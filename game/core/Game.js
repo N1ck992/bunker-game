@@ -278,6 +278,21 @@ class Game {
         makeImage('game/assets/characters/char_run_0.png'),
         makeImage('game/assets/characters/char_run_1.png'),
         makeImage('game/assets/characters/char_run_2.png')
+      ],
+      // Draw → aim → fire ×4 → recover, 11 frames — cycled while
+      // character.combatState === 'attacking' (set by CombatSystem).
+      attack: [
+        makeImage('game/assets/characters/char_attack_0.png'),
+        makeImage('game/assets/characters/char_attack_1.png'),
+        makeImage('game/assets/characters/char_attack_2.png'),
+        makeImage('game/assets/characters/char_attack_3.png'),
+        makeImage('game/assets/characters/char_attack_4.png'),
+        makeImage('game/assets/characters/char_attack_5.png'),
+        makeImage('game/assets/characters/char_attack_6.png'),
+        makeImage('game/assets/characters/char_attack_7.png'),
+        makeImage('game/assets/characters/char_attack_8.png'),
+        makeImage('game/assets/characters/char_attack_9.png'),
+        makeImage('game/assets/characters/char_attack_10.png')
       ]
     };
   }
@@ -972,12 +987,18 @@ class Game {
 
       const isMoving = character.path && character.path.length > 0;
       let sprite;
-      if (character.animState === 'examine' && !isMoving) {
-        sprite = this.sprites.examine;
-      } else if (isMoving) {
+      if (isMoving) {
+        // Moving always wins — a character walking into range cancels any
+        // stale "attacking" pose from the previous target, same as examine.
         const RUN_FPS = 7;
         const frameIndex = Math.floor((this._now / 1000) * RUN_FPS) % this.sprites.run.length;
         sprite = this.sprites.run[frameIndex];
+      } else if (character.combatState === 'attacking') {
+        const ATTACK_FPS = 10;
+        const frameIndex = Math.floor((this._now / 1000) * ATTACK_FPS) % this.sprites.attack.length;
+        sprite = this.sprites.attack[frameIndex];
+      } else if (character.animState === 'examine') {
+        sprite = this.sprites.examine;
       } else {
         sprite = this.sprites.idle;
       }
