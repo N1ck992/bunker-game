@@ -210,6 +210,76 @@ canvas {
   font-family: inherit;
 }
 
+.gear-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.gear-row strong { color: var(--text); }
+
+.inventory-btn {
+  width: 100%;
+  background: var(--steel-700);
+  border: 1px solid var(--amber-dim);
+  color: var(--amber);
+  padding: 8px;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+
+.inventory-box { width: min(92%, 420px); max-height: 80vh; overflow-y: auto; }
+
+.equip-slot { margin: 10px 0; }
+.equip-slot-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.equip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--steel-900);
+  border: 1px solid var(--steel-700);
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.equip-row.empty { color: var(--text-dim); font-style: italic; }
+
+.item-icon { font-size: 16px; }
+.item-name { flex: 0 0 auto; }
+.item-stats { flex: 1; color: var(--text-dim); font-size: 11px; }
+
+.unequip-btn, .equip-btn {
+  background: none;
+  border: 1px solid var(--amber-dim);
+  color: var(--amber);
+  padding: 4px 8px;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.unequip-btn { border-color: var(--rust); color: var(--rust); }
+
+.inventory-section { margin-top: 14px; }
+.inventory-section-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.inventory-empty { color: var(--text-dim); font-style: italic; font-size: 12px; }
+
 .cost-row { display: flex; gap: 10px; margin: 10px 0; }
 .cost-item { font-size: 12px; }
 .cost-item.ok { color: var(--ok); }

@@ -8,11 +8,14 @@ export class CharacterUI {
     this.root.appendChild(this.panel);
   }
 
-  show(character, rooms, onAssign, onClose) {
+  show(character, rooms, onAssign, onClose, onOpenInventory, itemsById) {
     const roomOptions = rooms
       .filter((r) => r.accessible)
       .map((r) => `<option value="${r.id}" ${character.assignedRoom === r.id ? 'selected' : ''}>${r.name}</option>`)
       .join('');
+
+    const weaponItem = itemsById?.get(character.weapon);
+    const clothingItem = itemsById?.get(character.clothing);
 
     this.panel.innerHTML = `
       <div class="panel-header">
@@ -30,6 +33,11 @@ export class CharacterUI {
         <span>ЛОВ ${character.agility}</span>
         <span>ИНТ ${character.intelligence}</span>
       </div>
+      <div class="gear-row">
+        <span class="gear-slot">Оружие: <strong>${weaponItem ? weaponItem.name : '— пусто —'}</strong></span>
+        <span class="gear-slot">Одежда: <strong>${clothingItem ? clothingItem.name : '— пусто —'}</strong></span>
+      </div>
+      <button class="inventory-btn">Инвентарь</button>
       <div class="assign-row">
         <label>Назначить в комнату:</label>
         <select class="assign-select">
@@ -46,6 +54,10 @@ export class CharacterUI {
 
     this.panel.querySelector('.assign-select').addEventListener('change', (e) => {
       onAssign?.(e.target.value || null);
+    });
+
+    this.panel.querySelector('.inventory-btn').addEventListener('click', () => {
+      onOpenInventory?.(character);
     });
 
     this.panel.classList.remove('hidden');

@@ -13,7 +13,8 @@
       "thirst": 100,
       "temperature": 20,
       "clothing": null,
-      "weapon": null,
+      "weapon": "kinetic_pistol",
+      "inventory": ["warm_clothes"],
       "position": { "col": 18, "row": 28 },
       "assignedRoom": null,
       "state": "active"

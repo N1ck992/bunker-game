@@ -23,6 +23,15 @@
       "coldResist": 3,
       "heatResist": 3,
       "healthModifier": 5
+    },
+    {
+      "id": "kinetic_pistol",
+      "name": "Кинетический пистолет",
+      "slot": "weapon",
+      "damage": 10,
+      "damageType": "kinetic",
+      "range": 6,
+      "attackCooldownSeconds": 1.2
     }
   ]
 }

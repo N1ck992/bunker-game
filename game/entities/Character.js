@@ -17,8 +17,15 @@ export class Character {
     this.thirst = data.thirst ?? 100;
     this.temperature = data.temperature ?? 20;
 
-    this.clothing = data.clothing ?? null;
-    this.weapon = data.weapon ?? null;
+    this.clothing = data.clothing ?? null; // equipped clothing item id, or null
+    this.weapon = data.weapon ?? null; // equipped weapon item id, or null
+    this.inventory = data.inventory ? [...data.inventory] : []; // owned item ids NOT currently equipped
+
+    // Combat runtime state, advanced by CombatSystem — not saved (recomputed
+    // fresh every load, same as Enemy's attackCooldownRemaining/aiState).
+    this.attackCooldownRemaining = 0;
+    this.combatState = 'idle'; // 'idle' | 'attacking'
+    this.targetEnemyId = null;
 
     // grid position (col,row)
     this.position = { ...(data.position ?? { col: 0, row: 0 }) };
@@ -83,6 +90,7 @@ export class Character {
       temperature: this.temperature,
       clothing: this.clothing,
       weapon: this.weapon,
+      inventory: [...this.inventory],
       position: { ...this.position },
       assignedRoom: this.assignedRoom,
       state: this.state

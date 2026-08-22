@@ -12,6 +12,8 @@ import { RoomSystem } from '../systems/RoomSystem.js';
 import { ConstructionSystem } from '../systems/ConstructionSystem.js';
 import { ExpeditionSystem } from '../systems/ExpeditionSystem.js';
 import { WorldSystem } from '../systems/WorldSystem.js';
+import { InventorySystem } from '../systems/InventorySystem.js';
+import { CombatSystem } from '../systems/CombatSystem.js';
 
 import { GameTime } from './GameTime.js';
 import { ResourceSystem } from './ResourceSystem.js';
@@ -21,6 +23,7 @@ import { SaveSystem } from './SaveSystem.js';
 import { Character } from '../entities/Character.js';
 import { Room } from '../entities/Room.js';
 import { Enemy } from '../entities/Enemy.js';
+import { Item } from '../entities/Item.js';
 import { EnemySystem } from '../systems/EnemySystem.js';
 
 import { ShelterUI } from '../ui/ShelterUI.js';
@@ -28,6 +31,7 @@ import { CharacterUI } from '../ui/CharacterUI.js';
 import { ConstructionUI } from '../ui/ConstructionUI.js';
 import { WorldMapUI } from '../ui/WorldMapUI.js';
 import { CharacterRosterUI } from '../ui/CharacterRosterUI.js';
+import { InventoryUI } from '../ui/InventoryUI.js';
 import { showStartMenu } from '../ui/StartMenu.js';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
@@ -36,15 +40,17 @@ const RESOURCE_LABELS = { food: 'еды', water: 'воды', heat: 'тепла',
 
 class Game {
   async init() {
-    const [balance, mapData, roomsData, charactersData] = await Promise.all([
+    const [balance, mapData, roomsData, charactersData, itemsData] = await Promise.all([
       fetchJson('game/data/balance.json'),
       fetchJson('game/map/bunker-map.json'),
       fetchJson('game/data/rooms.json'),
-      fetchJson('game/data/characters.json')
+      fetchJson('game/data/characters.json'),
+      fetchJson('game/data/items.json')
     ]);
 
     this.balance = balance;
     this.mapData = mapData;
+    this.itemsById = new Map(itemsData.items.map((i) => [i.id, new Item(i)]));
 
     const save = new SaveSystem().load();
     this.saveSystem = new SaveSystem();
@@ -93,6 +99,19 @@ class Game {
     this.enemySystem = new EnemySystem(this.pathfinder, this.movementSystem, (enemy, target) => {
       this._toast(`${enemy.name} атакует ${target.name}!`);
     });
+    this.inventorySystem = new InventorySystem(this.itemsById);
+    this.combatSystem = new CombatSystem(
+      this.itemsById,
+      (character, enemy) => this._toast(`${character.name} открывает огонь по цели: ${enemy.name}!`),
+      (character, enemy) => {
+        this._attackEffects.push({
+          from: { ...character.position },
+          to: { ...enemy.position },
+          start: this._now ?? performance.now()
+        });
+      }
+    );
+    this._attackEffects = []; // transient tracer effects for ranged hits, see _renderAttackEffects
 
     this._buildDom();
     this._loadBunkerImage();
@@ -236,6 +255,7 @@ class Game {
     this.characterUI = new CharacterUI(this.uiRoot);
     this.constructionUI = new ConstructionUI(this.uiRoot);
     this.worldMapUI = new WorldMapUI(this.uiRoot);
+    this.inventoryUI = new InventoryUI(this.uiRoot);
 
     this.toastEl = document.createElement('div');
     this.toastEl.className = 'toast hidden';
@@ -365,6 +385,10 @@ class Game {
 
   _selectCharacter(character) {
     this.characterSystem.select(character.id);
+    this._showCharacterPanel(character);
+  }
+
+  _showCharacterPanel(character) {
     this.characterUI.show(
       character,
       this.rooms,
@@ -372,7 +396,27 @@ class Game {
         if (roomId) this.roomSystem.assignWorker(roomId, character.id, this.characters);
         else this.roomSystem.unassignWorker(character.id, this.characters);
       },
-      () => this.characterSystem.deselect()
+      () => this.characterSystem.deselect(),
+      (c) => this._openInventory(c),
+      this.itemsById
+    );
+  }
+
+  _openInventory(character) {
+    this.inventoryUI.show(
+      character,
+      this.inventorySystem,
+      (itemId) => {
+        this.inventorySystem.equip(character, itemId);
+        this._openInventory(character); // refresh the modal in place
+        this._showCharacterPanel(character); // keep the panel underneath in sync (gear row)
+      },
+      (slot) => {
+        this.inventorySystem.unequip(character, slot);
+        this._openInventory(character);
+        this._showCharacterPanel(character);
+      },
+      () => {}
     );
   }
 
@@ -545,6 +589,7 @@ class Game {
     this.movementSystem.update(this.characters, dt);
     this.enemySystem.update(this.enemies, this.characters, dt);
     this.movementSystem.update(this.enemies, dt);
+    this.combatSystem.update(this.characters, this.enemies, dt);
     this._updatePendingFurnitureInteractions();
     this._updateFurnitureInteractions(dt);
 
@@ -598,6 +643,7 @@ class Game {
     this._renderInteractables();
     this._renderEnemies();
     this._renderCharacters();
+    this._renderAttackEffects();
 
     ctx.restore();
   }
@@ -840,6 +886,44 @@ class Game {
       ctx.fillText(character.name, x, groundY - drawH - 6 + 1);
       ctx.fillStyle = '#ffe9b3';
       ctx.fillText(character.name, x, groundY - drawH - 6);
+      ctx.restore();
+    }
+  }
+
+  /**
+   * Ranged weapons have no art yet, so a shot is represented as a short-lived
+   * tracer line (character -> target) instead of a projectile sprite. Effects
+   * are pushed by CombatSystem's onAttack callback and pruned here once their
+   * lifetime elapses — nothing else references this.attackEffects.
+   */
+  _renderAttackEffects() {
+    const ctx = this.ctx;
+    const cs = this.mapData.cellSize * this.scale;
+    const LIFETIME_MS = 140;
+    const now = this._now ?? performance.now();
+
+    this._attackEffects = this._attackEffects.filter((fx) => now - fx.start < LIFETIME_MS);
+
+    for (const fx of this._attackEffects) {
+      const t = (now - fx.start) / LIFETIME_MS;
+      const fromX = (fx.from.col + 0.5) * cs;
+      const fromY = (fx.from.row + 0.5) * cs - cs * 3; // roughly chest height, not feet
+      const toX = (fx.to.col + 0.5) * cs;
+      const toY = (fx.to.row + 0.5) * cs - cs * 2;
+
+      ctx.save();
+      ctx.globalAlpha = 1 - t;
+      ctx.strokeStyle = '#fff2b3';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff2b3';
+      ctx.beginPath();
+      ctx.arc(toX, toY, 3, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     }
   }
