@@ -25,9 +25,9 @@ export class ShelterUI {
     this.navBar = document.createElement('div');
     this.navBar.className = 'nav-bar';
     this.navBar.innerHTML = `
+      <button data-action="map" class="map-btn">Карта</button>
       <button data-action="characters">Жители</button>
       <button data-action="expedition">Экспедиция</button>
-      <button data-action="map">Карта</button>
     `;
     this.navBar.addEventListener('click', (e) => {
       const btn = e.target.closest('button');
@@ -40,6 +40,15 @@ export class ShelterUI {
 
     this.topRoot.appendChild(this.resourceBar);
     this.bottomRoot.appendChild(this.navBar);
+  }
+
+  /** Toggles the leftmost nav button between "Карта" (go to the map) and
+   * "Бункер" (return from it), so it doubles as the one control that opens
+   * and closes the world-map screen. */
+  setMapMode(isOnMap) {
+    const btn = this.navBar.querySelector('.map-btn');
+    btn.textContent = isOnMap ? 'Бункер' : 'Карта';
+    btn.classList.toggle('active', isOnMap);
   }
 
   update(resources, gameTime) {

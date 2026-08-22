@@ -30,7 +30,6 @@ import { ShelterUI } from '../ui/ShelterUI.js';
 import { CharacterUI } from '../ui/CharacterUI.js';
 import { CharacterMenuUI } from '../ui/CharacterMenuUI.js';
 import { ConstructionUI } from '../ui/ConstructionUI.js';
-import { WorldMapUI } from '../ui/WorldMapUI.js';
 import { CharacterRosterUI } from '../ui/CharacterRosterUI.js';
 import { InventoryUI } from '../ui/InventoryUI.js';
 import { EnemyMenuUI } from '../ui/EnemyMenuUI.js';
@@ -265,12 +264,11 @@ class Game {
     this.shelterUI = new ShelterUI(this.topRoot, this.uiRoot, {
       onCharacters: () => this._toast('Нажмите на жителя, чтобы увидеть его состояние.'),
       onExpedition: () => this._toast('Экспедиции появятся после открытия выхода на поверхность.'),
-      onMap: () => this.worldMapUI.show()
+      onMap: () => this._toggleWorldMap()
     });
     this.characterUI = new CharacterUI(this.uiRoot);
     this.characterMenuUI = new CharacterMenuUI(this.uiRoot);
     this.constructionUI = new ConstructionUI(this.uiRoot);
-    this.worldMapUI = new WorldMapUI(this.uiRoot);
     this.inventoryUI = new InventoryUI(this.uiRoot);
     this.enemyMenuUI = new EnemyMenuUI(this.uiRoot);
     this.enemyInfoUI = new EnemyInfoUI(this.uiRoot);
@@ -279,7 +277,25 @@ class Game {
     this.toastEl.className = 'toast hidden';
     this.uiRoot.appendChild(this.toastEl);
 
+    // 'shelter' (default bunker interior) or 'worldmap' (full-screen hex map),
+    // toggled by the nav bar's Карта/Бункер button — see _toggleWorldMap.
+    this.mode = 'shelter';
+
     window.addEventListener('resize', () => this._resizeCanvas());
+  }
+
+  /** Swaps the whole canvas between the bunker interior and the hex world
+   * map. Same button in the nav bar drives both directions (see ShelterUI). */
+  _toggleWorldMap() {
+    this.mode = this.mode === 'worldmap' ? 'shelter' : 'worldmap';
+    this.enemyMenuUI.hide();
+    this.characterMenuUI.hide();
+    this.characterUI.hide();
+    this.inventoryUI.hide();
+    this.constructionUI.hide();
+    this.characterSystem.deselect();
+    this.rosterUI.setVisible(this.mode === 'shelter');
+    this.shelterUI.setMapMode(this.mode === 'worldmap');
   }
 
   _loadCharacterSprites() {
@@ -400,6 +416,11 @@ class Game {
   }
 
   _onTap(e) {
+    if (this.mode === 'worldmap') {
+      this._onWorldMapTap(e);
+      return;
+    }
+
     // Any tap on the map dismisses the enemy mini-menu and the character
     // mini-menu, whether or not it hits a new character/enemy right after —
     // they aren't full-screen overlays like the other modals, so they don't
@@ -851,11 +872,20 @@ class Game {
       if (this.resourceSystem.water <= 5) this.shelterUI.flashLowResource('water');
     }
 
+    // Kept running even while the player is looking at the bunker screen,
+    // so a hex-to-hex trip doesn't pause just because the map isn't on screen.
+    this.worldSystem.update(dt);
+
     this.shelterUI.update(this.resourceSystem, this.gameTime);
     this.rosterUI.update(this.characters, this.characterSystem.selectedId);
   }
 
   _render() {
+    if (this.mode === 'worldmap') {
+      this._renderWorldMap();
+      return;
+    }
+
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -887,6 +917,133 @@ class Game {
     this._renderAttackEffects();
 
     ctx.restore();
+  }
+
+  // ---- World map (hex grid) -------------------------------------------
+  // Full-screen alternative to the bunker canvas above, toggled by
+  // _toggleWorldMap. No art yet — plain stroked hexagons, per the "just
+  // prepare the groundwork" ask — but the grid, fog of war, and travel
+  // timing (this.worldSystem) are all real and ready for a real look later.
+
+  _renderWorldMap() {
+    const ctx = this.ctx;
+    const size = 34; // hex "radius", center to corner, in px
+    const world = this.worldSystem;
+
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.fillStyle = '#0a0a12';
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // Keep the player's current hex centered on screen as they travel.
+    const playerPixel = world.pixelOf(world.playerHex, size);
+    const cx = this.canvas.width / 2 - playerPixel.x;
+    const cy = this.canvas.height / 2 - playerPixel.y;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    for (const hex of world.hexes.values()) {
+      this._renderHex(hex, size);
+    }
+
+    ctx.restore();
+
+    ctx.save();
+    ctx.font = '13px monospace';
+    ctx.fillStyle = 'rgba(232,176,75,0.85)';
+    ctx.textAlign = 'center';
+    ctx.fillText('ПУСТОШЬ', this.canvas.width / 2, 24);
+    if (world.isTraveling) {
+      ctx.font = '11px monospace';
+      ctx.fillStyle = 'rgba(232,176,75,0.65)';
+      ctx.fillText('В пути...', this.canvas.width / 2, 42);
+    }
+    ctx.restore();
+  }
+
+  _renderHex(hex, size) {
+    const ctx = this.ctx;
+    const world = this.worldSystem;
+    const { x, y } = world.pixelOf(hex, size);
+    const isHome = hex.q === world.homeHex.q && hex.r === world.homeHex.r;
+    const isPlayer = hex.q === world.playerHex.q && hex.r === world.playerHex.r;
+    const isTravelTarget = world.traveling && hex.q === world.traveling.to.q && hex.r === world.traveling.to.r;
+    const discovered = world.isDiscovered(hex);
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 180) * (60 * i - 30);
+      const px = size * 0.92 * Math.cos(angle);
+      const py = size * 0.92 * Math.sin(angle);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+
+    if (!discovered) {
+      ctx.fillStyle = '#111319';
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    } else if (isHome) {
+      ctx.fillStyle = 'rgba(232,176,75,0.18)';
+      ctx.strokeStyle = 'rgba(232,176,75,0.7)';
+    } else {
+      ctx.fillStyle = '#1b1e28';
+      ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    }
+    ctx.lineWidth = 1.5;
+    ctx.fill();
+    ctx.stroke();
+
+    if (isHome && discovered) {
+      ctx.font = `${Math.max(9, size * 0.24)}px monospace`;
+      ctx.fillStyle = 'rgba(232,176,75,0.8)';
+      ctx.textAlign = 'center';
+      ctx.fillText('БУНКЕР', 0, size * 0.08);
+    }
+
+    if (isTravelTarget) {
+      // Same progress-ring convention as door-open cooldowns in _renderInteractables.
+      const progress = world.travelProgress ?? 0;
+      ctx.strokeStyle = '#e8b04b';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, size * 0.4, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+      ctx.stroke();
+    }
+
+    if (isPlayer) {
+      ctx.fillStyle = '#2ecc71';
+      ctx.beginPath();
+      ctx.arc(0, 0, size * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  _onWorldMapTap(e) {
+    const size = 34;
+    const world = this.worldSystem;
+    const rect = this.canvas.getBoundingClientRect();
+    const playerPixel = world.pixelOf(world.playerHex, size);
+    const cx = this.canvas.width / 2 - playerPixel.x;
+    const cy = this.canvas.height / 2 - playerPixel.y;
+
+    const localX = e.clientX - rect.left - cx;
+    const localY = e.clientY - rect.top - cy;
+    const coords = world.hexAt(localX, localY, size);
+    const target = world.getHex(coords.q, coords.r);
+    if (!target) return;
+
+    if (world.isTraveling) {
+      this._toast('Уже в пути к следующей соте.');
+      return;
+    }
+    const moved = world.tryMoveTo(target);
+    if (!moved) this._toast('Можно перейти только в соседнюю соту.');
   }
 
   _renderSurfaceLabel() {

@@ -26,8 +26,7 @@ export class CharacterRosterUI {
   }
 
   /** Cheap enough to call every frame — just a handful of DOM nodes. */
-  update(characters, selectedId) {
-    // Rebuild only if the roster size changed (new characters appear
+  update(characters, selectedId) {    // Rebuild only if the roster size changed (new characters appear
     // occasionally); otherwise just patch the existing cards in place.
     if (this.bar.children.length !== characters.length) {
       this.bar.innerHTML = '';
@@ -41,6 +40,12 @@ export class CharacterRosterUI {
       if (!card) continue;
       this._updateCard(card, character, character.id === selectedId);
     }
+  }
+
+  /** Hidden while the world map takes over the screen — the roster is a
+   * shelter-specific tool for picking a settler on the bunker canvas. */
+  setVisible(visible) {
+    this.bar.classList.toggle('hidden', !visible);
   }
 
   _makeCard(character) {

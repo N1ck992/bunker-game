@@ -116,11 +116,12 @@ canvas {
   cursor: pointer;
 }
 
-.nav-bar button:last-child { border-right: none; }
 .nav-bar button:active { background: var(--steel-700); color: var(--amber); }
+.nav-bar button.active { background: var(--steel-700); color: var(--amber); }
+.nav-bar button:last-child { border-right: none; }
 
 /* Panels / modals */
-.character-panel, .construction-modal, .worldmap-modal {
+.character-panel, .construction-modal {
   position: absolute;
   left: 0; right: 0; bottom: 42px;
   background: var(--steel-800);
@@ -131,7 +132,7 @@ canvas {
   overflow-y: auto;
 }
 
-.construction-modal, .worldmap-modal, .enemy-info-modal {
+.construction-modal, .enemy-info-modal {
   position: fixed;
   inset: 0;
   bottom: auto;
