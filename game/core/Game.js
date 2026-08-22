@@ -273,8 +273,12 @@ class Game {
 
       const unitDef = this.enemyUnitDefsByKey.get(key);
       const { idle, run, attack } = unitDef.sprites;
+      // idle can be one static path or an array of frames to cycle through
+      // (afk animation) — same convention as run/attack. Kept both forms
+      // working so races that only have a single idle pose don't need a
+      // pointless one-element array in their JSON.
       this.enemySprites.set(key, {
-        idle: makeImage(idle),
+        idle: Array.isArray(idle) ? idle.map(makeImage) : [makeImage(idle)],
         run: run.map(makeImage),
         attack: attack.map(makeImage)
       });
@@ -712,7 +716,9 @@ class Game {
       } else if (enemy.aiState === 'chasing') {
         sprite = this._cycleFrame(spriteSet.run, 7);
       } else {
-        sprite = spriteSet.idle;
+        // Slower cadence than run/attack — this is idle "breathing"/afk
+        // fidgeting, not fast action, so it shouldn't read as jittery.
+        sprite = this._cycleFrame(spriteSet.idle, 4);
       }
       const hasSprite = sprite.complete && sprite.naturalWidth > 0;
       const drawW = hasSprite ? drawH * (sprite.naturalWidth / sprite.naturalHeight) : drawH * 0.32;

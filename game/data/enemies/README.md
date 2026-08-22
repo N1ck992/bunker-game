@@ -26,12 +26,17 @@
   "attackCooldownSeconds": 1.6,    // пауза между атаками
   "tilesPerSecond": 2.2,           // скорость бега при погоне
   "sprites": {
-    "idle": "game/assets/enemies/<race_id>/<unit_id>/idle.png",
+    "idle": "game/assets/enemies/<race_id>/<unit_id>/idle.png",  // одна картинка ИЛИ массив кадров, как run/attack — см. ниже
     "run": ["run_0.png", "run_1.png", "run_2.png"],   // 3-кадровый цикл, как у персонажа
     "attack": ["attack_0.png", "attack_1.png", "attack_2.png"]
   }
 }
 ```
+
+`idle` можно задать и как массив кадров (`["idle_00.png", "idle_01.png", ...]`), если
+у юнита есть анимация простоя (afk) — тогда она крутится медленнее, чем run/attack
+(см. `Game._renderEnemies`, `_cycleFrame(spriteSet.idle, 4)`). Число кадров в
+любом из трёх массивов не ограничено тремя — можно хоть 14, если есть арт.
 
 Спрайты грузятся один раз на тип юнита и переиспользуются между всеми его
 копиями на карте (см. `Game._loadEnemySprites`) — можно спокойно ставить
