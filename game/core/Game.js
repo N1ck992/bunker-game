@@ -38,6 +38,12 @@ import { showStartMenu } from '../ui/StartMenu.js';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
+
+// AFK fidget (look left/right, sniff armpit, recoil, return) — a one-shot
+// 5-frame gag that plays after a character has stood around doing nothing
+// for a while, then holds on the idle pose again until the next trigger.
+const AFK_TRIGGER_SECONDS = 8;
+const AFK_FRAME_SECONDS = 0.35;
 const RESOURCE_LABELS = { food: 'еды', water: 'воды', heat: 'тепла', materials: 'материалов' };
 
 class Game {
@@ -277,7 +283,24 @@ class Game {
       run: [
         makeImage('game/assets/characters/char_run_0.png'),
         makeImage('game/assets/characters/char_run_1.png'),
-        makeImage('game/assets/characters/char_run_2.png')
+        makeImage('game/assets/characters/char_run_2.png'),
+        makeImage('game/assets/characters/char_run_3.png'),
+        makeImage('game/assets/characters/char_run_4.png'),
+        makeImage('game/assets/characters/char_run_5.png'),
+        makeImage('game/assets/characters/char_run_6.png'),
+        makeImage('game/assets/characters/char_run_7.png'),
+        makeImage('game/assets/characters/char_run_8.png'),
+        makeImage('game/assets/characters/char_run_9.png')
+      ],
+      // Look left → look right → sniff armpit → recoil "фуу" → return, 5
+      // frames — a one-shot fidget played by _updateCharacterAfk after a
+      // stretch of true idle, not a continuous loop like run/attack.
+      afk: [
+        makeImage('game/assets/characters/char_afk_0.png'),
+        makeImage('game/assets/characters/char_afk_1.png'),
+        makeImage('game/assets/characters/char_afk_2.png'),
+        makeImage('game/assets/characters/char_afk_3.png'),
+        makeImage('game/assets/characters/char_afk_4.png')
       ],
       // Draw → aim → fire ×4 → recover, 11 frames — cycled while
       // character.combatState === 'attacking' (set by CombatSystem).
@@ -709,6 +732,48 @@ class Game {
     }
   }
 
+  /**
+   * Advances each active character's AFK fidget timer. "Truly idle" means
+   * not walking, not mid-examine, and not auto-fighting — any of those
+   * resets the timer and cancels a fidget in progress, same as the sprite
+   * priority order in _renderCharacters.
+   */
+  _updateCharacterAfk(dt) {
+    for (const character of this.characters) {
+      if (!character.isActive) {
+        character.afkIdleSeconds = 0;
+        character.afkPlaying = false;
+        character.afkElapsed = 0;
+        continue;
+      }
+
+      const isMoving = character.path && character.path.length > 0;
+      const trulyIdle = !isMoving && character.animState !== 'examine' && character.combatState !== 'attacking';
+
+      if (!trulyIdle) {
+        character.afkIdleSeconds = 0;
+        character.afkPlaying = false;
+        character.afkElapsed = 0;
+        continue;
+      }
+
+      if (character.afkPlaying) {
+        character.afkElapsed += dt;
+        if (character.afkElapsed >= this.sprites.afk.length * AFK_FRAME_SECONDS) {
+          character.afkPlaying = false;
+          character.afkElapsed = 0;
+          character.afkIdleSeconds = 0; // wait out a full idle stretch before fidgeting again
+        }
+      } else {
+        character.afkIdleSeconds += dt;
+        if (character.afkIdleSeconds >= AFK_TRIGGER_SECONDS) {
+          character.afkPlaying = true;
+          character.afkElapsed = 0;
+        }
+      }
+    }
+  }
+
   _toast(message) {
     this.toastEl.textContent = message;
     this.toastEl.classList.remove('hidden');
@@ -733,6 +798,7 @@ class Game {
     this.enemySystem.update(this.enemies, this.characters, dt);
     this.movementSystem.update(this.enemies, dt);
     this.combatSystem.update(this.characters, this.enemies, dt);
+    this._updateCharacterAfk(dt);
     this._updatePendingFurnitureInteractions();
     this._updateFurnitureInteractions(dt);
 
@@ -990,13 +1056,19 @@ class Game {
       if (isMoving) {
         // Moving always wins — a character walking into range cancels any
         // stale "attacking" pose from the previous target, same as examine.
-        const RUN_FPS = 7;
+        const RUN_FPS = 14; // 10-frame cycle now, vs. the old 3-frame one — bumped up so full strides per second stay the same
         const frameIndex = Math.floor((this._now / 1000) * RUN_FPS) % this.sprites.run.length;
         sprite = this.sprites.run[frameIndex];
       } else if (character.combatState === 'attacking') {
         const ATTACK_FPS = 10;
         const frameIndex = Math.floor((this._now / 1000) * ATTACK_FPS) % this.sprites.attack.length;
         sprite = this.sprites.attack[frameIndex];
+      } else if (character.afkPlaying) {
+        const frameIndex = Math.min(
+          this.sprites.afk.length - 1,
+          Math.floor(character.afkElapsed / AFK_FRAME_SECONDS)
+        );
+        sprite = this.sprites.afk[frameIndex];
       } else if (character.animState === 'examine') {
         sprite = this.sprites.examine;
       } else {

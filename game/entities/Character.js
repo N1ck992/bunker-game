@@ -41,6 +41,12 @@ export class Character {
     // 'idle' | 'examine' — drives which placeholder sprite is drawn.
     this.animState = 'idle';
 
+    // AFK fidget runtime state, advanced by Game's _updateCharacterAfk — not
+    // saved, same as combatState/animState above.
+    this.afkIdleSeconds = 0; // how long they've been truly idle (resets on any activity)
+    this.afkPlaying = false; // currently mid-fidget
+    this.afkElapsed = 0; // seconds into the current fidget playback
+
     // movement runtime state (filled in by MovementSystem)
     this.path = [];
     this.moveProgress = 0; // 0..1 progress along current path segment
