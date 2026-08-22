@@ -1,6 +1,6 @@
 {
   "comment": "One entry per race file in this folder (without .json). Add a new race by dropping <race_id>.json next to this file and listing its id here — Game.js loads every race listed on startup.",
   "races": [
-    "wasteland_raiders"
+    "mutants"
   ]
 }

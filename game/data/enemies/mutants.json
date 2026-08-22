@@ -1,0 +1,41 @@
+{
+  "id": "mutants",
+  "name": "Мутанты",
+  "description": "Твари, изменённые радиацией и заражением поверхности — быстрые, злые и совсем не разумные.",
+  "units": [
+    {
+      "id": "mutant_stalker",
+      "name": "Мутант",
+      "health": 40,
+      "damage": 6,
+      "attackRange": 1.5,
+      "aggroRange": 6,
+      "attackCooldownSeconds": 1.6,
+      "tilesPerSecond": 2.2,
+      "sprites": {
+        "idle": "game/assets/enemies/mutants/mutant_stalker/idle.png",
+        "run": [
+          "game/assets/enemies/mutants/mutant_stalker/run_00.png",
+          "game/assets/enemies/mutants/mutant_stalker/run_01.png",
+          "game/assets/enemies/mutants/mutant_stalker/run_02.png",
+          "game/assets/enemies/mutants/mutant_stalker/run_03.png",
+          "game/assets/enemies/mutants/mutant_stalker/run_04.png",
+          "game/assets/enemies/mutants/mutant_stalker/run_05.png",
+          "game/assets/enemies/mutants/mutant_stalker/run_06.png",
+          "game/assets/enemies/mutants/mutant_stalker/run_07.png",
+          "game/assets/enemies/mutants/mutant_stalker/run_08.png",
+          "game/assets/enemies/mutants/mutant_stalker/run_09.png",
+          "game/assets/enemies/mutants/mutant_stalker/run_10.png",
+          "game/assets/enemies/mutants/mutant_stalker/run_11.png",
+          "game/assets/enemies/mutants/mutant_stalker/run_12.png",
+          "game/assets/enemies/mutants/mutant_stalker/run_13.png"
+        ],
+        "attack": [
+          "game/assets/enemies/mutants/mutant_stalker/attack_0.png",
+          "game/assets/enemies/mutants/mutant_stalker/attack_1.png",
+          "game/assets/enemies/mutants/mutant_stalker/attack_2.png"
+        ]
+      }
+    }
+  ]
+}

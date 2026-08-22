@@ -1691,9 +1691,9 @@
   },
   "enemies": [
     {
-      "id": "raider_grunt_01",
-      "raceId": "wasteland_raiders",
-      "unitId": "raider_grunt",
+      "id": "mutant_stalker_01",
+      "raceId": "mutants",
+      "unitId": "mutant_stalker",
       "col": 30,
       "row": 28
     }
