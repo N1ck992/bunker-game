@@ -32,6 +32,6 @@
     "healthLossWhenCritical": 2
   },
   "movement": {
-    "tilesPerSecond": 2.5
+    "tilesPerSecond": 10
   }
 }
