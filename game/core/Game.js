@@ -44,6 +44,7 @@ const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, 
 // for a while, then holds on the idle pose again until the next trigger.
 const AFK_TRIGGER_SECONDS = 8;
 const AFK_FRAME_SECONDS = 0.35;
+const IDLE_FPS = 2.2; // slow head-turn breathing loop, not meant to read as active motion
 const RESOURCE_LABELS = { food: 'еды', water: 'воды', heat: 'тепла', materials: 'материалов' };
 
 class Game {
@@ -278,7 +279,15 @@ class Game {
     // One sprite per animation state, per spec section 25 — placeholders now,
     // swappable for a full sheet later without touching call sites.
     this.sprites = {
-      idle: makeImage('game/assets/characters/char_idle.png'),
+      // Slow "looking around" breathing loop — the default pose whenever the
+      // character is truly idle and not mid-fidget (see AFK_* below).
+      idle: [
+        makeImage('game/assets/characters/char_idle_0.png'),
+        makeImage('game/assets/characters/char_idle_1.png'),
+        makeImage('game/assets/characters/char_idle_2.png'),
+        makeImage('game/assets/characters/char_idle_3.png'),
+        makeImage('game/assets/characters/char_idle_4.png')
+      ],
       examine: makeImage('game/assets/characters/char_examine.png'),
       run: [
         makeImage('game/assets/characters/char_run_0.png'),
@@ -1072,7 +1081,8 @@ class Game {
       } else if (character.animState === 'examine') {
         sprite = this.sprites.examine;
       } else {
-        sprite = this.sprites.idle;
+        const frameIndex = Math.floor((this._now / 1000) * IDLE_FPS) % this.sprites.idle.length;
+        sprite = this.sprites.idle[frameIndex];
       }
       const drawH = cs * CHARACTER_HEIGHT_TILES;
       const drawW = sprite.naturalWidth
