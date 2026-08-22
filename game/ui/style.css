@@ -290,8 +290,8 @@ canvas {
 /* Character roster — sits directly under the map for quick unit selection */
 .roster-bar {
   display: flex;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: 12px;
+  padding: 10px 12px;
   background: var(--steel-900);
   border-bottom: 1px solid var(--steel-700);
   overflow-x: auto;
@@ -303,14 +303,14 @@ canvas {
   align-items: center;
   gap: 3px;
   flex: 0 0 auto;
-  width: 52px;
+  width: 72px;
   cursor: pointer;
 }
 
 .roster-avatar-portrait {
   position: relative;
-  width: 48px;
-  height: 48px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
   overflow: hidden;
   background: var(--steel-800);
@@ -330,13 +330,13 @@ canvas {
 .roster-avatar-fallback {
   color: var(--text-dim);
   font-weight: bold;
-  font-size: 16px;
+  font-size: 22px;
 }
 
 .roster-avatar-name {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-dim);
-  max-width: 52px;
+  max-width: 72px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

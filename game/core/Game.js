@@ -29,6 +29,7 @@ import { CharacterRosterUI } from '../ui/CharacterRosterUI.js';
 import { showStartMenu } from '../ui/StartMenu.js';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
+const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
 
 class Game {
   async init() {
@@ -467,7 +468,7 @@ class Game {
       } else {
         sprite = this.sprites.idle;
       }
-      const drawH = cs * 3.6;
+      const drawH = cs * CHARACTER_HEIGHT_TILES;
       const drawW = sprite.naturalWidth
         ? drawH * (sprite.naturalWidth / sprite.naturalHeight)
         : drawH * 0.32;
