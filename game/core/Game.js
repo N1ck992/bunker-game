@@ -617,7 +617,6 @@ class Game {
 
       const x = (px + 0.5) * cs;
       const groundY = (py + 1) * cs; // sprite's feet rest on the tile's bottom edge
-      const isSelected = this.characterSystem.selectedId === character.id;
 
       const isMoving = character.path && character.path.length > 0;
       let sprite;
@@ -651,12 +650,6 @@ class Game {
         if (character.facingDir < 0) ctx.scale(-1, 1);
         if (!character.isActive) ctx.globalAlpha = 0.5;
         ctx.drawImage(sprite, -drawW / 2, 0, drawW, drawH);
-
-        if (isSelected) {
-          ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(-drawW / 2, 0, drawW, drawH);
-        }
       }
 
       ctx.restore();
