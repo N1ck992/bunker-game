@@ -8,7 +8,7 @@
       "name": "Рейдер",
       "health": 40,
       "damage": 6,
-      "attackRange": 1.5,
+      "attackDistance": 3,
       "aggroRange": 6,
       "attackCooldownSeconds": 1.6,
       "tilesPerSecond": 2.2,

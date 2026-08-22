@@ -24,7 +24,11 @@ export class Enemy {
     this.maxHealth = unitDef.health;
     this.health = unitDef.health;
     this.damage = unitDef.damage;
-    this.attackRange = unitDef.attackRange;
+    // Tile gap the enemy keeps from its target: it stops chasing this many
+    // tiles away and attacks from there, so it never stands on the same
+    // tile as (or visually overlapping) the character. Tune per unit in
+    // game/data/enemies/*.json — wider sprites need a bigger number.
+    this.attackDistance = unitDef.attackDistance;
     this.aggroRange = unitDef.aggroRange;
     this.attackCooldownSeconds = unitDef.attackCooldownSeconds;
     this.tilesPerSecond = unitDef.tilesPerSecond;
