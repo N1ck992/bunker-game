@@ -42,6 +42,18 @@ export class ResourceSystem {
     return delta;
   }
 
+  /**
+   * Adds raw amounts straight away, bypassing production/consumption math.
+   * Used for one-off gains like a character rummaging through furniture.
+   * @param {{[resource:string]: number}} amounts
+   */
+  gain(amounts) {
+    for (const [res, amount] of Object.entries(amounts)) {
+      if (this[res] === undefined) continue;
+      this[res] = Math.max(0, this[res] + amount);
+    }
+  }
+
   canAfford(cost) {
     return Object.entries(cost).every(([res, amount]) => (this[res] ?? 0) >= amount);
   }

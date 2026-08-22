@@ -30,6 +30,7 @@ import { showStartMenu } from '../ui/StartMenu.js';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
+const RESOURCE_LABELS = { food: 'еды', water: 'воды', heat: 'тепла', materials: 'материалов' };
 
 class Game {
   async init() {
@@ -65,6 +66,11 @@ class Game {
 
     this.pathfinder = new PathfindingSystem(this.mapData.grid, this.interactableStates);
     this._sanitizeCharacterPositions();
+
+    // Furniture (table/wardrobe/etc.) that's currently being "worked" for a
+    // slow trickle of resources. Keyed by interactable id. See
+    // _onFurnitureTapped / _updateFurnitureInteractions.
+    this.activeFurnitureInteractions = new Map();
 
     this.movementSystem = new MovementSystem(balance);
     this.characterSystem = new CharacterSystem(balance);
@@ -247,10 +253,14 @@ class Game {
       return;
     }
 
-    // 2) Tapped an interactable (door/ladder)?
+    // 2) Tapped an interactable (door/ladder/furniture)?
     const interactable = this.interactableStates.get(`${col},${row}`);
     if (interactable) {
-      this._onInteractableTapped(interactable);
+      if (interactable.type === 'furniture') {
+        this._onFurnitureTapped(interactable);
+      } else {
+        this._onInteractableTapped(interactable);
+      }
       return;
     }
 
@@ -314,6 +324,69 @@ class Game {
     );
   }
 
+  /**
+   * Starts a "gather" session on a furniture object (table, wardrobe, ...).
+   * While active, resources trickle in every frame (see
+   * _updateFurnitureInteractions); once durationSeconds elapses the object
+   * goes on cooldown for cooldownSeconds before it can be used again.
+   * One session per object at a time — fine while there's a single
+   * character, but note this doesn't yet stop a second character from
+   * queuing up on the same object mid-session.
+   */
+  _onFurnitureTapped(interactable) {
+    const now = this._now ?? performance.now();
+
+    if (interactable.cooldownUntil && now < interactable.cooldownUntil) {
+      const secondsLeft = Math.ceil((interactable.cooldownUntil - now) / 1000);
+      this._toast(`${interactable.label}: нужно подождать ещё ${secondsLeft} сек.`);
+      return;
+    }
+    if (this.activeFurnitureInteractions.has(interactable.id)) return;
+
+    const { durationSeconds, cooldownSeconds } = interactable.interaction;
+    interactable.activeUntil = now + durationSeconds * 1000;
+    interactable.cooldownUntil = interactable.activeUntil + cooldownSeconds * 1000;
+    this.activeFurnitureInteractions.set(interactable.id, { interactable, gained: {} });
+
+    const character = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
+    if (character) character.animState = 'examine';
+
+    this._toast(`${interactable.label}: идёт сбор ресурсов...`);
+  }
+
+  _updateFurnitureInteractions(dt) {
+    const now = this._now ?? performance.now();
+
+    for (const [id, session] of this.activeFurnitureInteractions) {
+      const { interactable } = session;
+      const isDone = now >= interactable.activeUntil;
+      const tickSeconds = isDone
+        ? Math.max(0, dt - (now - interactable.activeUntil) / 1000)
+        : dt;
+
+      if (tickSeconds > 0) {
+        const amounts = {};
+        for (const [res, perSecond] of Object.entries(interactable.interaction.produces)) {
+          const amount = perSecond * tickSeconds;
+          amounts[res] = amount;
+          session.gained[res] = (session.gained[res] ?? 0) + amount;
+        }
+        this.resourceSystem.gain(amounts);
+      }
+
+      if (isDone) {
+        this.activeFurnitureInteractions.delete(id);
+        const character = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
+        if (character) character.animState = 'idle';
+
+        const summary = Object.entries(session.gained)
+          .map(([res, amount]) => `+${amount.toFixed(1)} ${RESOURCE_LABELS[res] ?? res}`)
+          .join(', ');
+        this._toast(`${interactable.label}: получено ${summary}`);
+      }
+    }
+  }
+
   _toast(message) {
     this.toastEl.textContent = message;
     this.toastEl.classList.remove('hidden');
@@ -335,6 +408,7 @@ class Game {
   _update(dt) {
     this.gameTime.update(dt);
     this.movementSystem.update(this.characters, dt);
+    this._updateFurnitureInteractions(dt);
 
     // needs/resource ticks run on their own slower cadence
     this._needsTickAccumulator += dt * 1000;
@@ -424,10 +498,42 @@ class Game {
   _renderInteractables() {
     const ctx = this.ctx;
     const cs = this.mapData.cellSize * this.scale;
+    const now = this._now ?? performance.now();
+
     for (const it of this.mapData.interactables) {
       const x = it.col * cs;
-      const spanRows = it.type === 'ladder' ? 8 : 1;
       const y = it.row * cs;
+
+      if (it.type === 'furniture') {
+        // The furniture is already drawn into the background art, so this is
+        // just a small breathing dot: green = ready, amber ring filling up =
+        // gathering in progress, dim red = on cooldown. No dashed rectangle —
+        // that reads as "locked door", which this isn't.
+        const cx = x + cs / 2;
+        const cy = y + cs / 2;
+        const isActive = this.activeFurnitureInteractions.has(it.id);
+        const onCooldown = !isActive && it.cooldownUntil && now < it.cooldownUntil;
+
+        ctx.save();
+        if (isActive) {
+          const { durationSeconds } = it.interaction;
+          const progress = 1 - Math.max(0, (it.activeUntil - now) / (durationSeconds * 1000));
+          ctx.strokeStyle = '#e8b04b';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(cx, cy, cs * 0.3, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = onCooldown ? 'rgba(192,57,43,0.55)' : 'rgba(46,204,113,0.75)';
+          ctx.beginPath();
+          ctx.arc(cx, cy, cs * 0.09, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+        continue;
+      }
+
+      const spanRows = it.type === 'ladder' ? 8 : 1;
       ctx.save();
       ctx.strokeStyle = it.locked ? '#c0392b' : '#2ecc71';
       ctx.lineWidth = 3;

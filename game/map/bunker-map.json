@@ -1657,6 +1657,32 @@
       "label": "Лестница на уровень -2",
       "locked": true,
       "unlockCondition": "story:not_yet_available"
+    },
+    {
+      "id": "table_01",
+      "type": "furniture",
+      "col": 19,
+      "row": 27,
+      "label": "Стол",
+      "locked": false,
+      "interaction": {
+        "produces": { "food": 0.3, "water": 0.2 },
+        "durationSeconds": 8,
+        "cooldownSeconds": 25
+      }
+    },
+    {
+      "id": "wardrobe_01",
+      "type": "furniture",
+      "col": 12,
+      "row": 27,
+      "label": "Шкаф",
+      "locked": false,
+      "interaction": {
+        "produces": { "materials": 0.4 },
+        "durationSeconds": 8,
+        "cooldownSeconds": 25
+      }
     }
   ],
   "spawnPoint": {
