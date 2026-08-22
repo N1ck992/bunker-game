@@ -50,27 +50,32 @@ canvas {
   touch-action: none;
 }
 
+.top-root {
+  position: relative;
+  z-index: 10;
+}
+
 .ui-root {
   position: relative;
   z-index: 10;
 }
 
-/* Resource bar */
+/* Resource bar — slim HUD strip above the scene */
 .resource-bar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 8px 12px;
+  gap: 12px;
+  padding: 5px 10px;
   background: var(--steel-800);
   border-bottom: 1px solid var(--steel-700);
-  font-size: 14px;
+  font-size: 12px;
   letter-spacing: 0.5px;
 }
 
 .resource {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   color: var(--amber);
   transition: color 0.15s;
 }
@@ -79,14 +84,15 @@ canvas {
   color: var(--rust);
 }
 
-.resource .icon { font-size: 14px; opacity: 0.85; }
+.resource .icon { font-size: 12px; opacity: 0.85; }
 
 .clock {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   color: var(--text-dim);
+  font-size: 11px;
 }
 
 /* Nav bar */
@@ -102,7 +108,7 @@ canvas {
   border: none;
   border-right: 1px solid var(--steel-700);
   color: var(--text);
-  padding: 12px 4px;
+  padding: 9px 4px;
   font-family: inherit;
   font-size: 12px;
   letter-spacing: 0.5px;
@@ -116,7 +122,7 @@ canvas {
 /* Panels / modals */
 .character-panel, .construction-modal, .worldmap-modal {
   position: absolute;
-  left: 0; right: 0; bottom: 56px;
+  left: 0; right: 0; bottom: 42px;
   background: var(--steel-800);
   border-top: 2px solid var(--amber-dim);
   padding: 14px 16px 18px;
@@ -335,10 +341,45 @@ canvas {
   color: #ffb3b3;
 }
 
+/* Character tap mini-menu (Характеристики / Амуниция) */
+.character-menu {
+  position: absolute;
+  z-index: 60;
+  background: var(--steel-800);
+  border: 2px solid var(--amber-dim);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 140px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+}
+
+.character-menu-title {
+  font-size: 11px;
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+  margin-bottom: 2px;
+}
+
+.character-menu-btn {
+  background: var(--steel-700);
+  border: 1px solid var(--amber-dim);
+  color: var(--text);
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.character-menu-btn:active { background: var(--steel-900); color: var(--amber); }
+
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 90px;
+  bottom: 64px;
   transform: translateX(-50%);
   background: var(--steel-800);
   border: 1px solid var(--amber-dim);
@@ -400,8 +441,8 @@ canvas {
 /* Character roster — sits directly under the map for quick unit selection */
 .roster-bar {
   display: flex;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 6px 10px;
   background: var(--steel-900);
   border-bottom: 1px solid var(--steel-700);
   overflow-x: auto;
@@ -411,16 +452,16 @@ canvas {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   flex: 0 0 auto;
-  width: 72px;
+  width: 54px;
   cursor: pointer;
 }
 
 .roster-avatar-portrait {
   position: relative;
-  width: 68px;
-  height: 68px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   overflow: hidden;
   background: var(--steel-800);
@@ -440,13 +481,13 @@ canvas {
 .roster-avatar-fallback {
   color: var(--text-dim);
   font-weight: bold;
-  font-size: 22px;
+  font-size: 16px;
 }
 
 .roster-avatar-name {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-dim);
-  max-width: 72px;
+  max-width: 54px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

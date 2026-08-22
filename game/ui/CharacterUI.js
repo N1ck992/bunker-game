@@ -66,4 +66,8 @@ export class CharacterUI {
   hide() {
     this.panel.classList.add('hidden');
   }
+
+  get isVisible() {
+    return !this.panel.classList.contains('hidden');
+  }
 }

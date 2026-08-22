@@ -2,9 +2,12 @@
 // Renders the top resource bar and bottom nav buttons. Pure DOM, no game logic.
 
 export class ShelterUI {
-  constructor(root, callbacks) {
-    this.root = root;
-    this.callbacks = callbacks; // { onConstruction, onCharacters, onExpedition, onMap }
+  // topRoot hosts the resource bar (rendered above the scene as a HUD strip);
+  // bottomRoot hosts the nav bar (rendered below the scene, next to the roster).
+  constructor(topRoot, bottomRoot, callbacks) {
+    this.topRoot = topRoot;
+    this.bottomRoot = bottomRoot;
+    this.callbacks = callbacks; // { onCharacters, onExpedition, onMap }
     this._build();
   }
 
@@ -22,7 +25,6 @@ export class ShelterUI {
     this.navBar = document.createElement('div');
     this.navBar.className = 'nav-bar';
     this.navBar.innerHTML = `
-      <button data-action="construction">Строительство</button>
       <button data-action="characters">Жители</button>
       <button data-action="expedition">Экспедиция</button>
       <button data-action="map">Карта</button>
@@ -31,14 +33,13 @@ export class ShelterUI {
       const btn = e.target.closest('button');
       if (!btn) return;
       const action = btn.dataset.action;
-      if (action === 'construction') this.callbacks.onConstruction?.();
       if (action === 'characters') this.callbacks.onCharacters?.();
       if (action === 'expedition') this.callbacks.onExpedition?.();
       if (action === 'map') this.callbacks.onMap?.();
     });
 
-    this.root.appendChild(this.resourceBar);
-    this.root.appendChild(this.navBar);
+    this.topRoot.appendChild(this.resourceBar);
+    this.bottomRoot.appendChild(this.navBar);
   }
 
   update(resources, gameTime) {

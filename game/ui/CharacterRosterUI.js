@@ -10,7 +10,7 @@ const WARN_THRESHOLD = 30; // rough "needs attention" line, separate from the
 export class CharacterRosterUI {
   constructor(root, callbacks) {
     this.root = root;
-    this.callbacks = callbacks; // { onSelect(characterId) }
+    this.callbacks = callbacks; // { onSelect(characterId, clickEvent) }
     this._build();
   }
 
@@ -20,7 +20,7 @@ export class CharacterRosterUI {
     this.bar.addEventListener('click', (e) => {
       const card = e.target.closest('.roster-avatar');
       if (!card) return;
-      this.callbacks.onSelect?.(card.dataset.id);
+      this.callbacks.onSelect?.(card.dataset.id, e);
     });
     this.root.appendChild(this.bar);
   }

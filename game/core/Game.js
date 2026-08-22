@@ -28,6 +28,7 @@ import { EnemySystem } from '../systems/EnemySystem.js';
 
 import { ShelterUI } from '../ui/ShelterUI.js';
 import { CharacterUI } from '../ui/CharacterUI.js';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js';
 import { ConstructionUI } from '../ui/ConstructionUI.js';
 import { WorldMapUI } from '../ui/WorldMapUI.js';
 import { CharacterRosterUI } from '../ui/CharacterRosterUI.js';
@@ -236,6 +237,12 @@ class Game {
   _buildDom() {
     const app = document.getElementById('app');
 
+    // Resource bar lives above the scene as a slim HUD strip, so the bottom
+    // of the screen only has to carry the roster + nav bar, not three stacked bars.
+    this.topRoot = document.createElement('div');
+    this.topRoot.className = 'top-root';
+    app.appendChild(this.topRoot);
+
     this.sceneWrap = document.createElement('div');
     this.sceneWrap.className = 'scene-wrap';
 
@@ -249,19 +256,19 @@ class Game {
     app.appendChild(this.uiRoot);
 
     this.rosterUI = new CharacterRosterUI(this.uiRoot, {
-      onSelect: (characterId) => {
+      onSelect: (characterId, clickEvent) => {
         const character = this.characters.find((c) => c.id === characterId);
-        if (character) this._selectCharacter(character);
+        if (character) this._onCharacterTapped(character, clickEvent.clientX, clickEvent.clientY);
       }
     });
 
-    this.shelterUI = new ShelterUI(this.uiRoot, {
-      onConstruction: () => this._toast('Выберите дверь на карте, чтобы открыть новое помещение.'),
+    this.shelterUI = new ShelterUI(this.topRoot, this.uiRoot, {
       onCharacters: () => this._toast('Нажмите на жителя, чтобы увидеть его состояние.'),
       onExpedition: () => this._toast('Экспедиции появятся после открытия выхода на поверхность.'),
       onMap: () => this.worldMapUI.show()
     });
     this.characterUI = new CharacterUI(this.uiRoot);
+    this.characterMenuUI = new CharacterMenuUI(this.uiRoot);
     this.constructionUI = new ConstructionUI(this.uiRoot);
     this.worldMapUI = new WorldMapUI(this.uiRoot);
     this.inventoryUI = new InventoryUI(this.uiRoot);
@@ -393,10 +400,12 @@ class Game {
   }
 
   _onTap(e) {
-    // Any tap on the map dismisses the enemy mini-menu, whether or not it
-    // hits a new enemy right after — it isn't a full-screen overlay like the
-    // other modals, so it doesn't swallow the tap itself.
+    // Any tap on the map dismisses the enemy mini-menu and the character
+    // mini-menu, whether or not it hits a new character/enemy right after —
+    // they aren't full-screen overlays like the other modals, so they don't
+    // swallow the tap itself.
     this.enemyMenuUI.hide();
+    this.characterMenuUI.hide();
 
     const rect = this.canvas.getBoundingClientRect();
     const px = (e.clientX - rect.left - this.offsetX) / this.scale;
@@ -411,7 +420,7 @@ class Game {
       (c) => c.position.col === col && c.position.row === row
     );
     if (tappedCharacter) {
-      this._selectCharacter(tappedCharacter);
+      this._onCharacterTapped(tappedCharacter, e.clientX, e.clientY);
       return;
     }
 
@@ -453,9 +462,20 @@ class Game {
     }
   }
 
-  _selectCharacter(character) {
-    this.characterSystem.select(character.id);
-    this._showCharacterPanel(character);
+  _onCharacterTapped(character, screenX, screenY) {
+    const alreadySelected = this.characterSystem.selectedId === character.id;
+    if (!alreadySelected) {
+      // First tap: just select them, ready to receive a move order on the
+      // next tap of the floor. No panel — that used to pop open immediately
+      // and felt like a huge interface for a single tap.
+      this.characterSystem.select(character.id);
+      return;
+    }
+    // Second tap on the same, already-selected character: small menu.
+    this.characterMenuUI.show(character, screenX, screenY, {
+      onStats: () => this._showCharacterPanel(character),
+      onGear: () => this._openInventory(character)
+    });
   }
 
   _showCharacterPanel(character) {
@@ -479,12 +499,15 @@ class Game {
       (itemId) => {
         this.inventorySystem.equip(character, itemId);
         this._openInventory(character); // refresh the modal in place
-        this._showCharacterPanel(character); // keep the panel underneath in sync (gear row)
+        // Only refresh the stats panel underneath if it's already open —
+        // gear can now be opened straight from the character mini-menu,
+        // and equipping shouldn't pop the big panel open in that case.
+        if (this.characterUI.isVisible) this._showCharacterPanel(character);
       },
       (slot) => {
         this.inventorySystem.unequip(character, slot);
         this._openInventory(character);
-        this._showCharacterPanel(character);
+        if (this.characterUI.isVisible) this._showCharacterPanel(character);
       },
       () => {}
     );
