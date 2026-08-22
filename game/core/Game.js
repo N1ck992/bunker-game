@@ -20,6 +20,8 @@ import { SaveSystem } from './SaveSystem.js';
 
 import { Character } from '../entities/Character.js';
 import { Room } from '../entities/Room.js';
+import { Enemy } from '../entities/Enemy.js';
+import { EnemySystem } from '../systems/EnemySystem.js';
 
 import { ShelterUI } from '../ui/ShelterUI.js';
 import { CharacterUI } from '../ui/CharacterUI.js';
@@ -49,6 +51,7 @@ class Game {
 
     this.rooms = roomsData.rooms.map((r) => new Room(r));
     this.characters = charactersData.characters.map((c) => new Character(c));
+    this.enemies = await this._loadEnemies(mapData);
 
     if (save) this._applySave(save);
 
@@ -87,10 +90,14 @@ class Game {
     this.expeditionSystem = new ExpeditionSystem();
     this.worldSystem = new WorldSystem();
     this.gameTime = new GameTime(balance, save?.gameTime);
+    this.enemySystem = new EnemySystem(this.pathfinder, this.movementSystem, (enemy, target) => {
+      this._toast(`${enemy.name} атакует ${target.name}!`);
+    });
 
     this._buildDom();
     this._loadBunkerImage();
     this._loadCharacterSprites();
+    this._loadEnemySprites();
     this._bindInput();
 
     // Auto-select the player's only character so its panel is one tap away,
@@ -127,6 +134,52 @@ class Game {
     if (save.rooms) {
       this.rooms = save.rooms.map((r) => new Room(r));
     }
+    if (save.enemies) {
+      const savedById = new Map(save.enemies.map((e) => [e.id, e]));
+      for (const enemy of this.enemies) {
+        const saved = savedById.get(enemy.id);
+        if (!saved) continue;
+        enemy.health = saved.health;
+        enemy.position = { ...saved.position };
+        enemy.state = saved.state;
+        if (enemy.state === 'dead') enemy.aiState = 'dead';
+      }
+    }
+  }
+
+  /**
+   * Loads every enemy race listed in game/data/enemies/index.json, then
+   * builds one Enemy instance per spawn entry in the map's "enemies" array.
+   * Adding a new race/unit never touches this method — see
+   * game/data/enemies/README.md.
+   */
+  async _loadEnemies(mapData) {
+    const spawns = mapData.enemies ?? [];
+    if (spawns.length === 0) return [];
+
+    const index = await fetchJson('game/data/enemies/index.json');
+    const raceFiles = await Promise.all(
+      index.races.map((raceId) => fetchJson(`game/data/enemies/${raceId}.json`))
+    );
+
+    const unitDefsByKey = new Map();
+    for (const race of raceFiles) {
+      for (const unit of race.units) {
+        unitDefsByKey.set(`${race.id}:${unit.id}`, unit);
+      }
+    }
+    this.enemyUnitDefsByKey = unitDefsByKey;
+
+    const enemies = [];
+    for (const spawn of spawns) {
+      const unitDef = unitDefsByKey.get(`${spawn.raceId}:${spawn.unitId}`);
+      if (!unitDef) {
+        console.error(`[Game] Unknown enemy ${spawn.raceId}:${spawn.unitId} for spawn "${spawn.id}" — skipping.`);
+        continue;
+      }
+      enemies.push(new Enemy(spawn, unitDef));
+    }
+    return enemies;
   }
 
   /**
@@ -203,6 +256,29 @@ class Game {
         makeImage('game/assets/characters/char_run_2.png')
       ]
     };
+  }
+
+  /**
+   * One sprite set per race+unit type (not per enemy instance) — several
+   * raider_grunts on the same map share these Image objects instead of each
+   * loading their own copy. Missing files (art not delivered yet) just leave
+   * naturalWidth at 0; _renderEnemies falls back to a placeholder shape so
+   * AI/combat is testable before art exists.
+   */
+  _loadEnemySprites() {
+    this.enemySprites = new Map();
+    for (const enemy of this.enemies) {
+      const key = `${enemy.raceId}:${enemy.unitId}`;
+      if (this.enemySprites.has(key)) continue;
+
+      const unitDef = this.enemyUnitDefsByKey.get(key);
+      const { idle, run, attack } = unitDef.sprites;
+      this.enemySprites.set(key, {
+        idle: makeImage(idle),
+        run: run.map(makeImage),
+        attack: attack.map(makeImage)
+      });
+    }
   }
 
   _loadBunkerImage() {
@@ -463,6 +539,8 @@ class Game {
   _update(dt) {
     this.gameTime.update(dt);
     this.movementSystem.update(this.characters, dt);
+    this.enemySystem.update(this.enemies, this.characters, dt);
+    this.movementSystem.update(this.enemies, dt);
     this._updatePendingFurnitureInteractions();
     this._updateFurnitureInteractions(dt);
 
@@ -514,6 +592,7 @@ class Game {
 
     this._renderSurfaceLabel();
     this._renderInteractables();
+    this._renderEnemies();
     this._renderCharacters();
 
     ctx.restore();
@@ -599,6 +678,99 @@ class Game {
     }
   }
 
+  /**
+   * Renders every enemy using its race+unit sprite set (see
+   * _loadEnemySprites). Falls back to a plain silhouette when the art files
+   * aren't there yet, so aggro/attack behaviour is testable before assets
+   * exist — swap in real PNGs later and this needs no changes.
+   */
+  _renderEnemies() {
+    const ctx = this.ctx;
+    const cs = this.mapData.cellSize * this.scale;
+
+    for (const enemy of this.enemies) {
+      if (enemy.state === 'dead') continue;
+
+      let px, py;
+      if (enemy.path && enemy.path.length > 0) {
+        const next = enemy.path[0];
+        px = lerp(enemy.position.col, next.col, enemy.moveProgress);
+        py = lerp(enemy.position.row, next.row, enemy.moveProgress);
+      } else {
+        px = enemy.position.col;
+        py = enemy.position.row;
+      }
+
+      const x = (px + 0.5) * cs;
+      const groundY = (py + 1) * cs;
+      const drawH = cs * CHARACTER_HEIGHT_TILES;
+
+      const spriteSet = this.enemySprites.get(`${enemy.raceId}:${enemy.unitId}`);
+      let sprite;
+      if (enemy.aiState === 'attacking') {
+        sprite = this._cycleFrame(spriteSet.attack, 8);
+      } else if (enemy.aiState === 'chasing') {
+        sprite = this._cycleFrame(spriteSet.run, 7);
+      } else {
+        sprite = spriteSet.idle;
+      }
+      const hasSprite = sprite.complete && sprite.naturalWidth > 0;
+      const drawW = hasSprite ? drawH * (sprite.naturalWidth / sprite.naturalHeight) : drawH * 0.32;
+
+      ctx.save();
+
+      // Reddish ground glow (vs. the characters' warm one) so enemies read
+      // as hostile at a glance even before real art is in place.
+      ctx.beginPath();
+      ctx.ellipse(x, groundY - 2, drawW * 0.5, cs * 0.28, 0, 0, Math.PI * 2);
+      const glow = ctx.createRadialGradient(x, groundY, 0, x, groundY, drawW * 0.6);
+      glow.addColorStop(0, 'rgba(220,60,60,0.35)');
+      glow.addColorStop(1, 'rgba(220,60,60,0)');
+      ctx.fillStyle = glow;
+      ctx.fill();
+
+      ctx.translate(x, groundY - drawH);
+      if (enemy.facingDir < 0) ctx.scale(-1, 1);
+
+      if (hasSprite) {
+        ctx.drawImage(sprite, -drawW / 2, 0, drawW, drawH);
+      } else {
+        // Placeholder: a simple silhouette so the enemy is visible/testable
+        // before its animations are delivered.
+        ctx.fillStyle = enemy.aiState === 'attacking' ? '#8b2e2e' : '#5a2e2e';
+        ctx.beginPath();
+        ctx.ellipse(0, drawH * 0.18, drawW * 0.22, drawH * 0.18, 0, 0, Math.PI * 2); // head
+        ctx.fill();
+        ctx.fillRect(-drawW * 0.18, drawH * 0.32, drawW * 0.36, drawH * 0.6); // body
+      }
+
+      ctx.restore();
+
+      // Name + health bar above the enemy, mirroring the character name label.
+      ctx.save();
+      ctx.font = `bold ${Math.max(11, 12 * this.scale)}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#2b0d0d';
+      ctx.fillText(enemy.name, x, groundY - drawH - 6 + 1);
+      ctx.fillStyle = '#ffb3b3';
+      ctx.fillText(enemy.name, x, groundY - drawH - 6);
+
+      const barW = cs * 1.2;
+      const barY = groundY - drawH - 16;
+      const healthRatio = enemy.health / enemy.maxHealth;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(x - barW / 2, barY, barW, 4);
+      ctx.fillStyle = healthRatio > 0.3 ? '#c0392b' : '#e74c3c';
+      ctx.fillRect(x - barW / 2, barY, barW * healthRatio, 4);
+      ctx.restore();
+    }
+  }
+
+  _cycleFrame(frames, fps) {
+    const frameIndex = Math.floor((this._now / 1000) * fps) % frames.length;
+    return frames[frameIndex];
+  }
+
   _renderCharacters() {
     const ctx = this.ctx;
     const cs = this.mapData.cellSize * this.scale;
@@ -670,6 +842,7 @@ class Game {
     this.saveSystem.save({
       characters: this.characters.map((c) => c.toSaveData()),
       rooms: this.rooms.map((r) => r.toSaveData()),
+      enemies: this.enemies.map((e) => e.toSaveData()),
       resources: this.resourceSystem.toSaveData(),
       gameTime: this.gameTime.toSaveData(),
       interactables: this.mapData.interactables.map((it) => ({ id: it.id, locked: it.locked, state: it.state }))

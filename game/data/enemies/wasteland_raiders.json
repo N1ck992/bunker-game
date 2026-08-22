@@ -1,0 +1,30 @@
+{
+  "id": "wasteland_raiders",
+  "name": "Пустошные рейдеры",
+  "description": "Разрозненные банды с поверхности, промышляющие набегами на уцелевшие бункеры.",
+  "units": [
+    {
+      "id": "raider_grunt",
+      "name": "Рейдер",
+      "health": 40,
+      "damage": 6,
+      "attackRange": 1.5,
+      "aggroRange": 6,
+      "attackCooldownSeconds": 1.6,
+      "tilesPerSecond": 2.2,
+      "sprites": {
+        "idle": "game/assets/enemies/wasteland_raiders/raider_grunt/idle.png",
+        "run": [
+          "game/assets/enemies/wasteland_raiders/raider_grunt/run_0.png",
+          "game/assets/enemies/wasteland_raiders/raider_grunt/run_1.png",
+          "game/assets/enemies/wasteland_raiders/raider_grunt/run_2.png"
+        ],
+        "attack": [
+          "game/assets/enemies/wasteland_raiders/raider_grunt/attack_0.png",
+          "game/assets/enemies/wasteland_raiders/raider_grunt/attack_1.png",
+          "game/assets/enemies/wasteland_raiders/raider_grunt/attack_2.png"
+        ]
+      }
+    }
+  ]
+}

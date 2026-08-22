@@ -1688,5 +1688,14 @@
   "spawnPoint": {
     "col": 18,
     "row": 28
-  }
+  },
+  "enemies": [
+    {
+      "id": "raider_grunt_01",
+      "raceId": "wasteland_raiders",
+      "unitId": "raider_grunt",
+      "col": 30,
+      "row": 28
+    }
+  ]
 }

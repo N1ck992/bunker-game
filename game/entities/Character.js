@@ -50,6 +50,11 @@ export class Character {
     );
   }
 
+  takeDamage(amount) {
+    this.health = Math.max(0, this.health - amount);
+    if (this.health <= 0) this.setInactive();
+  }
+
   setInactive() {
     this.state = 'inactive';
     this.path = [];
