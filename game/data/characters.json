@@ -1,0 +1,22 @@
+{
+  "characters": [
+    {
+      "id": "char_1",
+      "name": "Игорь",
+      "avatar": "game/assets/characters/avatars/char_1.png",
+      "health": 100,
+      "strength": 5,
+      "endurance": 5,
+      "agility": 5,
+      "intelligence": 5,
+      "hunger": 100,
+      "thirst": 100,
+      "temperature": 20,
+      "clothing": null,
+      "weapon": null,
+      "position": { "col": 18, "row": 28 },
+      "assignedRoom": null,
+      "state": "active"
+    }
+  ]
+}

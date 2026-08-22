@@ -1,0 +1,41 @@
+{
+  "rooms": [
+    {
+      "id": "room_01",
+      "type": "utility",
+      "name": "Техническое помещение",
+      "position": { "col": 4, "row": 21 },
+      "size": { "cols": 29, "rows": 8 },
+      "accessible": true,
+      "temperature": 18,
+      "maxWorkers": 2,
+      "workers": [],
+      "production": {
+        "water": 4,
+        "food": 0,
+        "heat": 3,
+        "materials": 0
+      },
+      "description": "Уцелевшие насосы и обогреватель старого бункера. Дают немного воды и тепла, но еду тут не произвести — нужна кухня."
+    },
+    {
+      "id": "room_A",
+      "type": "kitchen",
+      "name": "Кухня (заблокировано)",
+      "position": { "col": 40, "row": 21 },
+      "size": { "cols": 6, "rows": 8 },
+      "accessible": false,
+      "temperature": null,
+      "maxWorkers": 2,
+      "workers": [],
+      "production": {
+        "water": 0,
+        "food": 6,
+        "heat": 0,
+        "materials": 0
+      },
+      "unlockCost": { "materials": 40 },
+      "description": "За дверью A. Откройте, потратив стройматериалы, чтобы начать производство еды."
+    }
+  ]
+}
