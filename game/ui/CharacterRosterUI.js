@@ -1,7 +1,11 @@
 // CharacterRosterUI.js
-// Row of character avatars placed directly under the map. Lets the player
-// select a settler by tapping their portrait instead of hunting for the tiny
-// sprite on the canvas — same selection callback the canvas tap uses.
+// Floating column of character avatars pinned to the bottom-right corner of
+// the game area (see the .roster-bar CSS and where Game._buildDom mounts
+// this on #app). Always on screen, including over the world map, so the
+// player can select/inspect a settler no matter which screen is active.
+// Lets the player select a settler by tapping their portrait instead of
+// hunting for the tiny sprite on the canvas — same selection callback the
+// canvas tap uses.
 
 const WARN_THRESHOLD = 30; // rough "needs attention" line, separate from the
                              // exact criticalThreshold in balance.json — this
@@ -42,8 +46,8 @@ export class CharacterRosterUI {
     }
   }
 
-  /** Hidden while the world map takes over the screen — the roster is a
-   * shelter-specific tool for picking a settler on the bunker canvas. */
+  /** Unused now that the roster stays visible on every screen (see
+   * Game._toggleWorldMap) — kept in case a future screen needs to hide it. */
   setVisible(visible) {
     this.bar.classList.toggle('hidden', !visible);
   }

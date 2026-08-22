@@ -106,6 +106,7 @@ export class InventoryUI {
     if (item.coldResist) parts.push(`холод ${item.coldResist > 0 ? '+' : ''}${item.coldResist}`);
     if (item.heatResist) parts.push(`жара ${item.heatResist > 0 ? '+' : ''}${item.heatResist}`);
     if (item.healthModifier) parts.push(`здоровье ${item.healthModifier > 0 ? '+' : ''}${item.healthModifier}`);
+    if (item.allowsTravel) parts.push('можно выходить на поверхность');
     return `<span class="item-stats">${parts.join(' · ')}</span>`;
   }
 

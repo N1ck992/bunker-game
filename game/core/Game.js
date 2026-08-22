@@ -254,7 +254,11 @@ class Game {
     this.uiRoot.className = 'ui-root';
     app.appendChild(this.uiRoot);
 
-    this.rosterUI = new CharacterRosterUI(this.uiRoot, {
+    // Mounted directly on #app (not uiRoot) so it can be pinned to the
+    // bottom-right corner of the whole game area via CSS and stay visible
+    // over the canvas regardless of mode — see _toggleWorldMap, which no
+    // longer hides it.
+    this.rosterUI = new CharacterRosterUI(app, {
       onSelect: (characterId, clickEvent) => {
         const character = this.characters.find((c) => c.id === characterId);
         if (character) this._onCharacterTapped(character, clickEvent.clientX, clickEvent.clientY);
@@ -267,10 +271,15 @@ class Game {
       onMap: () => this._toggleWorldMap()
     });
     this.characterUI = new CharacterUI(this.uiRoot);
-    this.characterMenuUI = new CharacterMenuUI(this.uiRoot);
+    // These two float at the exact tap point (see their getBoundingClientRect
+    // math), so they're mounted on #app itself rather than uiRoot: uiRoot's
+    // own box sits low and short (just the nav bar), while #app spans the
+    // whole game area — mounting there keeps the click-to-local-coordinate
+    // math and the panel's actual containing block in agreement.
+    this.characterMenuUI = new CharacterMenuUI(app);
     this.constructionUI = new ConstructionUI(this.uiRoot);
     this.inventoryUI = new InventoryUI(this.uiRoot);
-    this.enemyMenuUI = new EnemyMenuUI(this.uiRoot);
+    this.enemyMenuUI = new EnemyMenuUI(app);
     this.enemyInfoUI = new EnemyInfoUI(this.uiRoot);
 
     this.toastEl = document.createElement('div');
@@ -294,7 +303,7 @@ class Game {
     this.inventoryUI.hide();
     this.constructionUI.hide();
     this.characterSystem.deselect();
-    this.rosterUI.setVisible(this.mode === 'shelter');
+    // Roster stays visible on both screens now — see _buildDom.
     this.shelterUI.setMapMode(this.mode === 'worldmap');
   }
 
@@ -476,6 +485,10 @@ class Game {
     // toward that column.
     const selected = this.characterSystem.getSelected(this.characters);
     if (selected) {
+      if (selected.combatState === 'attacking') {
+        this._toast(`${selected.name} ведёт бой и не может двигаться.`);
+        return;
+      }
       this.pendingFurnitureInteractions.delete(selected.id);
       const target = { col, row: selected.position.row };
       const moved = this.movementSystem.moveTo(selected, target, this.pathfinder);
@@ -607,6 +620,11 @@ class Game {
     const weapon = character.weapon ? this.itemsById.get(character.weapon) : null;
     if (!weapon || weapon.slot !== 'weapon') {
       this._toast(`${character.name}: нет оружия для атаки.`);
+      return;
+    }
+
+    if (character.combatState === 'attacking' && character.targetEnemyId !== enemy.id) {
+      this._toast(`${character.name} уже ведёт бой и не может двигаться.`);
       return;
     }
 
@@ -957,6 +975,10 @@ class Game {
       ctx.font = '11px monospace';
       ctx.fillStyle = 'rgba(232,176,75,0.65)';
       ctx.fillText('В пути...', this.canvas.width / 2, 42);
+    } else if (!this._canTravelWorldMap()) {
+      ctx.font = '11px monospace';
+      ctx.fillStyle = 'rgba(192,57,43,0.85)';
+      ctx.fillText('Нужен транспорт-костюм для перемещения', this.canvas.width / 2, 42);
     }
     ctx.restore();
   }
@@ -1038,12 +1060,28 @@ class Game {
     const target = world.getHex(coords.q, coords.r);
     if (!target) return;
 
+    if (!this._canTravelWorldMap()) {
+      this._toast('Наденьте транспорт-костюм, чтобы выходить на поверхность.');
+      return;
+    }
     if (world.isTraveling) {
       this._toast('Уже в пути к следующей соте.');
       return;
     }
     const moved = world.tryMoveTo(target);
     if (!moved) this._toast('Можно перейти только в соседнюю соту.');
+  }
+
+  /** The wasteland isn't survivable in regular bunker clothing — at least
+   * one active settler needs a clothing item flagged allowsTravel (see
+   * items.json's transport_suit) equipped before any hex-to-hex movement
+   * on the world map is allowed. Viewing the map is still always fine. */
+  _canTravelWorldMap() {
+    return this.characters.some((character) => {
+      if (!character.isActive || !character.clothing) return false;
+      const item = this.itemsById.get(character.clothing);
+      return item?.allowsTravel === true;
+    });
   }
 
   _renderSurfaceLabel() {

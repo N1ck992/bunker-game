@@ -14,7 +14,7 @@
       "temperature": 20,
       "clothing": null,
       "weapon": "kinetic_pistol",
-      "inventory": ["warm_clothes"],
+      "inventory": ["warm_clothes", "transport_suit"],
       "position": { "col": 18, "row": 28 },
       "assignedRoom": null,
       "state": "active"

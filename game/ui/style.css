@@ -439,14 +439,31 @@ canvas {
   cursor: default;
 }
 
-/* Character roster — sits directly under the map for quick unit selection */
+/* Character roster — floats over the bottom-right corner of the game area
+ * (pinned to #app, not the in-flow document) so it's always reachable for
+ * quick unit selection, whether the bunker or the world map is showing.
+ * z-index stays below .top-root/.ui-root (10): both are separate stacking
+ * contexts under #app, so this must lose to them as a whole in order for
+ * the enemy/character mini-menus, panels, and toast (all nested inside
+ * .ui-root) to still be able to render above the roster and stay clickable
+ * — a nested z-index like .enemy-menu's 60 can never outrank a sibling
+ * context's z-index on its own. */
 .roster-bar {
+  position: absolute;
+  right: 10px;
+  bottom: 48px; /* clears the nav-bar below it */
+  z-index: 5; /* above the canvas, below .top-root/.ui-root and everything in them */
   display: flex;
+  flex-direction: column-reverse; /* newest/first avatar closest to the thumb */
   gap: 8px;
-  padding: 6px 10px;
-  background: var(--steel-900);
-  border-bottom: 1px solid var(--steel-700);
-  overflow-x: auto;
+  max-height: calc(100% - 100px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 6px;
+  background: rgba(20, 23, 15, 0.88);
+  border: 1px solid var(--steel-700);
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4);
 }
 
 .roster-avatar {

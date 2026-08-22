@@ -39,6 +39,11 @@ export class MovementSystem {
    */
   moveTo(character, target, pathfinder) {
     if (!character.isActive) return false;
+    // Characters only (enemies don't have combatState — see Enemy.js's
+    // aiState instead, which EnemySystem already handles on its own): once
+    // engaged, a character holds position and just fires — no repositioning
+    // until CombatSystem drops it back to 'idle' (target dead/out of range).
+    if (character.combatState === 'attacking') return false;
     const path = pathfinder.findPath(character.position, target);
     if (path === null) return false;
     character.path = path;

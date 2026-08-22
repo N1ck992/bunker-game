@@ -51,6 +51,12 @@ export class CombatSystem {
       character.combatState = 'attacking';
       character.targetEnemyId = target.id;
       character.facingDir = target.position.col >= character.position.col ? 1 : -1;
+      // From this frame on the character holds position — see
+      // MovementSystem.moveTo, which now refuses new orders while
+      // combatState is 'attacking'. Clearing any in-progress path here
+      // covers the case where a target wanders into range mid-walk.
+      character.path = [];
+      character.moveProgress = 0;
 
       if (character.attackCooldownRemaining <= 0) {
         character.attackCooldownRemaining = weapon.attackCooldownSeconds;

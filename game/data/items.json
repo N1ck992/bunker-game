@@ -25,6 +25,15 @@
       "healthModifier": 5
     },
     {
+      "id": "transport_suit",
+      "name": "Транспорт-костюм",
+      "slot": "clothing",
+      "coldResist": 5,
+      "heatResist": 5,
+      "healthModifier": 0,
+      "allowsTravel": true
+    },
+    {
       "id": "kinetic_pistol",
       "name": "Кинетический пистолет",
       "slot": "weapon",

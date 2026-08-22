@@ -1,10 +1,11 @@
 // CharacterMenuUI.js
 // Small floating context menu shown when the player taps a character that is
-// already selected — mirrors EnemyMenuUI's pattern. The first tap on a
-// character just selects them (so the player can then tap the floor to move
-// them); this menu only appears on the second tap, and offers the two things
-// that used to open the big stats panel immediately: Характеристики (stats)
-// and Амуниция (gear/inventory).
+// already selected — mirrors EnemyMenuUI's pattern, including being mounted
+// directly on #app (not uiRoot) so its getBoundingClientRect() math lines up
+// with its own containing block. The first tap on a character just selects
+// them (so the player can then tap the floor to move them); this menu only
+// appears on the second tap, and offers the two things that used to open the
+// big stats panel immediately: Характеристики (stats) and Амуниция (gear/inventory).
 
 export class CharacterMenuUI {
   constructor(root) {

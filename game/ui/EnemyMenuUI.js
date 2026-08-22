@@ -5,10 +5,11 @@
 // "Изучить" (inspect, no movement) and "Атаковать" (walk to weapon range
 // and hold position — see Game._commandAttack).
 //
-// Positioned in screen space near the tap point, inside the same uiRoot as
-// every other panel — it floats over the canvas rather than covering the
-// whole screen like ConstructionUI's modal, so a tap elsewhere on the map
-// should hide() it (see Game._onTap).
+// Positioned in screen space near the tap point. Mounted directly on #app
+// (not uiRoot — see Game._buildDom) so its getBoundingClientRect() math
+// lines up with its own containing block; it floats over the canvas rather
+// than covering the whole screen like ConstructionUI's modal, so a tap
+// elsewhere on the map should hide() it (see Game._onTap).
 
 export class EnemyMenuUI {
   constructor(root) {
