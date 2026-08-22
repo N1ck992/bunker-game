@@ -24,8 +24,7 @@
           "game/assets/enemies/mutants/mutant_stalker/idle_07.png",
           "game/assets/enemies/mutants/mutant_stalker/idle_08.png",
           "game/assets/enemies/mutants/mutant_stalker/idle_09.png",
-          "game/assets/enemies/mutants/mutant_stalker/idle_10.png",
-          "game/assets/enemies/mutants/mutant_stalker/idle_11.png"
+          "game/assets/enemies/mutants/mutant_stalker/idle_10.png"
         ],
         "run": [
           "game/assets/enemies/mutants/mutant_stalker/run_00.png",
