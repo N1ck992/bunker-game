@@ -1,0 +1,37 @@
+{
+  "time": {
+    "dayDurationSeconds": 900,
+    "nightDurationSeconds": 900,
+    "tickIntervalMs": 1000
+  },
+  "temperature": {
+    "surfaceDay": 42,
+    "surfaceNight": -5,
+    "depthModifierPerLevel": 6,
+    "heatSourceRadius": 6,
+    "heatSourceStrength": 14,
+    "safeMin": 10,
+    "safeMax": 30,
+    "healthLossPerTickOutsideSafeRange": 1
+  },
+  "resources": {
+    "startingWater": 60,
+    "startingFood": 60,
+    "startingHeat": 40,
+    "startingMaterials": 30,
+    "consumptionPerCharacter": {
+      "water": 1.2,
+      "food": 1.4
+    },
+    "tickIntervalMs": 3000
+  },
+  "needs": {
+    "hungerDecayPerTick": 1.5,
+    "thirstDecayPerTick": 1.6,
+    "criticalThreshold": 15,
+    "healthLossWhenCritical": 2
+  },
+  "movement": {
+    "tilesPerSecond": 2.5
+  }
+}
