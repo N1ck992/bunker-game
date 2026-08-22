@@ -43,9 +43,17 @@
           "game/assets/enemies/mutants/mutant_stalker/run_13.png"
         ],
         "attack": [
-          "game/assets/enemies/mutants/mutant_stalker/attack_0.png",
-          "game/assets/enemies/mutants/mutant_stalker/attack_1.png",
-          "game/assets/enemies/mutants/mutant_stalker/attack_2.png"
+          "game/assets/enemies/mutants/mutant_stalker/attack_00.png",
+          "game/assets/enemies/mutants/mutant_stalker/attack_01.png",
+          "game/assets/enemies/mutants/mutant_stalker/attack_02.png",
+          "game/assets/enemies/mutants/mutant_stalker/attack_03.png",
+          "game/assets/enemies/mutants/mutant_stalker/attack_04.png",
+          "game/assets/enemies/mutants/mutant_stalker/attack_05.png",
+          "game/assets/enemies/mutants/mutant_stalker/attack_07.png",
+          "game/assets/enemies/mutants/mutant_stalker/attack_08.png",
+          "game/assets/enemies/mutants/mutant_stalker/attack_09.png",
+          "game/assets/enemies/mutants/mutant_stalker/attack_10.png",
+          "game/assets/enemies/mutants/mutant_stalker/attack_11.png"
         ]
       }
     }
