@@ -72,6 +72,12 @@ class Game {
     // _onFurnitureTapped / _updateFurnitureInteractions.
     this.activeFurnitureInteractions = new Map();
 
+    // Characters currently walking toward a furniture object they tapped,
+    // keyed by character id -> interactable id. Once they arrive at the
+    // object's column, _updatePendingFurnitureInteractions starts the
+    // actual gather session.
+    this.pendingFurnitureInteractions = new Map();
+
     this.movementSystem = new MovementSystem(balance);
     this.characterSystem = new CharacterSystem(balance);
     this.roomSystem = new RoomSystem(this.rooms);
@@ -270,6 +276,7 @@ class Game {
     // toward that column.
     const selected = this.characterSystem.getSelected(this.characters);
     if (selected) {
+      this.pendingFurnitureInteractions.delete(selected.id);
       const target = { col, row: selected.position.row };
       const moved = this.movementSystem.moveTo(selected, target, this.pathfinder);
       if (!moved) this._toast('Туда пройти нельзя.');
@@ -325,13 +332,11 @@ class Game {
   }
 
   /**
-   * Starts a "gather" session on a furniture object (table, wardrobe, ...).
-   * While active, resources trickle in every frame (see
-   * _updateFurnitureInteractions); once durationSeconds elapses the object
-   * goes on cooldown for cooldownSeconds before it can be used again.
-   * One session per object at a time — fine while there's a single
-   * character, but note this doesn't yet stop a second character from
-   * queuing up on the same object mid-session.
+   * Tapping furniture no longer starts gathering on the spot — the character
+   * has to walk over to it first (movement is horizontal-only, so "over" means
+   * lining up on the object's column, on whatever row the character is
+   * already standing on). Once they arrive, _updatePendingFurnitureInteractions
+   * kicks off the actual gather session via _startFurnitureGather.
    */
   _onFurnitureTapped(interactable) {
     const now = this._now ?? performance.now();
@@ -343,13 +348,64 @@ class Game {
     }
     if (this.activeFurnitureInteractions.has(interactable.id)) return;
 
+    const character = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
+    if (!character) return;
+
+    const alreadyBusy = [...this.activeFurnitureInteractions.values()].some(
+      (session) => session.character === character
+    );
+    if (alreadyBusy) {
+      this._toast('Сначала закончи текущее дело.');
+      return;
+    }
+
+    if (character.position.col === interactable.col) {
+      this._startFurnitureGather(interactable, character);
+      return;
+    }
+
+    const target = { col: interactable.col, row: character.position.row };
+    const moved = this.movementSystem.moveTo(character, target, this.pathfinder);
+    if (moved) {
+      this.pendingFurnitureInteractions.set(character.id, interactable.id);
+    } else {
+      this._toast('Туда пройти нельзя.');
+    }
+  }
+
+  _updatePendingFurnitureInteractions() {
+    for (const [characterId, interactableId] of this.pendingFurnitureInteractions) {
+      const character = this.characters.find((c) => c.id === characterId);
+      const interactable = this.mapData.interactables.find((it) => it.id === interactableId);
+
+      if (!character || !interactable || !character.isActive) {
+        this.pendingFurnitureInteractions.delete(characterId);
+        continue;
+      }
+      if (character.path.length > 0) continue; // still walking there
+
+      this.pendingFurnitureInteractions.delete(characterId);
+      // Arrived on the right column and the object is still free (didn't go
+      // on cooldown from another character while this one was walking)?
+      if (
+        character.position.col === interactable.col &&
+        !this.activeFurnitureInteractions.has(interactable.id) &&
+        !(interactable.cooldownUntil && (this._now ?? performance.now()) < interactable.cooldownUntil)
+      ) {
+        this._startFurnitureGather(interactable, character);
+      }
+    }
+  }
+
+  _startFurnitureGather(interactable, character) {
+    const now = this._now ?? performance.now();
     const { durationSeconds, cooldownSeconds } = interactable.interaction;
     interactable.activeUntil = now + durationSeconds * 1000;
     interactable.cooldownUntil = interactable.activeUntil + cooldownSeconds * 1000;
-    this.activeFurnitureInteractions.set(interactable.id, { interactable, gained: {} });
+    this.activeFurnitureInteractions.set(interactable.id, { interactable, character, gained: {} });
 
-    const character = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
-    if (character) character.animState = 'examine';
+    character.animState = 'examine';
+    character.facingDir = interactable.col >= character.position.col ? 1 : -1;
 
     this._toast(`${interactable.label}: идёт сбор ресурсов...`);
   }
@@ -376,8 +432,7 @@ class Game {
 
       if (isDone) {
         this.activeFurnitureInteractions.delete(id);
-        const character = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
-        if (character) character.animState = 'idle';
+        if (session.character.animState === 'examine') session.character.animState = 'idle';
 
         const summary = Object.entries(session.gained)
           .map(([res, amount]) => `+${amount.toFixed(1)} ${RESOURCE_LABELS[res] ?? res}`)
@@ -408,6 +463,7 @@ class Game {
   _update(dt) {
     this.gameTime.update(dt);
     this.movementSystem.update(this.characters, dt);
+    this._updatePendingFurnitureInteractions();
     this._updateFurnitureInteractions(dt);
 
     // needs/resource ticks run on their own slower cadence
