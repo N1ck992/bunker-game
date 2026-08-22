@@ -32,6 +32,8 @@ import { ConstructionUI } from '../ui/ConstructionUI.js';
 import { WorldMapUI } from '../ui/WorldMapUI.js';
 import { CharacterRosterUI } from '../ui/CharacterRosterUI.js';
 import { InventoryUI } from '../ui/InventoryUI.js';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js';
 import { showStartMenu } from '../ui/StartMenu.js';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
@@ -256,6 +258,8 @@ class Game {
     this.constructionUI = new ConstructionUI(this.uiRoot);
     this.worldMapUI = new WorldMapUI(this.uiRoot);
     this.inventoryUI = new InventoryUI(this.uiRoot);
+    this.enemyMenuUI = new EnemyMenuUI(this.uiRoot);
+    this.enemyInfoUI = new EnemyInfoUI(this.uiRoot);
 
     this.toastEl = document.createElement('div');
     this.toastEl.className = 'toast hidden';
@@ -342,6 +346,11 @@ class Game {
   }
 
   _onTap(e) {
+    // Any tap on the map dismisses the enemy mini-menu, whether or not it
+    // hits a new enemy right after — it isn't a full-screen overlay like the
+    // other modals, so it doesn't swallow the tap itself.
+    this.enemyMenuUI.hide();
+
     const rect = this.canvas.getBoundingClientRect();
     const px = (e.clientX - rect.left - this.offsetX) / this.scale;
     const py = (e.clientY - rect.top - this.offsetY) / this.scale;
@@ -359,7 +368,21 @@ class Game {
       return;
     }
 
-    // 2) Tapped an interactable (door/ladder/furniture)?
+    // 2) Tapped an (active) enemy? Open the Изучить/Атаковать mini-menu
+    // instead of walking straight there — that used to send the hero right
+    // onto the enemy's own tile. Hit area is deliberately much bigger than
+    // its single grid tile (see _enemyHitBounds) so it's easy to tap.
+    const tappedEnemy = this.enemies.find((en) => {
+      if (!en.isActive) return false;
+      const box = this._enemyHitBounds(en);
+      return px >= box.left && px <= box.right && py >= box.top && py <= box.bottom;
+    });
+    if (tappedEnemy) {
+      this._onEnemyTapped(tappedEnemy, e);
+      return;
+    }
+
+    // 3) Tapped an interactable (door/ladder/furniture)?
     const interactable = this.interactableStates.get(`${col},${row}`);
     if (interactable) {
       if (interactable.type === 'furniture') {
@@ -370,7 +393,7 @@ class Game {
       return;
     }
 
-    // 3) Otherwise, move the selected character there. Movement is
+    // 4) Otherwise, move the selected character there. Movement is
     // horizontal-only, so we ignore the tapped row and keep the character's
     // current one — tapping anywhere in the room just walks them left/right
     // toward that column.
@@ -418,6 +441,111 @@ class Game {
       },
       () => {}
     );
+  }
+
+  /**
+   * Tap hit-box for an enemy, deliberately much larger than its single grid
+   * tile so it's easy to hit on a phone screen. Returned in the same
+   * unscaled image-space pixels as _onTap's px/py (i.e. divide out
+   * this.scale), so callers can compare directly.
+   *
+   * Width: as wide as the enemy's own rendered sprite image (same drawW
+   * math as _renderEnemies), not just its one grid column.
+   * Height: from the floor tile it's standing on up to the ceiling of this
+   * room — the contiguous run of walkable tiles above it in the same column
+   * — instead of just its own row, since the room art is much taller than a
+   * single tile.
+   */
+  _enemyHitBounds(enemy) {
+    const cellSize = this.mapData.cellSize;
+
+    const spriteSet = this.enemySprites.get(`${enemy.raceId}:${enemy.unitId}`);
+    const idleSprite = spriteSet?.idle?.[0];
+    const drawH = cellSize * CHARACTER_HEIGHT_TILES;
+    const hasSprite = idleSprite && idleSprite.complete && idleSprite.naturalWidth > 0;
+    const drawW = hasSprite ? drawH * (idleSprite.naturalWidth / idleSprite.naturalHeight) : drawH * 0.32;
+
+    const centerX = (enemy.position.col + 0.5) * cellSize;
+
+    let ceilingRow = enemy.position.row;
+    while (ceilingRow > 0 && this.pathfinder.isWalkable(enemy.position.col, ceilingRow - 1)) {
+      ceilingRow--;
+    }
+
+    return {
+      left: centerX - drawW / 2,
+      right: centerX + drawW / 2,
+      top: ceilingRow * cellSize,
+      bottom: (enemy.position.row + 1) * cellSize
+    };
+  }
+
+  _onEnemyTapped(enemy, e) {
+    this.enemyMenuUI.show(enemy, e.clientX, e.clientY, {
+      onExamine: () => this._examineEnemy(enemy),
+      onAttack: () => this._commandAttack(enemy)
+    });
+  }
+
+  /** "Изучить" — a look-don't-touch inspection, so the hero never moves for this. */
+  _examineEnemy(enemy) {
+    const character = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
+    if (character) {
+      character.animState = 'examine';
+      character.facingDir = enemy.position.col >= character.position.col ? 1 : -1;
+      clearTimeout(this._examineTimer);
+      this._examineTimer = setTimeout(() => {
+        character.animState = 'idle';
+      }, 1800);
+    }
+
+    this.enemyInfoUI.show(enemy, () => {});
+  }
+
+  /**
+   * "Атаковать" — walks the selected character to just inside their
+   * equipped weapon's range (never onto the enemy's own tile), then stops.
+   * Once there the path is empty, so the hero simply stands and faces the
+   * target while CombatSystem's per-frame auto-fire does the rest — the
+   * hero never chases past that point.
+   */
+  _commandAttack(enemy) {
+    const character = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
+    if (!character || !character.isActive) return;
+
+    const weapon = character.weapon ? this.itemsById.get(character.weapon) : null;
+    if (!weapon || weapon.slot !== 'weapon') {
+      this._toast(`${character.name}: нет оружия для атаки.`);
+      return;
+    }
+
+    const dirToEnemy = enemy.position.col >= character.position.col ? 1 : -1;
+    const distance = Math.hypot(
+      enemy.position.col - character.position.col,
+      enemy.position.row - character.position.row
+    );
+
+    if (distance <= weapon.range) {
+      // Already in range — just turn to face the target and hold position.
+      character.facingDir = dirToEnemy;
+      return;
+    }
+
+    this.pendingFurnitureInteractions.delete(character.id);
+
+    const standoffDistance = Math.max(1, weapon.range - 1);
+    const desiredCol = enemy.position.col - dirToEnemy * standoffDistance;
+    const target = { col: desiredCol, row: character.position.row };
+
+    let moved = this.movementSystem.moveTo(character, target, this.pathfinder);
+    if (!moved) {
+      // Standoff tile blocked (e.g. a wall) — fall back to one tile short of
+      // the enemy's own column instead, so the hero still doesn't end up
+      // standing on top of it.
+      const fallbackCol = enemy.position.col - dirToEnemy;
+      moved = this.movementSystem.moveTo(character, { col: fallbackCol, row: character.position.row }, this.pathfinder);
+    }
+    if (!moved) this._toast('Туда пройти нельзя.');
   }
 
   _onInteractableTapped(interactable) {

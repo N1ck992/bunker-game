@@ -125,7 +125,7 @@ canvas {
   overflow-y: auto;
 }
 
-.construction-modal, .worldmap-modal {
+.construction-modal, .worldmap-modal, .enemy-info-modal {
   position: fixed;
   inset: 0;
   bottom: auto;
@@ -293,6 +293,46 @@ canvas {
   font-family: inherit;
   font-weight: bold;
   cursor: pointer;
+}
+
+/* Enemy tap mini-menu (Изучить / Атаковать) */
+.enemy-menu {
+  position: absolute;
+  z-index: 60;
+  background: var(--steel-800);
+  border: 2px solid var(--rust);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 140px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+}
+
+.enemy-menu-title {
+  font-size: 11px;
+  color: #ffb3b3;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+  margin-bottom: 2px;
+}
+
+.enemy-menu-btn {
+  background: var(--steel-700);
+  border: 1px solid var(--amber-dim);
+  color: var(--text);
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.enemy-menu-btn:active { background: var(--steel-900); color: var(--amber); }
+
+.enemy-menu-btn.attack-btn {
+  border-color: var(--rust);
+  color: #ffb3b3;
 }
 
 .toast {
