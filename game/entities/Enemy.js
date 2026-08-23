@@ -36,7 +36,13 @@ export class Enemy {
     // Item ids that appear on the corpse once this unit dies — see
     // Game._onCorpseTapped, which grants them to the acting character and
     // flips lootCollected so the corpse can't be searched twice.
-    this.loot = unitDef.loot ? [...unitDef.loot] : [];
+    // Loot is per-spawn-instance (map JSON "enemies" entry), NOT per unit
+    // type — every mutant_stalker shares the same unitDef, so putting loot
+    // there would hand every single one of them a keycard. Only specific
+    // spawns (e.g. mutant_stalker_01, the very first enemy in the game)
+    // carry a "loot" field of their own; falls back to unitDef.loot for
+    // any unit whose loot genuinely is uniform across all its instances.
+    this.loot = spawn.loot ? [...spawn.loot] : (unitDef.loot ? [...unitDef.loot] : []);
     this.lootCollected = false;
 
     this.spawnPosition = { col: spawn.col, row: spawn.row };

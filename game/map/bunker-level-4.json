@@ -1,8 +1,8 @@
 {
- "id": "bunker_level_-1",
- "name": "Уровень -1",
- "depth": -1,
- "image": "game/assets/bunker/bunker-room-1.png?v=4",
+ "id": "bunker_level_-4",
+ "name": "Уровень -4",
+ "depth": -4,
+ "image": "game/assets/bunker/bunker-room-4.png?v=4",
  "imageSize": {
   "width": 1536,
   "height": 1024
@@ -21,7 +21,7 @@
   "7": "разрушенная область",
   "8": "выход наружу"
  },
- "comment": "Full art (wasteland + vault door on top, underground room below) is shown as one scene. Only the underground band (rows ~21-28) is walkable; the surface half is visible backdrop, locked until story unlocks it.",
+ "comment": "Placeholder fourth level, reusing level -3's grid 1:1 (layout/doors/collision) (\"того же дизайна\", как остальные) now with its own room art (game/assets/bunker/bunker-room-4.png) so it doesn't look identical to the other floors. Only reachable once door_C on level -3 is hacked open by Ольга — see Game._commandHackDoor/_updateHacking. One more mutant_stalker than level -3, per the brief (\"на 1 монстра больше\" each floor down from here). Its own door_D (col 40, hack:40) continues down to level -5 — see bunker-level-5.json.",
  "grid": [
   [
    0,
@@ -1626,69 +1626,27 @@
  ],
  "interactables": [
   {
-   "id": "door_01",
+   "id": "door_up_03",
    "type": "door",
    "col": 4,
    "row": 21,
-   "state": "closed",
-   "leadsTo": "bunker_level_-2",
-   "label": "Дверь — вниз, на уровень -2",
-   "locked": true,
-   "unlockCondition": "item:keycard_level2",
-   "leadsToFile": "game/map/bunker-level-2.json"
+   "state": "open",
+   "leadsTo": "bunker_level_-3",
+   "label": "Электронная дверь — обратно на уровень -3",
+   "locked": false,
+   "leadsToFile": "game/map/bunker-level-3.json"
   },
   {
-   "id": "door_A",
+   "id": "door_D",
    "type": "door",
    "col": 40,
    "row": 21,
    "state": "closed",
-   "leadsTo": "room_A",
-   "label": "Дверь A — Соседнее помещение",
+   "leadsTo": "bunker_level_-5",
+   "label": "Электронная дверь — вниз, на уровень -5",
    "locked": true,
-   "unlockCondition": "hack:60"
-  },
-  {
-   "id": "ladder_01",
-   "type": "ladder",
-   "col": 33,
-   "row": 21,
-   "toRow": 12,
-   "leadsTo": "bunker_level_-2",
-   "label": "Лестница на уровень -2",
-   "locked": true,
-   "unlockCondition": "story:not_yet_available"
-  },
-  {
-   "id": "table_01",
-   "type": "furniture",
-   "col": 19,
-   "row": 27,
-   "label": "Стол",
-   "locked": false,
-   "interaction": {
-    "produces": {
-     "food": 0.3,
-     "water": 0.2
-    },
-    "durationSeconds": 8,
-    "cooldownSeconds": 25
-   }
-  },
-  {
-   "id": "wardrobe_01",
-   "type": "furniture",
-   "col": 12,
-   "row": 27,
-   "label": "Шкаф",
-   "locked": false,
-   "interaction": {
-    "produces": {
-     "materials": 0.4
-    },
-    "durationSeconds": 8,
-    "cooldownSeconds": 25
-   }
+   "unlockCondition": "hack:40",
+   "leadsToFile": "game/map/bunker-level-5.json"
   }
  ],
  "spawnPoint": {
@@ -1697,14 +1655,25 @@
  },
  "enemies": [
   {
-   "id": "mutant_stalker_01",
+   "id": "mutant_stalker_l4_01",
    "raceId": "mutants",
    "unitId": "mutant_stalker",
-   "col": 30,
-   "row": 28,
-   "loot": [
-    "keycard_level2"
-   ]
+   "col": 26,
+   "row": 27
+  },
+  {
+   "id": "mutant_stalker_l4_02",
+   "raceId": "mutants",
+   "unitId": "mutant_stalker",
+   "col": 34,
+   "row": 27
+  },
+  {
+   "id": "mutant_stalker_l4_03",
+   "raceId": "mutants",
+   "unitId": "mutant_stalker",
+   "col": 18,
+   "row": 26
   }
  ]
 }
