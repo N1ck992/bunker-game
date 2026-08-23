@@ -1317,6 +1317,13 @@ class Game {
         if (linkedRoom) linkedRoom.open();
 
         this._toast(`${character.name} взломала дверь: ${interactable.label}`);
+
+        // Same "ask before actually switching floors" gate as the resource/
+        // item unlock path in _performInteractableInteraction — a hacked
+        // door leading to another level's file shouldn't behave any
+        // differently just because it was opened by Ольга instead of spent
+        // materials.
+        if (interactable.leadsToFile) this._confirmLevelTransition(interactable);
       }
     }
   }
@@ -1398,9 +1405,13 @@ class Game {
   /**
    * Swaps the active floor for another pre-authored map JSON (fetched once,
    * then cached in this.levelCache) — rebuilds the pathfinder/interactable
-   * state and reloads that level's enemies, and drops the whole party at its
-   * spawnPoint. Used for door_01 → bunker_level_-2 today, but works for any
-   * leadsToFile door in either direction (see door_up_01 on level -2).
+   * state and reloads that level's enemies, and drops the whole party at the
+   * door on the new floor that actually leads back to the floor they just
+   * left (see _spawnPointFor) rather than always the same fixed point —
+   * going down through the door on the left should put you at the door on
+   * the left below, and same for the right. Used for door_01 →
+   * bunker_level_-2 today, but works for any leadsToFile door in either
+   * direction (see door_up_01/door_B/door_up_02).
    *
    * The new floor's art is registered into the persistent stack (see
    * _registerFloor) rather than replacing the previous floor's — it stays
@@ -1412,6 +1423,8 @@ class Game {
     if (this._switchingLevel) return;
     this._switchingLevel = true;
     try {
+      const cameFromLevelId = this.mapData.id;
+
       this.levelCache = this.levelCache ?? new Map();
       let mapData = this.levelCache.get(fileUrl);
       if (!mapData) {
@@ -1430,7 +1443,7 @@ class Game {
       }
       this.pathfinder = new PathfindingSystem(this.mapData.grid, this.interactableStates);
 
-      const spawn = this.mapData.spawnPoint;
+      const spawn = this._spawnPointFor(this.mapData, cameFromLevelId);
       for (const character of this.characters) {
         character.position = { ...spawn };
         character.path = [];
@@ -1454,6 +1467,43 @@ class Game {
     } finally {
       this._switchingLevel = false;
     }
+  }
+
+  /**
+   * Where the party appears on a freshly-loaded floor: right at the door
+   * that leads back to the floor they just came from (identified by that
+   * door's own `leadsTo` matching the previous floor's id), on the floor
+   * row directly below it — same "walk down from the door's row until a
+   * room tile" search _interactableHitBounds uses. Left door down puts you
+   * at the left door on arrival; right door down puts you at the right
+   * door — whichever one actually connects back, not a single fixed point.
+   * Falls back to the map's own authored spawnPoint if no such door exists
+   * (e.g. nothing leads back — a one-way trip, or an unauthored edge case).
+   */
+  _spawnPointFor(mapData, cameFromLevelId) {
+    const grid = mapData.grid;
+    const rows = grid.length;
+    const cols = grid[0].length;
+    const inRoom = (col, row) =>
+      row >= 0 && row < rows && col >= 0 && col < cols && grid[row][col] !== 0;
+
+    const returnDoor = mapData.interactables.find(
+      (it) => it.type === 'door' && it.leadsTo === cameFromLevelId
+    );
+    if (!returnDoor) return mapData.spawnPoint;
+
+    // Movement is horizontal-only, so the map's own spawnPoint row is the
+    // one real floor line a character can ever stand on (see
+    // _sanitizeCharacterPositions). Landing on the first walkable tile
+    // below the door instead — which for a multi-row room is usually a row
+    // or two below the door but still well above the real floor — put the
+    // party on a row that isn't the floor line, so they'd end up stuck
+    // running back and forth right under the door instead of down on the
+    // ground like every other character.
+    const floorRow = mapData.spawnPoint.row;
+    if (!inRoom(returnDoor.col, floorRow)) return mapData.spawnPoint;
+
+    return { col: returnDoor.col, row: floorRow };
   }
 
   /**
@@ -2133,8 +2183,14 @@ class Game {
 
       // Doors used to get a small wall-mounted keypad panel drawn beside
       // them here (see removed _renderDoorKeypad) instead of a shine —
-      // removed per user request, so doors fall through to the same
-      // room-shine treatment as everything else below.
+      // removed per user request. What's left is only a transient progress
+      // bar (see _renderHackProgress) while Ольга is actively hacking one —
+      // not a permanent fixture, gone the moment the session ends — plus
+      // the same room-shine treatment as everything else below.
+      if (it.type === 'door') {
+        const session = [...this.hackingSessions.values()].find((s) => s.interactable === it);
+        if (session) this._renderHackProgress(it, session, cs);
+      }
 
       // Ladders/other interactables (doors too, now) keep the original room-shine treatment —
       // they shimmer across the same generous chunk of the room that's
@@ -2151,6 +2207,59 @@ class Game {
         now
       );
     }
+  }
+
+  /**
+   * Transient progress bar shown above a door only while a hacking session
+   * (see _startHacking/_updateHacking) is actively running against it — a
+   * plain labelled bar, not a dial or panel, so it doesn't bring back the
+   * permanent per-door chrome that got removed. Positioned just above the
+   * hacking character's head (same floor-row-below-the-door search used
+   * elsewhere, e.g. _interactableHitBounds) rather than at the door's own
+   * high wall tile, since that's where the eye is already looking. Vanishes
+   * the instant the session ends, success or interruption alike — it's
+   * driven purely by hackingSessions still containing this door.
+   */
+  _renderHackProgress(it, session, cs) {
+    const ctx = this.ctx;
+    const grid = this.mapData.grid;
+    const rows = grid.length;
+    const cols = grid[0].length;
+    const inRoom = (col, row) =>
+      row >= 0 && row < rows && col >= 0 && col < cols && grid[row][col] !== 0;
+
+    let floorRow = it.row + 1;
+    while (floorRow < rows && !inRoom(it.col, floorRow)) floorRow++;
+    if (floorRow >= rows) floorRow = it.row;
+
+    const groundY = (floorRow + 1) * cs;
+    const charDrawH = cs * CHARACTER_HEIGHT_TILES;
+    const cx = (it.col + 0.5) * cs;
+    const cy = groundY - charDrawH * 1.08; // just above the hacking character's head
+
+    const progress =
+      session.requiredMs > 0 ? Math.min(1, (it.hackProgressMs ?? 0) / session.requiredMs) : 0;
+    const barW = cs * 1.6;
+    const barH = cs * 0.16;
+
+    ctx.save();
+
+    ctx.font = `${Math.max(9, cs * 0.22)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillText(`Взлом… ${Math.round(progress * 100)}%`, cx, cy - barH / 2 - 3);
+
+    ctx.fillStyle = 'rgba(10,12,16,0.75)';
+    ctx.fillRect(cx - barW / 2, cy - barH / 2, barW, barH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - barW / 2, cy - barH / 2, barW, barH);
+
+    ctx.fillStyle = '#6ebeff';
+    ctx.fillRect(cx - barW / 2 + 1, cy - barH / 2 + 1, (barW - 2) * progress, barH - 2);
+
+    ctx.restore();
   }
 
   /**

@@ -1,7 +1,7 @@
 {
-  "id": "bunker_level_-2",
-  "name": "Уровень -2",
-  "depth": -2,
+  "id": "bunker_level_-3",
+  "name": "Уровень -3",
+  "depth": -3,
   "image": "game/assets/bunker/bunker-full.png",
   "imageSize": {
     "width": 1536,
@@ -21,7 +21,7 @@
     "7": "разрушенная область",
     "8": "выход наружу"
   },
-  "comment": "Placeholder second level, reusing level -1's art/grid 1:1 (\"того же дизайна\", per the brief) until it gets its own design. Only reachable once door_01 on level -1 is unlocked with the keycard looted from mutant_stalker_01 — see Game._switchLevel.",
+  "comment": "Placeholder third level, reusing level -2's art/grid 1:1 (\"того же дизайна\", как остальные) until it gets its own design. Only reachable once door_B on level -2 is hacked open by Ольга — see Game._commandHackDoor/_updateHacking.",
   "grid": [
     [
       0,
@@ -1626,27 +1626,15 @@
   ],
   "interactables": [
     {
-      "id": "door_up_01",
-      "type": "door",
-      "col": 4,
-      "row": 21,
-      "state": "open",
-      "leadsTo": "bunker_level_-1",
-      "label": "Дверь — обратно на уровень -1",
-      "locked": false,
-      "leadsToFile": "game/map/bunker-map.json"
-    },
-    {
-      "id": "door_B",
+      "id": "door_up_02",
       "type": "door",
       "col": 40,
       "row": 21,
-      "state": "closed",
-      "leadsTo": "bunker_level_-3",
-      "label": "Электронная дверь — вниз, на уровень -3",
-      "locked": true,
-      "unlockCondition": "hack:40",
-      "leadsToFile": "game/map/bunker-level-3.json"
+      "state": "open",
+      "leadsTo": "bunker_level_-2",
+      "label": "Электронная дверь — обратно на уровень -2",
+      "locked": false,
+      "leadsToFile": "game/map/bunker-level-2.json"
     }
   ],
   "spawnPoint": {
