@@ -1,7 +1,7 @@
 // DoorMenuUI.js
 // Small floating context menu shown when the player taps a locked door
 // whose unlockCondition is "hack:<seconds>" (see ConstructionSystem /
-// Game._isHackDoor) — the button-dial keypad mounted beside the door.
+// Game._isHackDoor).
 // Mirrors EnemyMenuUI.js: one choice, "Изучить", which starts the walk-over
 // + hacking sequence (see Game._commandHackDoor / _startHacking) rather
 // than acting on the door instantly.

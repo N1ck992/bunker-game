@@ -2058,18 +2058,32 @@ class Game {
     let rightCol = it.col;
     while (rightCol + 1 < cols && inRoom(rightCol + 1, floorRow)) rightCol++;
 
-    // Highlight roughly a third of the room's width, anchored against
-    // whichever wall the door is closer to ("весь левый/правый участок").
-    const roomWidthTiles = rightCol - leftCol + 1;
-    const bandTiles = Math.max(4, Math.round(roomWidthTiles * 0.35));
-
     let boundLeftCol, boundRightCol;
-    if (it.col - leftCol <= rightCol - it.col) {
-      boundLeftCol = leftCol;
-      boundRightCol = Math.min(rightCol, leftCol + bandTiles);
+    if (it.type === 'door') {
+      // Doors used to share the wide "roughly a third of the room" zone
+      // below with ladders — great for finding the door, but it also meant
+      // any movement tap thrown anywhere in that whole chunk of the room
+      // got swallowed as "tap the door" instead, so trying to walk a
+      // character past a doorway just kept re-snapping them back to it
+      // ("stuck in the doorway"). Doors get a small zone hugging just the
+      // doorway itself instead, so taps further into the room reach
+      // movement (case 4 in _onTap) like normal.
+      const doorBand = 1;
+      boundLeftCol = Math.max(leftCol, it.col - doorBand);
+      boundRightCol = Math.min(rightCol, it.col + doorBand);
     } else {
-      boundLeftCol = Math.max(leftCol, rightCol - bandTiles);
-      boundRightCol = rightCol;
+      // Ladders/other interactables keep the original wide, forgiving zone:
+      // roughly a third of the room's width, anchored against whichever
+      // wall they're closer to ("весь левый/правый участок").
+      const roomWidthTiles = rightCol - leftCol + 1;
+      const bandTiles = Math.max(4, Math.round(roomWidthTiles * 0.35));
+      if (it.col - leftCol <= rightCol - it.col) {
+        boundLeftCol = leftCol;
+        boundRightCol = Math.min(rightCol, leftCol + bandTiles);
+      } else {
+        boundLeftCol = Math.max(leftCol, rightCol - bandTiles);
+        boundRightCol = rightCol;
+      }
     }
 
     return {
@@ -2117,17 +2131,12 @@ class Game {
         continue;
       }
 
-      // Doors get a small keypad panel mounted on the wall beside them (see
-      // _renderDoorKeypad) instead of the old room-wide shimmer — that's the
-      // actual "display with buttons" the door is unlocked through. The big
-      // _interactableHitBounds tap area is untouched (still used by _onTap),
-      // just no longer painted as a glow across the room.
-      if (it.type === 'door') {
-        this._renderDoorKeypad(it, now);
-        continue;
-      }
+      // Doors used to get a small wall-mounted keypad panel drawn beside
+      // them here (see removed _renderDoorKeypad) instead of a shine —
+      // removed per user request, so doors fall through to the same
+      // room-shine treatment as everything else below.
 
-      // Ladders/other interactables keep the original room-shine treatment —
+      // Ladders/other interactables (doors too, now) keep the original room-shine treatment —
       // they shimmer across the same generous chunk of the room that's
       // actually tappable (see _interactableHitBounds): what glows is
       // exactly what you can hit with a finger, not just their own tile.
@@ -2142,144 +2151,6 @@ class Game {
         now
       );
     }
-  }
-
-  /**
-   * Which side of the door has more open room to mount the keypad on —
-   * away from the nearest wall/corner, same "walk the grid outward" approach
-   * as _interactableHitBounds' leftCol/rightCol, just picking the roomier
-   * side instead of the nearer wall. Returns 1 (mount to the door's right)
-   * or -1 (mount to its left).
-   */
-  _keypadSide(it) {
-    const grid = this.mapData.grid;
-    const rows = grid.length;
-    const cols = grid[0].length;
-    const inRoom = (col, row) =>
-      row >= 0 && row < rows && col >= 0 && col < cols && grid[row][col] !== 0;
-
-    let floorRow = it.row + 1;
-    while (floorRow < rows && !inRoom(it.col, floorRow)) floorRow++;
-    if (floorRow >= rows) floorRow = it.row;
-
-    let leftCol = it.col;
-    while (leftCol - 1 >= 0 && inRoom(leftCol - 1, floorRow)) leftCol--;
-    let rightCol = it.col;
-    while (rightCol + 1 < cols && inRoom(rightCol + 1, floorRow)) rightCol++;
-
-    return it.col - leftCol >= rightCol - it.col ? -1 : 1;
-  }
-
-  /**
-   * The wall-mounted display + button grid next to a door — what "Изучить"
-   * actually targets (see DoorMenuUI/_commandHackDoor for hack doors), and
-   * the visual replacement for the old plain glowing patch that used to sit
-   * right over the door. Screen text reads:
-   *  - 🔒 for a locked door nobody's currently working on,
-   *  - a live percentage while a hacking session (see _updateHacking) is
-   *    running against this exact door,
-   *  - 🔓 once unlocked.
-   * Colour follows the same state: amber while locked and idle, blue while
-   * actively being hacked, mint once open — matching _drawInteractableShine's
-   * existing locked/unlocked palette so it still reads consistently next to
-   * ladders elsewhere on the floor.
-   */
-  _renderDoorKeypad(it, now) {
-    const ctx = this.ctx;
-    const cs = this.mapData.cellSize * this.scale;
-    const side = this._keypadSide(it);
-
-    // Vertical placement: the door's own grid row is just the lintel/frame
-    // tile up near the top of the doorway, nowhere near where a character
-    // actually stands — mounting the keypad there put it way above eye
-    // level. Instead find the floor row right below the door (same walk-
-    // down-until-walkable approach as _interactableHitBounds' floorRow) and
-    // hang the panel at waist height on a standing character there, same
-    // CHARACTER_HEIGHT_TILES sprite scale used everywhere else (see
-    // _renderCharacters) — belt-height, not door-frame-height.
-    const grid = this.mapData.grid;
-    const rows = grid.length;
-    const cols = grid[0].length;
-    const inRoom = (col, row) =>
-      row >= 0 && row < rows && col >= 0 && col < cols && grid[row][col] !== 0;
-    let floorRow = it.row + 1;
-    while (floorRow < rows && !inRoom(it.col, floorRow)) floorRow++;
-    if (floorRow >= rows) floorRow = it.row;
-
-    const groundY = (floorRow + 1) * cs;
-    const charDrawH = cs * CHARACTER_HEIGHT_TILES;
-
-    const cx = (it.col + 0.5 + side * 0.72) * cs;
-    const cy = groundY - charDrawH * 0.45; // ~waist height on a standing hero
-    const panelW = cs * 0.46;
-    const panelH = cs * 1.05;
-
-    const isHacking = [...this.hackingSessions.values()].some((s) => s.interactable === it);
-    let rgb = it.locked ? '255,196,84' : '120,235,190';
-    if (isHacking) rgb = '110,190,255';
-
-    const phase = now / 550 + (it.col + it.row) * 0.6;
-    const pulse = 0.5 + 0.5 * Math.sin(phase);
-
-    ctx.save();
-
-    // Panel body, mounted flush to the wall.
-    ctx.fillStyle = 'rgba(18,20,24,0.92)';
-    this._roundRectPath(ctx, cx - panelW / 2, cy - panelH / 2, panelW, panelH, cs * 0.05);
-    ctx.fill();
-    ctx.strokeStyle = `rgba(${rgb},${(0.5 + 0.3 * pulse).toFixed(3)})`;
-    ctx.lineWidth = Math.max(1, cs * 0.02);
-    ctx.stroke();
-
-    // Screen.
-    const screenX = cx - panelW * 0.4;
-    const screenY = cy - panelH / 2 + panelH * 0.08;
-    const screenW = panelW * 0.8;
-    const screenH = panelH * 0.3;
-    ctx.fillStyle = `rgba(${rgb},${isHacking ? 0.32 : 0.16})`;
-    ctx.fillRect(screenX, screenY, screenW, screenH);
-
-    let label = it.locked ? '🔒' : '🔓';
-    if (isHacking) {
-      const requiredMs = this._hackRequiredMs(it);
-      const progress = requiredMs > 0 ? Math.min(1, (it.hackProgressMs ?? 0) / requiredMs) : 0;
-      label = `${Math.round(progress * 100)}%`;
-    }
-    ctx.font = `${Math.max(9, screenH * 0.6)}px monospace`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = `rgba(${rgb},0.95)`;
-    ctx.fillText(label, cx, screenY + screenH / 2);
-
-    // 3x3 button grid below the screen.
-    const gridTop = screenY + screenH + panelH * 0.07;
-    const gridW = screenW;
-    const btnGap = gridW * 0.1;
-    const btnSize = (gridW - btnGap * 2) / 3;
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 3; c++) {
-        const bx = screenX + c * (btnSize + btnGap);
-        const by = gridTop + r * (btnSize + btnGap);
-        ctx.fillStyle = `rgba(${rgb},${(0.22 + 0.18 * pulse).toFixed(3)})`;
-        this._roundRectPath(ctx, bx, by, btnSize, btnSize, btnSize * 0.15);
-        ctx.fill();
-      }
-    }
-
-    ctx.restore();
-  }
-
-  /** Small canvas-path helper — a hand-rolled rounded rect, since not every
-   * runtime this prototype targets can be relied on to have ctx.roundRect. */
-  _roundRectPath(ctx, x, y, w, h, r) {
-    const radius = Math.min(r, w / 2, h / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.arcTo(x + w, y, x + w, y + h, radius);
-    ctx.arcTo(x + w, y + h, x, y + h, radius);
-    ctx.arcTo(x, y + h, x, y, radius);
-    ctx.arcTo(x, y, x + w, y, radius);
-    ctx.closePath();
   }
 
   /**
