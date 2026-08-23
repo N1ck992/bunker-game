@@ -22,23 +22,35 @@ export class PathfindingSystem {
 
   isWalkable(col, row) {
     if (row < 0 || row >= this.rows || col < 0 || col >= this.cols) return false;
+
+    // A cell that hosts an interactable (door/ladder/furniture) has its own
+    // runtime locked flag, which is the actual source of truth once the game
+    // is running — the static grid value (e.g. "6" for a closed door) only
+    // describes the map's authored starting layout and is never rewritten
+    // when a door gets unlocked with a key or resources. Trusting the grid
+    // value here as well as `locked` meant a door stayed impassable forever
+    // after being unlocked, because its tile was still baked in as "closed".
+    const interactable = this.interactableStates.get(this.key(col, row));
+    if (interactable) return !interactable.locked;
+
     const value = this.grid[row][col];
 
     // Closed doors (6) and generic walls (0), obstacles (5), rubble (7) are never walkable.
     if (!WALKABLE_TYPES.has(value)) return false;
 
-    // A cell that hosts an interactable (door/ladder) may be dynamically locked.
-    const interactable = this.interactableStates.get(this.key(col, row));
-    if (interactable && interactable.locked) return false;
-
     return true;
   }
 
   neighbors(col, row) {
-    // Horizontal movement only, by design — characters walk left/right along
-    // their row and never step up/down within it. Vertical transitions (once
-    // needed) will go through ladders as an explicit action, not tile-to-tile
-    // pathfinding, so this list intentionally omits row+1/row-1.
+    // Movement is horizontal-only, by design: a character walks left/right
+    // along the one floor row it's standing on and never steps up/down
+    // through the grid. Doors/ladders sit on a different row (the wall,
+    // above the floor) — reaching them is handled in Game.js by lining up
+    // on their column while staying on the character's own row, not by
+    // pathing onto their tile. Switching floors entirely happens through
+    // the door/ladder level-switch flow (see Game._switchLevel), which
+    // teleports the party to the new floor's spawn point instead of
+    // walking them there row by row.
     const candidates = [
       [col + 1, row], [col - 1, row]
     ];

@@ -12,6 +12,7 @@
       "aggroRange": 6,
       "attackCooldownSeconds": 1.6,
       "tilesPerSecond": 2.2,
+      "loot": ["keycard_level2"],
       "sprites": {
         "idle": [
           "game/assets/enemies/mutants/mutant_stalker/idle_00.png",

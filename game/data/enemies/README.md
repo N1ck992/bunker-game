@@ -25,6 +25,7 @@
   "aggroRange": 6,                 // дистанция, с которой замечает героя
   "attackCooldownSeconds": 1.6,    // пауза между атаками
   "tilesPerSecond": 2.2,           // скорость бега при погоне
+  "loot": ["item_id"],             // необязательно — предметы (см. items.json), которые появляются на трупе после смерти юнита и подбираются тапом по телу (см. Game._onCorpseTapped)
   "sprites": {
     "idle": "game/assets/enemies/<race_id>/<unit_id>/idle.png",  // одна картинка ИЛИ массив кадров, как run/attack — см. ниже
     "run": ["run_0.png", "run_1.png", "run_2.png"],   // 3-кадровый цикл, как у персонажа

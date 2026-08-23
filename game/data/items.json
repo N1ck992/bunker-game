@@ -25,9 +25,14 @@
       "healthModifier": 5
     },
     {
+      "id": "keycard_level2",
+      "name": "Ключ-карта (уровень -2)",
+      "slot": "key"
+    },
+    {
       "id": "transport_suit",
       "name": "Транспорт-костюм",
-      "slot": "clothing",
+      "slot": "vehicle",
       "coldResist": 5,
       "heatResist": 5,
       "healthModifier": 0,
@@ -40,7 +45,8 @@
       "damage": 10,
       "damageType": "kinetic",
       "range": 6,
-      "attackCooldownSeconds": 1.2
+      "attackCooldownSeconds": 1.2,
+      "icon": "game/assets/items/kinetic_pistol.png"
     }
   ]
 }

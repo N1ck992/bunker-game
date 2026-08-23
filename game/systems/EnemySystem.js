@@ -14,17 +14,20 @@
 
 const REPATH_INTERVAL_SECONDS = 0.3; // how often a chasing enemy recalculates its path to a moving target
 const LEASH_RANGE_TILES = 12; // beyond this, a chasing enemy gives up and goes home even without losing aggro range first
+const DEFAULT_ATTACK_ANIM_SECONDS = 0.35; // fallback if balance.combat.attackAnimSeconds is missing
 
 export class EnemySystem {
   /**
    * @param {PathfindingSystem} pathfinder
    * @param {MovementSystem} movementSystem
    * @param {(enemy:Enemy) => void} [onEngage] - called once, the first time an enemy starts attacking
+   * @param {object} [balance] - game/data/balance.json, for balance.combat.attackAnimSeconds
    */
-  constructor(pathfinder, movementSystem, onEngage) {
+  constructor(pathfinder, movementSystem, onEngage, balance) {
     this.pathfinder = pathfinder;
     this.movementSystem = movementSystem;
     this.onEngage = onEngage;
+    this.attackAnimSeconds = balance?.combat?.attackAnimSeconds ?? DEFAULT_ATTACK_ANIM_SECONDS;
   }
 
   /**
@@ -33,11 +36,19 @@ export class EnemySystem {
    * @param {number} dt
    */
   update(enemies, characters, dt) {
+    // Refreshed fresh every frame below (see _attack) — a character stops
+    // being "under attack" the instant every enemy targeting them backs off
+    // or dies, same frame their combatState would too.
+    for (const character of characters) character.isBeingAttacked = false;
+
     for (const enemy of enemies) {
       if (!enemy.isActive) continue;
 
       if (enemy.attackCooldownRemaining > 0) {
         enemy.attackCooldownRemaining = Math.max(0, enemy.attackCooldownRemaining - dt);
+      }
+      if (enemy.attackAnimRemaining > 0) {
+        enemy.attackAnimRemaining = Math.max(0, enemy.attackAnimRemaining - dt);
       }
 
       const target = this._pickTarget(enemy, characters);
@@ -66,7 +77,9 @@ export class EnemySystem {
    * inside aggroRange.
    */
   _pickTarget(enemy, characters) {
-    const active = characters.filter((c) => c.isActive);
+    // Benched settlers (Отряд panel toggle) are held back from the fight —
+    // never picked as a target, same as if they weren't on this floor.
+    const active = characters.filter((c) => c.isActive && c.inParty !== false);
     if (active.length === 0) return null;
 
     if (enemy.aiState === 'chasing' || enemy.aiState === 'attacking') {
@@ -75,6 +88,15 @@ export class EnemySystem {
         return current;
       }
     }
+
+    // The party's tank (set in the Отряд panel) draws attention away from
+    // the rest of the group whenever they're in aggro range — even if
+    // they're not literally the closest settler — so they're the one
+    // eating hits up front, per the tank role's whole point.
+    const tank = active.find(
+      (c) => c.isTank && this._distance(enemy.position, c.position) <= enemy.aggroRange
+    );
+    if (tank) return tank;
 
     let nearest = null;
     let nearestDist = Infinity;
@@ -127,6 +149,14 @@ export class EnemySystem {
     enemy.targetCharacterId = target.id;
     enemy.path = [];
     enemy.facingDir = target.position.col >= enemy.position.col ? 1 : -1;
+    // Pins the target in place for this frame — see MovementSystem.moveTo
+    // and the isBeingAttacked reset at the top of update().
+    target.isBeingAttacked = true;
+    // The target holds position under fire the same way an attacking
+    // character does — clears any tap-to-move order already in flight so
+    // getting hit interrupts a walk instead of finishing it.
+    target.path = [];
+    target.moveProgress = 0;
 
     if (!wasAlreadyAttacking && !enemy.hasEngagedOnce) {
       enemy.hasEngagedOnce = true;
@@ -135,6 +165,12 @@ export class EnemySystem {
 
     if (enemy.attackCooldownRemaining <= 0) {
       enemy.attackCooldownRemaining = enemy.attackCooldownSeconds;
+      // Brief "strike" animation pulse, same idea as CombatSystem's
+      // character.attackAnimRemaining — see Game._renderEnemies, which
+      // plays the attack frames only while this is running and an idle
+      // "ready" pose the rest of the cooldown, with a reload bar over the
+      // head counting up to the next hit.
+      enemy.attackAnimRemaining = Math.min(this.attackAnimSeconds, enemy.attackCooldownSeconds);
       target.takeDamage(enemy.damage);
     }
   }

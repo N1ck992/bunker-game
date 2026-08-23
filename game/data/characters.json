@@ -1,4 +1,5 @@
 {
+  "partyInventory": ["warm_clothes", "transport_suit"],
   "characters": [
     {
       "id": "char_1",
@@ -14,10 +15,31 @@
       "temperature": 20,
       "clothing": null,
       "weapon": "kinetic_pistol",
-      "inventory": ["warm_clothes", "transport_suit"],
+      "vehicle": null,
       "position": { "col": 18, "row": 28 },
       "assignedRoom": null,
       "state": "active"
+    },
+    {
+      "id": "char_2",
+      "name": "Ольга",
+      "avatar": "game/assets/characters/avatars/char_1.png",
+      "health": 100,
+      "strength": 3,
+      "endurance": 3,
+      "agility": 5,
+      "intelligence": 9,
+      "hunger": 100,
+      "thirst": 100,
+      "temperature": 20,
+      "clothing": null,
+      "weapon": null,
+      "vehicle": null,
+      "position": { "col": 30, "row": 28 },
+      "assignedRoom": null,
+      "state": "active",
+      "recruited": false,
+      "levelId": "bunker_level_-2"
     }
   ]
 }

@@ -19,13 +19,42 @@ export class Character {
 
     this.clothing = data.clothing ?? null; // equipped clothing item id, or null
     this.weapon = data.weapon ?? null; // equipped weapon item id, or null
-    this.inventory = data.inventory ? [...data.inventory] : []; // owned item ids NOT currently equipped
+    // Equipped transport/vehicle item id, or null. Deliberately its own slot,
+    // separate from weapon/clothing: a transport-suit (and later cars,
+    // motorcycles, other surface/space suits) is a piece of vehicle
+    // technology, not amunition or clothing — see items.json's "vehicle"
+    // slot and Game._canTravelWorldMap.
+    this.vehicle = data.vehicle ?? null;
+    // Equipped gadget/device item id, or null. A third equip slot alongside
+    // weapon/vehicle — the "дополнительное устройство" shown in the squad
+    // screen (see game/ui/PartyUI.js). No items.json entries use slot
+    // "gadget" yet, so this is a forward-looking hook: it always reads as
+    // unequipped today, ready to wire up once gadget items exist.
+    this.gadget = data.gadget ?? null;
+    // Unequipped items are no longer tracked per-character — the whole party
+    // shares one backpack now (see Game.partyInventory / InventorySystem).
 
     // Combat runtime state, advanced by CombatSystem — not saved (recomputed
     // fresh every load, same as Enemy's attackCooldownRemaining/aiState).
     this.attackCooldownRemaining = 0;
+    // The current effective cooldown (weapon base cooldown, sped up by
+    // ловкость for melee weapons) — recomputed every frame by CombatSystem.
+    // Game._renderCharacters divides attackCooldownRemaining by this to
+    // draw the reload bar over the character's head.
+    this.attackCooldownSeconds = 0;
+    // Brief pulse set by CombatSystem each time a shot/swing actually
+    // lands — attack sprite frames only play while this is running, so a
+    // slow-firing weapon doesn't read as attacking nonstop; the rest of
+    // the cooldown shows an idle "ready" pose plus the reload bar above.
+    this.attackAnimRemaining = 0;
     this.combatState = 'idle'; // 'idle' | 'attacking'
     this.targetEnemyId = null;
+    // Whether some enemy is currently attacking this character, refreshed
+    // every frame by EnemySystem — separate from combatState, which only
+    // tracks this character's own weapon fire. A character under attack
+    // holds position even with no weapon equipped or the attacker out of
+    // their own weapon's range — see MovementSystem.moveTo.
+    this.isBeingAttacked = false;
 
     // grid position (col,row)
     this.position = { ...(data.position ?? { col: 0, row: 0 }) };
@@ -34,6 +63,30 @@ export class Character {
 
     // 'active' | 'inactive'
     this.state = data.state ?? 'active';
+
+    // Whether this settler has actually joined the party yet. Characters
+    // with recruited:false in characters.json are held back from
+    // Game.characters (see Game._splitRecruits) and instead shown as a
+    // standalone NPC on their home floor (levelId) until a party member
+    // walks up to them — see Game._updateRecruitEncounters.
+    this.recruited = data.recruited ?? true;
+    // Which map (mapData.id) this settler waits on before being recruited.
+    // Unused once recruited.
+    this.levelId = data.levelId ?? null;
+
+    // Squad management (see game/ui/PartyUI.js): inParty=false means this
+    // recruited settler stays out of combat (not targeted by enemies, does
+    // not auto-fight) even though they're still walking around the bunker.
+    // isTank marks the one settler enemies should prefer to attack first —
+    // see EnemySystem._pickTarget.
+    this.inParty = data.inParty ?? true;
+    this.isTank = data.isTank ?? false;
+    // Firing-line stand order behind the tank (see SquadCombatSystem —
+    // lower numbers stand closer to the tank, higher/unset ones fall back
+    // to roster order). Set from the roster's per-character menu — see
+    // CharacterMenuUI's "Очередь" picker / Game._setQueueOrder. Irrelevant
+    // for whoever is currently the tank (they're always line 1).
+    this.queueOrder = data.queueOrder ?? null;
 
     // 1 = facing right, -1 = facing left. Used to flip the sprite.
     this.facingDir = data.facingDir ?? 1;
@@ -96,10 +149,16 @@ export class Character {
       temperature: this.temperature,
       clothing: this.clothing,
       weapon: this.weapon,
-      inventory: [...this.inventory],
+      vehicle: this.vehicle,
+      gadget: this.gadget,
       position: { ...this.position },
       assignedRoom: this.assignedRoom,
-      state: this.state
+      state: this.state,
+      recruited: this.recruited,
+      levelId: this.levelId,
+      inParty: this.inParty,
+      isTank: this.isTank,
+      queueOrder: this.queueOrder
     };
   }
 }

@@ -1,13 +1,16 @@
 // ShelterUI.js
-// Renders the top resource bar and bottom nav buttons. Pure DOM, no game logic.
+// Renders the top resource bar (HUD strip above the scene). Pure DOM, no
+// game logic. Used to also render a bottom nav bar with Жители/Экспедиция
+// buttons — both were removed (Экспедиция was an unreachable stub; Жители
+// was just a hint toast), along with the ExpeditionSystem/Expedition stub
+// files that backed the former. The bottom-of-screen slot they used to
+// occupy is now free — Выбрать всех / Отряд live in CharacterRosterUI's
+// floating corner widget instead — see Game._buildDom.
 
 export class ShelterUI {
-  // topRoot hosts the resource bar (rendered above the scene as a HUD strip);
-  // bottomRoot hosts the nav bar (rendered below the scene, next to the roster).
-  constructor(topRoot, bottomRoot, callbacks) {
+  // topRoot hosts the resource bar, rendered above the scene as a HUD strip.
+  constructor(topRoot) {
     this.topRoot = topRoot;
-    this.bottomRoot = bottomRoot;
-    this.callbacks = callbacks; // { onCharacters, onExpedition, onMap }
     this._build();
   }
 
@@ -22,33 +25,7 @@ export class ShelterUI {
       <div class="clock"><span class="phase-icon">☀</span><span class="phase-label">День</span></div>
     `;
 
-    this.navBar = document.createElement('div');
-    this.navBar.className = 'nav-bar';
-    this.navBar.innerHTML = `
-      <button data-action="map" class="map-btn">Карта</button>
-      <button data-action="characters">Жители</button>
-      <button data-action="expedition">Экспедиция</button>
-    `;
-    this.navBar.addEventListener('click', (e) => {
-      const btn = e.target.closest('button');
-      if (!btn) return;
-      const action = btn.dataset.action;
-      if (action === 'characters') this.callbacks.onCharacters?.();
-      if (action === 'expedition') this.callbacks.onExpedition?.();
-      if (action === 'map') this.callbacks.onMap?.();
-    });
-
     this.topRoot.appendChild(this.resourceBar);
-    this.bottomRoot.appendChild(this.navBar);
-  }
-
-  /** Toggles the leftmost nav button between "Карта" (go to the map) and
-   * "Бункер" (return from it), so it doubles as the one control that opens
-   * and closes the world-map screen. */
-  setMapMode(isOnMap) {
-    const btn = this.navBar.querySelector('.map-btn');
-    btn.textContent = isOnMap ? 'Бункер' : 'Карта';
-    btn.classList.toggle('active', isOnMap);
   }
 
   update(resources, gameTime) {

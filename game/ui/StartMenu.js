@@ -5,6 +5,7 @@
 // decides *whether* to clear the save first, it doesn't touch game logic.
 
 import { SaveSystem } from '../core/SaveSystem.js';
+import { requestLandscapeLock } from '../core/OrientationLock.js';
 
 export function showStartMenu(onStart) {
   const app = document.getElementById('app');
@@ -27,6 +28,9 @@ export function showStartMenu(onStart) {
   }
 
   menu.querySelector('#btn-new-game').addEventListener('click', () => {
+    // Fires from a genuine tap, so this is the one reliable place to ask
+    // the browser for fullscreen + a landscape lock — see OrientationLock.js.
+    requestLandscapeLock();
     new SaveSystem().clear();
     menu.remove();
     onStart();
@@ -34,6 +38,7 @@ export function showStartMenu(onStart) {
 
   btnContinue.addEventListener('click', () => {
     if (!hasSave) return;
+    requestLandscapeLock();
     menu.remove();
     onStart();
   });

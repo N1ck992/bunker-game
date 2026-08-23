@@ -1631,10 +1631,11 @@
       "col": 4,
       "row": 21,
       "state": "closed",
-      "leadsTo": "surface",
-      "label": "Дверь 01 — Выход на поверхность",
+      "leadsTo": "bunker_level_-2",
+      "label": "Дверь — вниз, на уровень -2",
       "locked": true,
-      "unlockCondition": "story:surface_access"
+      "unlockCondition": "item:keycard_level2",
+      "leadsToFile": "game/map/bunker-level-2.json"
     },
     {
       "id": "door_A",
@@ -1645,7 +1646,7 @@
       "leadsTo": "room_A",
       "label": "Дверь A — Соседнее помещение",
       "locked": true,
-      "unlockCondition": "materials:40"
+      "unlockCondition": "hack:60"
     },
     {
       "id": "ladder_01",
@@ -1666,7 +1667,10 @@
       "label": "Стол",
       "locked": false,
       "interaction": {
-        "produces": { "food": 0.3, "water": 0.2 },
+        "produces": {
+          "food": 0.3,
+          "water": 0.2
+        },
         "durationSeconds": 8,
         "cooldownSeconds": 25
       }
@@ -1679,7 +1683,9 @@
       "label": "Шкаф",
       "locked": false,
       "interaction": {
-        "produces": { "materials": 0.4 },
+        "produces": {
+          "materials": 0.4
+        },
         "durationSeconds": 8,
         "cooldownSeconds": 25
       }

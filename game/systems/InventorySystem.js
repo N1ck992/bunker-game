@@ -1,9 +1,15 @@
 // InventorySystem.js
-// Owns the equip/unequip transition between a character's inventory (owned
-// but unequipped items) and its two gear slots — character.weapon and
-// character.clothing. Doesn't know about combat or temperature; those
-// systems just read character.weapon/character.clothing directly, exactly
-// as they did before this system existed.
+// Owns the equip/unequip transition between the party's shared backpack
+// (one pooled array of item ids, owned by Game.partyInventory — every
+// settler draws from and returns to the same stash) and a character's three
+// gear slots: character.weapon, character.clothing, character.vehicle.
+// Vehicle is kept as its own slot rather than folded into clothing — a
+// transport-suit (and later cars, motorcycles, other surface/space suits)
+// is a piece of vehicle technology, not amunition or clothing.
+// Doesn't know about combat or temperature; those systems just read
+// character.weapon/clothing/vehicle directly, exactly as before.
+
+const EQUIPPABLE_SLOTS = new Set(['weapon', 'clothing', 'vehicle']);
 
 export class InventorySystem {
   /** @param {Map<string, Item>} itemsById */
@@ -15,35 +21,41 @@ export class InventorySystem {
     return itemId ? this.itemsById.get(itemId) ?? null : null;
   }
 
-  /** Items a character owns but hasn't equipped, resolved to Item instances (unknown ids silently dropped). */
-  getInventoryItems(character) {
-    return character.inventory.map((id) => this.itemsById.get(id)).filter(Boolean);
+  /** The party's shared, unequipped items, resolved to Item instances (unknown ids silently dropped). */
+  getPartyInventoryItems(partyInventory) {
+    return partyInventory.map((id) => this.itemsById.get(id)).filter(Boolean);
   }
 
   /**
-   * Moves itemId out of the character's inventory into its matching gear
-   * slot ('weapon' or 'clothing', read from the item itself), swapping
-   * whatever was equipped there back into the inventory. Returns false
-   * without changing anything if the item isn't actually in the inventory.
+   * Moves itemId out of the shared party inventory into one character's
+   * matching gear slot ('weapon' | 'clothing' | 'vehicle', read from the
+   * item itself), swapping whatever was equipped there back into the shared
+   * pool. Returns false without changing anything if the item isn't
+   * actually in the party inventory.
+   * @param {Character} character
+   * @param {string} itemId
+   * @param {string[]} partyInventory
    */
-  equip(character, itemId) {
+  equip(character, itemId, partyInventory) {
     const item = this.itemsById.get(itemId);
-    if (!item || (item.slot !== 'weapon' && item.slot !== 'clothing')) return false;
-    if (!character.inventory.includes(itemId)) return false;
+    if (!item || !EQUIPPABLE_SLOTS.has(item.slot)) return false;
+    const index = partyInventory.indexOf(itemId);
+    if (index === -1) return false;
 
-    const previouslyEquipped = character[item.slot];
-    character.inventory = character.inventory.filter((id) => id !== itemId);
-    if (previouslyEquipped) character.inventory.push(previouslyEquipped);
-    character[item.slot] = itemId;
+    const slot = item.slot;
+    const previouslyEquipped = character[slot];
+    partyInventory.splice(index, 1);
+    if (previouslyEquipped) partyInventory.push(previouslyEquipped);
+    character[slot] = itemId;
     return true;
   }
 
-  /** Moves whatever's equipped in the given slot back into the inventory. */
-  unequip(character, slot) {
+  /** Moves whatever's equipped in the given slot back into the shared party inventory. */
+  unequip(character, slot, partyInventory) {
     const itemId = character[slot];
     if (!itemId) return false;
     character[slot] = null;
-    character.inventory.push(itemId);
+    partyInventory.push(itemId);
     return true;
   }
 }

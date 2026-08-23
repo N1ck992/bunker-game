@@ -33,6 +33,12 @@ export class Enemy {
     this.attackCooldownSeconds = unitDef.attackCooldownSeconds;
     this.tilesPerSecond = unitDef.tilesPerSecond;
 
+    // Item ids that appear on the corpse once this unit dies — see
+    // Game._onCorpseTapped, which grants them to the acting character and
+    // flips lootCollected so the corpse can't be searched twice.
+    this.loot = unitDef.loot ? [...unitDef.loot] : [];
+    this.lootCollected = false;
+
     this.spawnPosition = { col: spawn.col, row: spawn.row };
     this.position = { col: spawn.col, row: spawn.row };
     this.facingDir = 1;
@@ -42,6 +48,12 @@ export class Enemy {
     this.aiState = 'idle';
     this.targetCharacterId = null;
     this.attackCooldownRemaining = 0;
+    // Brief pulse set by EnemySystem._attack each time a hit actually
+    // lands — Game._renderEnemies plays the attack sprite frames only
+    // while this is running, so the loop doesn't read as nonstop
+    // attacking; the rest of attackCooldownRemaining is shown as an idle
+    // "ready" pose plus a reload bar over the head (see attackCooldownRemaining/attackCooldownSeconds).
+    this.attackAnimRemaining = 0;
     this.hasEngagedOnce = false; // so Game can toast only on the first engagement
 
     // movement runtime state, advanced by the shared MovementSystem exactly
@@ -72,7 +84,8 @@ export class Enemy {
       id: this.id,
       health: this.health,
       position: { ...this.position },
-      state: this.state
+      state: this.state,
+      lootCollected: this.lootCollected
     };
   }
 }

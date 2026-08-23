@@ -33,5 +33,10 @@
   },
   "movement": {
     "tilesPerSecond": 10
+  },
+  "combat": {
+    "meleeAgilityAttackSpeedPercent": 3,
+    "agilityBaseline": 5,
+    "attackAnimSeconds": 0.35
   }
 }

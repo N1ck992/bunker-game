@@ -41,9 +41,11 @@ export class MovementSystem {
     if (!character.isActive) return false;
     // Characters only (enemies don't have combatState — see Enemy.js's
     // aiState instead, which EnemySystem already handles on its own): once
-    // engaged, a character holds position and just fires — no repositioning
-    // until CombatSystem drops it back to 'idle' (target dead/out of range).
-    if (character.combatState === 'attacking') return false;
+    // engaged — either firing back (combatState 'attacking') or just being
+    // shot at (isBeingAttacked, set every frame by EnemySystem) — a
+    // character holds position, no repositioning until the fight actually
+    // ends (target dead/out of range, or the attacker breaks off).
+    if (character.combatState === 'attacking' || character.isBeingAttacked) return false;
     const path = pathfinder.findPath(character.position, target);
     if (path === null) return false;
     character.path = path;
