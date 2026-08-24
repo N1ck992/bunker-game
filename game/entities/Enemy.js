@@ -53,6 +53,15 @@ export class Enemy {
     // animation frames render (see Game._renderEnemies).
     this.aiState = 'idle';
     this.targetCharacterId = null;
+    // Set true the moment any settler engages ANY enemy sharing this one's
+    // raceId (see EnemySystem.alertFaction, called from CombatSystem's
+    // onEngage in Game.js) — the rest of the "faction" piling on once one of
+    // their own gets shot at, same as a real pack. Once alerted, this enemy
+    // hunts the party regardless of aggroRange (see EnemySystem._pickTarget)
+    // instead of needing the party to physically wander into its own small
+    // detection bubble first. Runtime-only, not saved — same as aiState,
+    // it's re-derived from the fight, not persisted between sessions.
+    this.alerted = false;
     this.attackCooldownRemaining = 0;
     // Brief pulse set by EnemySystem._attack each time a hit actually
     // lands — Game._renderEnemies plays the attack sprite frames only

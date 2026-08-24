@@ -62,7 +62,13 @@ export class EnemySystem {
 
       if (distance <= enemy.attackDistance) {
         this._attack(enemy, target, dt);
-      } else if (distance <= enemy.aggroRange || enemy.aiState === 'chasing') {
+      } else if (distance <= enemy.aggroRange || enemy.aiState === 'chasing' || enemy.alerted) {
+        // enemy.alerted (see alertFaction below) skips the aggroRange gate
+        // the same way an already-chasing enemy does — otherwise an alerted
+        // enemy that picked a target beyond its own aggroRange via
+        // _pickTarget's detection-range override would fall through to
+        // _goIdle on this very first frame, before aiState ever became
+        // 'chasing' to satisfy the check on its own.
         this._chase(enemy, target, dt);
       } else {
         this._goIdle(enemy);
@@ -71,10 +77,30 @@ export class EnemySystem {
   }
 
   /**
+   * Marks every active enemy sharing `raceId` as alerted — called from
+   * Game.js the moment any settler engages any one enemy (CombatSystem's
+   * onEngage), so attacking a single mutant brings every other mutant on
+   * this map down on the party at once, not just that one. See Enemy.alerted
+   * and _pickTarget/_detectionRange below for how the flag actually changes
+   * targeting once set.
+   */
+  alertFaction(enemies, raceId) {
+    for (const enemy of enemies) {
+      if (!enemy.isActive || enemy.raceId !== raceId) continue;
+      enemy.alerted = true;
+    }
+  }
+
+  /** Normally aggroRange; unlimited once an enemy has been alerted (see alertFaction) — an alerted unit hunts the party across the whole map instead of needing them to wander into its own small detection bubble. */
+  _detectionRange(enemy) {
+    return enemy.alerted ? Infinity : enemy.aggroRange;
+  }
+
+  /**
    * Keeps chasing the character already engaged (even slightly past
    * aggroRange, up to the leash) rather than flip-flopping between two
    * characters that are both nearby; otherwise picks the nearest active one
-   * inside aggroRange.
+   * inside detection range (aggroRange, or unlimited once alerted).
    */
   _pickTarget(enemy, characters) {
     // Benched settlers (Отряд panel toggle) are held back from the fight —
@@ -89,12 +115,14 @@ export class EnemySystem {
       }
     }
 
+    const detectionRange = this._detectionRange(enemy);
+
     // The party's tank (set in the Отряд panel) draws attention away from
-    // the rest of the group whenever they're in aggro range — even if
+    // the rest of the group whenever they're in detection range — even if
     // they're not literally the closest settler — so they're the one
     // eating hits up front, per the tank role's whole point.
     const tank = active.find(
-      (c) => c.isTank && this._distance(enemy.position, c.position) <= enemy.aggroRange
+      (c) => c.isTank && this._distance(enemy.position, c.position) <= detectionRange
     );
     if (tank) return tank;
 
@@ -102,7 +130,7 @@ export class EnemySystem {
     let nearestDist = Infinity;
     for (const character of active) {
       const d = this._distance(enemy.position, character.position);
-      if (d <= enemy.aggroRange && d < nearestDist) {
+      if (d <= detectionRange && d < nearestDist) {
         nearest = character;
         nearestDist = d;
       }

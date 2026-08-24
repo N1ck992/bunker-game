@@ -1,25 +1,25 @@
 // CharacterRosterUI.js
-// Widget mounted into the bottom bar below the scene (see .bottom-bar and
-// .roster-wrap in style.css, and where Game._buildDom mounts this) — no
-// longer floats over the canvas, so it never covers the room the characters
-// walk around in. .roster-wrap is column-reverse, so DOM order controls
-// stacking bottom-up:
-// the avatar row is appended first (see _build) and sits right in the
-// corner; the Отряд / Выбрать всех buttons are appended after it and render
-// directly above — same spot they used to occupy before a previous pass
-// split them out into PartyControlsUI's separate full-width bottom bar.
-// That bar is gone now; this widget owns both again, so the game area
-// doesn't waste a permanent strip at the bottom of the screen.
+// Widget mounted into the bottom bar below the scene (see .bottom-bar,
+// .roster-wrap and .hud-right in style.css, and where Game._buildDom mounts
+// this) — no longer floats over the canvas, so it never covers the room the
+// characters walk around in. .roster-wrap is column-reverse, so DOM order
+// controls stacking bottom-up: .hud-right (the portrait readout) is
+// appended first (see _build) and sits right in the corner, forming the
+// right end of the pipe-and-panel HUD bar together with LeftBarUI's
+// .hud-left and the .hud-pipe connector between them (see Game._buildDom);
+// the Отряд / Выбрать всех buttons are appended after it and render
+// directly above.
 //
-// The avatar row itself wraps onto extra lines (row-reverse + wrap-reverse)
-// instead of scrolling horizontally — with several avatars on a narrow
-// phone screen a horizontal scrollbar was easy to miss entirely; wrapping
-// keeps every avatar visible with no ползунок.
+// Unlike the old multi-avatar roster, .hud-right shows only ONE character —
+// whichever _displayCharacter resolves as "current" (selected, else the
+// tank, else the first active settler) — because the reference art
+// (game/assets/ui/hud_bar_right_frame.png) frames a single portrait, not a
+// row of them. The rest of the squad stays reachable via Отряд (PartyUI),
+// same as before.
 //
-// Always on screen, including over the world map, so the player can select/
-// inspect a settler no matter which screen is active. Lets the player
-// select a settler by tapping their portrait instead of hunting for the
-// tiny sprite on the canvas — same selection callback the canvas tap uses.
+// Always on screen, including over the world map, so the player always has
+// a portrait to glance at. Tapping it re-fires the same select/open callback
+// a canvas tap on that character would.
 
 const WARN_THRESHOLD = 30; // rough "needs attention" line — just a visual
                              // cue, not a gameplay value.
@@ -32,7 +32,7 @@ export class CharacterRosterUI {
   constructor(root, callbacks) {
     this.root = root;
     this.callbacks = callbacks;
-    this._lastTankId = undefined;
+    this._displayedId = undefined;
     this._build();
   }
 
@@ -40,21 +40,29 @@ export class CharacterRosterUI {
     this.wrap = document.createElement('div');
     this.wrap.className = 'roster-wrap';
 
-    this.bar = document.createElement('div');
-    this.bar.className = 'roster-bar';
-    this.bar.addEventListener('click', (e) => {
-      const card = e.target.closest('.roster-avatar');
-      if (!card) return;
-      this.callbacks.onSelect?.(card.dataset.id, e);
-    });
     // Appended first — with .roster-wrap's column-reverse, the first DOM
     // child is the one pinned to the main-start of the (reversed) axis,
-    // i.e. the very bottom/corner. That has to be the avatar row; anything
-    // appended after it stacks progressively higher, not lower.
-    this.wrap.appendChild(this.bar);
+    // i.e. the very bottom/corner. That has to be the portrait panel;
+    // anything appended after it stacks progressively higher, not lower.
+    this.panel = document.createElement('div');
+    this.panel.className = 'hud-right';
+    this.panel.innerHTML = `
+      <div class="hud-portrait-slot">
+        <span class="hud-portrait-fallback"></span>
+        <div class="hud-hp-badge"></div>
+        <div class="hud-hp-track"><div class="hud-hp-fill"></div></div>
+      </div>
+      <span class="hud-badge hud-badge-tank" title="Танк">🛡</span>
+      <span class="hud-badge hud-badge-vehicle" title="Транспорт">🚙</span>
+      <div class="hud-right-frame"></div>
+    `;
+    this.panel.addEventListener('click', (e) => {
+      if (this._displayedId) this.callbacks.onSelect?.(this._displayedId, e);
+    });
+    this.wrap.appendChild(this.panel);
 
-    // Appended second so it renders directly above the avatar row —
-    // "сверху над ними" (above them).
+    // Appended second so it renders directly above the portrait panel —
+    // "сверху над ним" (above it).
     this.controls = document.createElement('div');
     this.controls.className = 'roster-controls';
 
@@ -81,75 +89,67 @@ export class CharacterRosterUI {
    *   Game.followAllParty), reflected on the button's active style.
    */
   update(characters, selectedId, followAllActive) {
-    const tankId = characters.find((c) => c.isTank)?.id ?? null;
-
     // Only worth showing the controls once there's an actual squad to manage.
     const showButtons = characters.length >= 2;
     this.partyBtn.classList.toggle('hidden', !showButtons);
     this.selectAllBtn.classList.toggle('hidden', !showButtons);
     this.selectAllBtn.classList.toggle('active', !!followAllActive);
 
-    // Rebuild if the roster size changed (new characters appear
-    // occasionally) or the tank changed (that reorders the cards below);
-    // otherwise just patch the existing cards in place.
-    if (this.bar.children.length !== characters.length || tankId !== this._lastTankId) {
-      this.bar.innerHTML = '';
-      // Tank first: with .roster-bar's row-reverse layout the first DOM
-      // child sits closest to the thumb (the right-hand corner anchor) —
-      // front of the line, per the tank's whole "stands in front" role.
-      const ordered = [...characters].sort((a, b) => (b.isTank ? 1 : 0) - (a.isTank ? 1 : 0));
-      for (const character of ordered) {
-        this.bar.appendChild(this._makeCard(character));
+    // "Current" character for the single-portrait readout: whoever's
+    // selected, else the tank, else just the first one — always shows
+    // someone rather than going blank whenever selection is cleared (e.g.
+    // Game._toggleWorldMap deselects on entering the map).
+    const displayChar =
+      characters.find((c) => c.id === selectedId) ??
+      characters.find((c) => c.isTank) ??
+      characters[0] ??
+      null;
+
+    this._displayedId = displayChar?.id ?? null;
+    if (!displayChar) {
+      this.panel.classList.add('hidden');
+      return;
+    }
+    this.panel.classList.remove('hidden');
+    this._updatePanel(displayChar);
+  }
+
+  _updatePanel(character) {
+    this.panel.classList.toggle('inactive', !character.isActive);
+    this.panel.classList.toggle('tank', !!character.isTank);
+    this.panel.classList.toggle('has-vehicle', !!character.vehicle);
+    this.panel.classList.toggle('not-in-party', character.inParty === false);
+
+    const fallback = this.panel.querySelector('.hud-portrait-fallback');
+    let img = this.panel.querySelector('.hud-portrait-img');
+    if (character.avatar) {
+      if (!img) {
+        img = document.createElement('img');
+        img.className = 'hud-portrait-img';
+        img.addEventListener('error', () => img.remove());
+        this.panel.querySelector('.hud-portrait-slot').prepend(img);
       }
-      this._lastTankId = tankId;
+      if (img.src !== character.avatar) img.src = character.avatar;
+      fallback.textContent = '';
+    } else {
+      img?.remove();
+      fallback.textContent = character.name.charAt(0).toUpperCase();
     }
 
-    for (const character of characters) {
-      const card = this.bar.querySelector(`[data-id="${character.id}"]`);
-      if (!card) continue;
-      this._updateCard(card, character, character.id === selectedId);
-    }
+    const warning = character.isActive && character.health <= WARN_THRESHOLD;
+    const hpBadge = this.panel.querySelector('.hud-hp-badge');
+    const hpFill = this.panel.querySelector('.hud-hp-fill');
+    hpBadge.textContent = Math.round(character.health);
+    hpBadge.style.color = warning ? '#ffb3b3' : '';
+    const ratio = Math.max(0, Math.min(1, character.health / 100));
+    hpFill.style.width = `${ratio * 100}%`;
+    hpFill.classList.toggle('critical', !character.isActive);
+    hpFill.classList.toggle('warning', warning && character.isActive);
   }
 
   /** Unused now that the roster stays visible on every screen (see
    * Game._toggleWorldMap). Kept in case a future screen needs to hide it. */
   setVisible(visible) {
     this.wrap.classList.toggle('hidden', !visible);
-  }
-
-  _makeCard(character) {
-    const card = document.createElement('div');
-    card.className = 'roster-avatar';
-    card.dataset.id = character.id;
-    card.innerHTML = `
-      <div class="roster-avatar-portrait">
-        <span class="roster-avatar-fallback">${character.name.charAt(0).toUpperCase()}</span>
-        <span class="roster-tank-badge" title="Танк">🛡</span>
-        <span class="roster-vehicle-badge" title="Транспорт">🚙</span>
-      </div>
-      <div class="roster-avatar-name"></div>
-    `;
-    if (character.avatar) {
-      const img = document.createElement('img');
-      img.src = character.avatar;
-      img.alt = character.name;
-      // If the art fails to load, keep the initials fallback visible instead.
-      img.addEventListener('error', () => img.remove());
-      card.querySelector('.roster-avatar-portrait').prepend(img);
-    }
-    return card;
-  }
-
-  _updateCard(card, character, isSelected) {
-    card.classList.toggle('selected', isSelected);
-    card.classList.toggle('inactive', !character.isActive);
-    card.classList.toggle('tank', !!character.isTank);
-    card.classList.toggle('has-vehicle', !!character.vehicle);
-    card.classList.toggle('not-in-party', character.inParty === false);
-
-    const warning = character.isActive && character.health <= WARN_THRESHOLD;
-    card.classList.toggle('warning', warning);
-
-    card.querySelector('.roster-avatar-name').textContent = character.name;
   }
 }

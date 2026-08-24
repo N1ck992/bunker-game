@@ -64,24 +64,23 @@ canvas {
   z-index: 10;
 }
 
-/* Real strip below the canvas — holds .left-bar and .roster-wrap in normal
- * document flow (see Game._buildDom) so neither floats over the room the
- * characters walk around in anymore. #app's flex column gives .scene-wrap
- * flex:1 and this whatever height its content needs, so adding buttons/extra
- * roster rows here grows the bar and shrinks the canvas instead of covering
- * it. align-items: flex-end keeps the left buttons and the roster's avatar
- * row level with each other even when the roster stacks taller (Отряд /
- * Выбрать всех above the avatars — see .roster-wrap below). No background/
- * border of its own — just enough padding to keep the small buttons off the
- * screen edge, same understated look they had while floating. */
+/* Real strip below the canvas — holds .hud-left, .hud-pipe and .roster-wrap
+ * (which now ends in .hud-right, see CharacterRosterUI.js) in normal
+ * document flow (see Game._buildDom) so nothing floats over the room the
+ * characters walk around in. #app's flex column gives .scene-wrap flex:1
+ * and this whatever height its content needs, so the Отряд/Выбрать всех
+ * buttons stacking above .hud-right grows the bar and shrinks the canvas
+ * instead of covering it. align-items: flex-end keeps .hud-left/.hud-pipe
+ * and .hud-right level with each other along the bar's bottom edge even
+ * when .roster-wrap stacks taller. No flex-wrap/justify-content: .hud-pipe's
+ * own flex:1 is what consumes whatever width is left between the two ends —
+ * wrapping or redistributing that space here would just fight it. */
 .bottom-bar {
   position: relative;
   z-index: 10;
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: 0;
   padding: 6px 10px;
   background: var(--steel-900);
 }
@@ -496,40 +495,65 @@ canvas {
   cursor: default;
 }
 
-/* Left-side action bar — now a normal flex item inside .bottom-bar (see
- * above), sitting to the left of the roster instead of floating over the
- * canvas. Карта and Инвентарь live here (see LeftBarUI). */
-.left-bar {
-  z-index: 5;
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
+/* Industrial pipe-and-panel HUD bar (see LeftBarUI/CharacterRosterUI) —
+ * built from three crops of one reference art piece
+ * (game/assets/ui/hud_bar_*.png): a left double-panel housing Инвентарь +
+ * Карта, a tileable straight pipe segment that fills whatever's left of the
+ * bar's width, and a right panel framing the current portrait readout (see
+ * .hud-right below). --hud-bar-h is the one shared height every piece scales
+ * from — each cap's width follows automatically via aspect-ratio, so the
+ * pipe is the only piece that actually stretches/tiles with screen width. */
+:root {
+  --hud-bar-h: 70px;
 }
 
-.left-bar-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(20, 23, 15, 0.92);
-  border: 1px solid var(--amber-dim);
-  color: var(--amber);
-  border-radius: 10px;
-  padding: 7px 12px;
-  font-family: inherit;
-  font-size: 11px;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.4);
-  white-space: nowrap;
+.hud-left {
+  position: relative;
+  flex: 0 0 auto;
+  height: var(--hud-bar-h);
+  aspect-ratio: 470 / 250; /* native size of hud_bar_left.png */
+  background-image: url('../assets/ui/hud_bar_left.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
 }
-.left-bar-btn:active { background: var(--steel-700); }
-.left-bar-btn.active { background: var(--amber); border-color: var(--amber); color: var(--steel-950); }
-.left-bar-icon { font-size: 13px; }
+
+/* Both buttons sit over their own baked-in square (icon + label already
+ * part of the art) — invisible hit targets, not styled boxes. Percentages
+ * come from where those two squares actually fall inside hud_bar_left.png
+ * (the trailing ~21% of its width is the pipe stub leading out, left
+ * unclickable). */
+.hud-btn {
+  position: absolute;
+  top: 26%;
+  height: 68%;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.hud-btn-inventory { left: 0; width: 39%; }
+.hud-btn-map { left: 39.4%; width: 39.3%; }
+.hud-btn:active { filter: brightness(1.35); }
+/* Карта's label stays baked as "Карта" even once active (toggled into the
+ * world-map screen) — the art has no separate "Бункер" state to swap to —
+ * so a bright glow is the only on/off cue now, instead of the old label
+ * swap. */
+.hud-btn.active { filter: brightness(1.5) saturate(1.4) drop-shadow(0 0 6px rgba(232,176,75,0.7)); }
+
+.hud-pipe {
+  flex: 1 1 auto;
+  min-width: 12px;
+  height: var(--hud-bar-h);
+  background-image: url('../assets/ui/hud_bar_pipe.png');
+  background-repeat: repeat-x;
+  background-size: auto 100%;
+  background-position: left center;
+}
 
 /* Character roster — now a normal flex item inside .bottom-bar (see the
  * .bottom-bar rule near the top of this file), sitting to the right of
- * .left-bar in the strip below the canvas instead of floating over the
+ * .hud-pipe in the strip below the canvas instead of floating over the
  * bottom-right corner of the room.
  * z-index stays below .top-root/.ui-root (10): both are separate stacking
  * contexts under #app, so this must lose to them as a whole in order for
@@ -537,11 +561,12 @@ canvas {
  * .ui-root) to still be able to render above the roster and stay clickable
  * — a nested z-index like .enemy-menu's 60 can never outrank a sibling
  * context's z-index on its own. */
-/* Holds the avatar row (.roster-bar) plus the Отряд/Выбрать всех buttons
- * (.roster-controls) stacked directly above it — column-reverse means the
- * first DOM child (.roster-bar, see CharacterRosterUI._build) is anchored
- * at the very corner (main-start of the reversed axis is the bottom), and
- * .roster-controls, appended after it, stacks above. */
+/* Holds .hud-right (the current-character portrait readout) plus the
+ * Отряд/Выбрать всех buttons (.roster-controls) stacked directly above it —
+ * column-reverse means the first DOM child (.hud-right, see
+ * CharacterRosterUI._build) is anchored at the very corner (main-start of
+ * the reversed axis is the bottom), and .roster-controls, appended after
+ * it, stacks above. */
 .roster-wrap {
   z-index: 5; /* above the canvas, below .top-root/.ui-root and everything in them */
   display: flex;
@@ -551,7 +576,7 @@ canvas {
   max-width: 100%;
 }
 
-/* Отряд / Выбрать всех, stacked right above the avatar row. */
+/* Отряд / Выбрать всех, stacked right above the portrait panel. */
 .roster-controls {
   display: flex;
   justify-content: flex-end;
@@ -559,25 +584,130 @@ canvas {
   gap: 8px;
 }
 
-/* Horizontal, right-to-left, wrapping upward instead of scrolling: row-
- * reverse means the first DOM child (the tank, sorted first in
- * CharacterRosterUI.update) lands at the right edge closest to the corner
- * anchor/thumb, and wrap-reverse pushes any avatars that don't fit on that
- * first line onto a new line ABOVE it (matching .roster-wrap's own
- * column-reverse stacking) rather than hiding them behind a horizontal
- * scrollbar. */
-.roster-bar {
+/* Single portrait readout — the right end of the pipe-and-panel HUD bar
+ * (see .hud-left/.hud-pipe above). Shows whichever character
+ * CharacterRosterUI resolves as "current" (selected, else tank, else the
+ * first active settler) — not the whole squad; the rest of the party is
+ * still reachable via Отряд (.roster-controls, above). */
+.hud-right {
+  position: relative;
+  flex: 0 0 auto;
+  height: var(--hud-bar-h);
+  aspect-ratio: 372 / 250; /* native size of hud_bar_right_frame.png */
+  cursor: pointer;
+}
+
+/* The frame graphic has its inner cavity (face + level badge + bar area)
+ * cut fully transparent (see game/assets/ui/hud_bar_right_frame.png) so it
+ * can sit on top, in normal document order, of the live portrait/badge/bar
+ * beneath it, letting the metal border show through in front of them. */
+.hud-right-frame {
+  position: absolute;
+  inset: 0;
+  background-image: url('../assets/ui/hud_bar_right_frame.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+/* The cavity itself — percentages measured from the same crop the frame's
+ * cutout rectangle came from (168,26,175,192 out of 372x250). */
+.hud-portrait-slot {
+  position: absolute;
+  left: 45.2%;
+  top: 10.4%;
+  width: 47%;
+  height: 76.8%;
+  background: var(--steel-900);
+  overflow: hidden;
+}
+
+.hud-portrait-img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 62%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.hud-portrait-fallback {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 62%;
   display: flex;
-  flex-direction: row-reverse;
-  flex-wrap: wrap-reverse;
-  justify-content: flex-end;
-  gap: 8px;
-  max-width: calc(100% - 20px);
-  padding: 8px 6px;
-  background: rgba(20, 23, 15, 0.88);
+  align-items: center;
+  justify-content: center;
+  background: var(--steel-800);
+  color: var(--text-dim);
+  font-weight: bold;
+  font-size: 20px;
+}
+
+/* Health readout, baked as a number + bar in the reference art — recreated
+ * live here instead: this game has no separate "level" stat, so the number
+ * slot shows rounded HP and the bar fills to match, rather than inventing a
+ * level that doesn't exist. */
+.hud-hp-badge {
+  position: absolute;
+  left: 0;
+  bottom: 6%;
+  width: 27%;
+  height: 22%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--steel-950);
+  border: 1px solid var(--amber-dim);
+  color: var(--amber);
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.hud-hp-track {
+  position: absolute;
+  right: 2%;
+  bottom: 9%;
+  width: 68%;
+  height: 15%;
+  background: var(--steel-950);
   border: 1px solid var(--steel-700);
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+}
+
+.hud-hp-fill {
+  height: 100%;
+  background: var(--amber);
+}
+.hud-hp-fill.warning { background: #d4a83a; }
+.hud-hp-fill.critical { background: var(--rust); }
+
+/* Tank/vehicle badges, pinned to the frame's own top corners — same idea as
+ * the old roster avatar's corner badges. */
+.hud-badge {
+  position: absolute;
+  top: 2%;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--steel-950);
+  border: 1px solid var(--amber);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  display: none;
+  z-index: 3;
+}
+.hud-badge-tank { left: 2%; }
+.hud-badge-vehicle { right: 2%; }
+.hud-right.tank .hud-badge-tank { display: block; }
+.hud-right.has-vehicle .hud-badge-vehicle { display: block; }
+
+.hud-right.inactive .hud-portrait-slot,
+.hud-right.not-in-party .hud-portrait-slot {
+  opacity: 0.5;
 }
 
 .party-btn,
@@ -609,132 +739,9 @@ canvas {
   color: var(--steel-950);
 }
 
-.roster-avatar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  flex: 0 0 auto;
-  width: 54px;
-  cursor: pointer;
-}
-
-.roster-avatar-portrait {
-  position: relative;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: var(--steel-800);
-  border: 2px solid var(--steel-700);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color 0.15s;
-}
-
-.roster-avatar-portrait img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.roster-avatar-fallback {
-  color: var(--text-dim);
-  font-weight: bold;
-  font-size: 16px;
-}
-
-.roster-avatar-name {
-  font-size: 10px;
-  color: var(--text-dim);
-  max-width: 54px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.roster-avatar.selected .roster-avatar-portrait {
-  border-color: var(--amber);
-  box-shadow: 0 0 0 2px rgba(232,176,75,0.25);
-}
-
-.roster-avatar.selected .roster-avatar-name {
-  color: var(--amber);
-}
-
-.roster-avatar.warning .roster-avatar-portrait {
-  border-color: #d4a83a;
-}
-
-.roster-avatar.inactive .roster-avatar-portrait {
-  border-color: var(--rust);
-  opacity: 0.6;
-}
-
-.roster-avatar.inactive .roster-avatar-name {
-  color: var(--rust);
-}
-
-/* Tank badge — small shield pinned to the corner of the portrait, only
- * the settler currently set as tank in PartyUI shows it. */
-.roster-tank-badge {
-  display: none;
-  position: absolute;
-  right: -2px;
-  bottom: -2px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--steel-950);
-  border: 1px solid var(--amber);
-  font-size: 11px;
-  line-height: 16px;
-  text-align: center;
-}
-
-.roster-avatar.tank .roster-avatar-portrait {
-  border-color: var(--amber);
-}
-
-.roster-avatar.tank .roster-tank-badge {
-  display: block;
-}
-
-/* Vehicle badge — opposite corner from the tank badge, so both can show at
- * once. Marks a settler with an equipped transport/vehicle item (see
- * items.json's "vehicle" slot and Character.vehicle) — a car, motorcycle,
- * or surface/space suit, kept as its own category, separate from clothing. */
-.roster-vehicle-badge {
-  display: none;
-  position: absolute;
-  left: -2px;
-  bottom: -2px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--steel-950);
-  border: 1px solid var(--amber);
-  font-size: 11px;
-  line-height: 16px;
-  text-align: center;
-}
-
-.roster-avatar.has-vehicle .roster-vehicle-badge {
-  display: block;
-}
-
-/* Benched settlers (unchecked "в отряде" in the Отряд panel) — still
- * selectable/controllable, just visually dimmed to show they're sitting
- * out of any fight. */
-.roster-avatar.not-in-party .roster-avatar-portrait {
-  opacity: 0.45;
-}
-
-.roster-avatar.not-in-party .roster-avatar-name {
-  color: var(--text-dim);
-  font-style: italic;
-}
+/* Benched (unchecked "в отряде" in Отряд) still shows here if selected —
+ * .hud-right.not-in-party above dims it the same way .inactive does, just
+ * as a visual "sitting out" cue rather than blocking selection. */
 
 /* ---------------------------------------------------------------------
  * Отряд (squad) screen — game/ui/PartyUI.js
@@ -1268,10 +1275,8 @@ canvas {
 @media screen and (orientation: landscape) and (max-height: 420px) {
   .resource-bar { padding: 3px 10px; font-size: 11px; gap: 10px; }
   .bottom-bar { padding: 5px 10px; gap: 6px; }
-  .left-bar { gap: 6px; }
   .roster-wrap { gap: 6px; }
-  .left-bar-btn, .party-btn, .select-all-btn { padding: 5px 10px; font-size: 10px; }
-  .roster-avatar { width: 46px; }
-  .roster-avatar-portrait { width: 38px; height: 38px; }
+  .party-btn, .select-all-btn { padding: 5px 10px; font-size: 10px; }
+  :root { --hud-bar-h: 54px; }
   .character-panel, .construction-modal { max-height: 78vh; }
 }

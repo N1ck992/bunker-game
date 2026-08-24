@@ -178,7 +178,12 @@ class Game {
     this.combatSystem = new CombatSystem(
       this.itemsById,
       balance,
-      (character, enemy) => this._toast(`${character.name} открывает огонь по цели: ${enemy.name}!`),
+      (character, enemy) => {
+        this._toast(`${character.name} открывает огонь по цели: ${enemy.name}!`);
+        // Attacking any one enemy calls its whole faction (raceId) down on
+        // the party at once — see EnemySystem.alertFaction/Enemy.alerted.
+        this.enemySystem.alertFaction(this.enemies, enemy.raceId);
+      },
       (character, enemy) => {
         const dist = Math.hypot(enemy.position.col - character.position.col, enemy.position.row - character.position.row);
         this._attackEffects.push({
@@ -362,17 +367,26 @@ class Game {
 
     // Mounted into bottomBar (not uiRoot/app) so it renders in its own strip
     // below the canvas rather than floating over it — see bottomBar above.
-    // Appended first so it lands on the left side of the bar (bottomBar's
-    // space-between layout — see style.css), same side it occupied before.
+    // Appended first so it lands on the left side of the bar, same side it
+    // occupied before — now the left end of the pipe-and-panel HUD (see
+    // .hud-left/.hud-pipe/.hud-right in style.css).
     this.shelterUI = new ShelterUI(this.topRoot);
     this.leftBarUI = new LeftBarUI(this.bottomBar, {
       onMap: () => this._toggleWorldMap(),
       onInventory: () => this._openPartyInventory()
     });
 
-    // Appended second so it lands on the right side of the bar, same corner
+    // The straight pipe segment connecting .hud-left to .hud-right (see
+    // CharacterRosterUI below) — pure decoration, no UI class of its own,
+    // stretches/tiles to fill whatever width is left between the two ends
+    // (see .hud-pipe in style.css).
+    this.hudPipe = document.createElement('div');
+    this.hudPipe.className = 'hud-pipe';
+    this.bottomBar.appendChild(this.hudPipe);
+
+    // Appended third so it lands on the right side of the bar, same corner
     // it occupied before. Also owns the Отряд / Выбрать всех buttons,
-    // stacked right above the avatar row — see CharacterRosterUI.js.
+    // stacked right above the portrait panel — see CharacterRosterUI.js.
     this.rosterUI = new CharacterRosterUI(this.bottomBar, {
       onSelect: (characterId, clickEvent) => {
         const character = this.characters.find((c) => c.id === characterId);
@@ -2731,19 +2745,18 @@ class Game {
         sprite = spriteSet.idle[frameIndex];
       }
       const drawH = cs * CHARACTER_HEIGHT_TILES;
-      // Width comes from a fixed per-character reference frame (their own
-      // idle pose), never from whichever frame happens to be playing right
-      // now. Different animation sets (and even different frames within one
-      // set — e.g. Ольга's char_2/run_right_*.png source at 480x656 vs her
-      // examine/idle art at 512x655, or the default set's char_examine.png
-      // at a totally different aspect than char_idle_*.png) were exported at
-      // slightly different canvas sizes, so deriving drawW from the active
-      // frame's own aspect ratio made the character visibly grow/shrink
-      // every time they switched pose (most noticeably stepping into
-      // "Изучить"/examine). Anchoring to one constant reference per
-      // character keeps their on-screen footprint identical across every
-      // state — idle, run, examine, afk, attack.
-      const refSprite = this._referenceSpriteFor(spriteSet);
+      // Width comes from whichever frame is actually playing right now, at
+      // its own native aspect ratio — never squashed or stretched into some
+      // other pose's shape. Run/attack/examine art is genuinely a different
+      // silhouette than idle (a running stride is wider, examine's raised
+      // holo-panel wider still), so the character's on-screen width does
+      // shift a bit between poses instead of staying perfectly constant —
+      // that's the accepted trade for never rendering squeezed/stretched
+      // (see the reference-frame version this replaced, which anchored
+      // every pose to idle's own aspect and squeezed run/attack sideways to
+      // fit it). Falls back to the character's idle reference frame only if
+      // the currently-playing frame itself hasn't finished loading yet.
+      const refSprite = sprite.naturalWidth ? sprite : this._referenceSpriteFor(spriteSet);
       const drawW = refSprite.naturalWidth
         ? drawH * (refSprite.naturalWidth / refSprite.naturalHeight)
         : drawH * 0.32;

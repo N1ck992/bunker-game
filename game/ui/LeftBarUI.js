@@ -1,9 +1,13 @@
 // LeftBarUI.js
-// Two icon buttons living in the bottom bar below the scene (see .bottom-bar
-// in style.css and where Game._buildDom mounts this into it) — no longer
-// floating over the canvas, so they never cover the room. Карта toggles the
-// world-map screen (moved here from ShelterUI's nav bar); Инвентарь opens
-// the party's shared gear stash (see Game._openPartyInventory).
+// Left end of the pipe-and-panel HUD bar below the scene (see .hud-left in
+// style.css and where Game._buildDom mounts this into .bottom-bar, right
+// before .hud-pipe and CharacterRosterUI's .hud-right). The double-panel
+// art (game/assets/ui/hud_bar_left.png) already has the icon + label baked
+// into each square, in this exact order — Инвентарь first/left, Карта
+// second — so the two buttons here are just invisible hit targets sized to
+// match those squares, not styled boxes of their own. Карта toggles the
+// world-map screen; Инвентарь opens the party's shared gear stash (see
+// Game._openPartyInventory).
 
 export class LeftBarUI {
   /** @param {{onMap:Function, onInventory:Function}} callbacks */
@@ -15,14 +19,10 @@ export class LeftBarUI {
 
   _build() {
     this.wrap = document.createElement('div');
-    this.wrap.className = 'left-bar';
+    this.wrap.className = 'hud-left';
     this.wrap.innerHTML = `
-      <button class="left-bar-btn map-btn" data-action="map">
-        <span class="left-bar-icon">🗺</span><span class="left-bar-label">Карта</span>
-      </button>
-      <button class="left-bar-btn" data-action="inventory">
-        <span class="left-bar-icon">🎒</span><span class="left-bar-label">Инвентарь</span>
-      </button>
+      <button class="hud-btn hud-btn-inventory" data-action="inventory" aria-label="Инвентарь"></button>
+      <button class="hud-btn hud-btn-map" data-action="map" aria-label="Карта"></button>
     `;
     this.wrap.addEventListener('click', (e) => {
       const btn = e.target.closest('button');
@@ -34,12 +34,12 @@ export class LeftBarUI {
     this.root.appendChild(this.wrap);
   }
 
-  /** Toggles the map button between "Карта" (go to the map) and "Бункер"
-   * (return from it), so it doubles as the one control that opens and
-   * closes the world-map screen. */
+  /** Highlights the Карта button while the world-map screen is open — the
+   * art's own label stays "Карта" either way (no baked "Бункер" state to
+   * swap to), so an active glow is the toggle's only visual cue now. */
   setMapMode(isOnMap) {
-    const btn = this.wrap.querySelector('.map-btn');
-    btn.querySelector('.left-bar-label').textContent = isOnMap ? 'Бункер' : 'Карта';
+    const btn = this.wrap.querySelector('.hud-btn-map');
     btn.classList.toggle('active', isOnMap);
+    btn.setAttribute('aria-label', isOnMap ? 'Бункер' : 'Карта');
   }
 }
