@@ -24,8 +24,6 @@ export class CharacterUI {
         <button class="close-btn">✕</button>
       </div>
       <div class="stat-row"><span>Здоровье</span><div class="bar"><div class="fill health" style="width:${character.health}%"></div></div></div>
-      <div class="stat-row"><span>Голод</span><div class="bar"><div class="fill hunger" style="width:${character.hunger}%"></div></div></div>
-      <div class="stat-row"><span>Жажда</span><div class="bar"><div class="fill thirst" style="width:${character.thirst}%"></div></div></div>
       <div class="stat-row"><span>Температура</span><span>${Math.round(character.temperature)}°</span></div>
       <div class="attrs">
         <span>СИЛ ${character.strength}</span>

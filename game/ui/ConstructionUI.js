@@ -93,5 +93,5 @@ export class ConstructionUI {
 }
 
 function labelFor(key) {
-  return { water: 'Вода', food: 'Еда', heat: 'Тепло', materials: 'Материалы' }[key] ?? key;
+  return { provisions: 'Провизия', heat: 'Тепло', materials: 'Материалы' }[key] ?? key;
 }

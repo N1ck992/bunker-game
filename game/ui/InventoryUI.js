@@ -24,7 +24,7 @@
 
 const GRID_SIZE = 20; // 5 columns x 4 rows, matches the reference mockup
 const SLOT_ICONS = { weapon: '⚔', clothing: '🧥', vehicle: '🚙', key: '🔑' };
-const DAMAGE_TYPE_LABELS = { kinetic: 'Кинетический' };
+const DAMAGE_TYPE_LABELS = { kinetic: 'Кинетический', energy: 'Энергетический' };
 
 export class InventoryUI {
   constructor(root) {

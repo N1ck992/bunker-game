@@ -13,8 +13,6 @@ export class Character {
     this.agility = data.agility ?? 5;
     this.intelligence = data.intelligence ?? 5;
 
-    this.hunger = data.hunger ?? 100;
-    this.thirst = data.thirst ?? 100;
     this.temperature = data.temperature ?? 20;
 
     this.clothing = data.clothing ?? null; // equipped clothing item id, or null
@@ -47,6 +45,13 @@ export class Character {
     // slow-firing weapon doesn't read as attacking nonstop; the rest of
     // the cooldown shows an idle "ready" pose plus the reload bar above.
     this.attackAnimRemaining = 0;
+    // The pulse's total length at the moment it started (set alongside
+    // attackAnimRemaining above) — Game._renderCharacters uses
+    // attackAnimDuration - attackAnimRemaining as elapsed-into-the-swing so
+    // the attack frames always play draw→fire→recover in order from frame 0,
+    // instead of sampling off the absolute game clock (which used to land
+    // mid-cycle depending on when the swing happened to fire).
+    this.attackAnimDuration = 0;
     this.combatState = 'idle'; // 'idle' | 'attacking'
     this.targetEnemyId = null;
     // Whether some enemy is currently attacking this character, refreshed
@@ -106,14 +111,8 @@ export class Character {
     this.pixelPosition = null; // set by renderer/movement system
   }
 
-  isCritical(criticalThreshold) {
-    return (
-      this.health <= 0 ||
-      this.hunger <= criticalThreshold ||
-      this.thirst <= criticalThreshold ||
-      this.temperature <= 5 ||
-      this.temperature >= 45
-    );
+  isCritical() {
+    return this.health <= 0 || this.temperature <= 5 || this.temperature >= 45;
   }
 
   takeDamage(amount) {
@@ -144,8 +143,6 @@ export class Character {
       endurance: this.endurance,
       agility: this.agility,
       intelligence: this.intelligence,
-      hunger: this.hunger,
-      thirst: this.thirst,
       temperature: this.temperature,
       clothing: this.clothing,
       weapon: this.weapon,

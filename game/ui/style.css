@@ -196,8 +196,6 @@ canvas {
 }
 .bar .fill { height: 100%; background: var(--amber); }
 .bar .fill.health { background: var(--ok); }
-.bar .fill.hunger { background: #d98e3a; }
-.bar .fill.thirst { background: #4a9fc0; }
 
 .attrs {
   display: flex;
@@ -988,8 +986,6 @@ canvas {
 }
 .squad-stat-fill { height: 100%; background: var(--squad-gold); }
 .squad-stat-fill.health { background: var(--ok); }
-.squad-stat-fill.hunger { background: #d98e3a; }
-.squad-stat-fill.thirst { background: #4a9fc0; }
 
 .squad-attrs {
   display: flex;

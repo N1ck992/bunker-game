@@ -18,8 +18,7 @@ export class ShelterUI {
     this.resourceBar = document.createElement('div');
     this.resourceBar.className = 'resource-bar';
     this.resourceBar.innerHTML = `
-      <div class="resource" data-res="water"><span class="icon">💧</span><span class="val">0</span></div>
-      <div class="resource" data-res="food"><span class="icon">🍖</span><span class="val">0</span></div>
+      <div class="resource" data-res="provisions"><span class="icon">🥫</span><span class="val">0</span></div>
       <div class="resource" data-res="heat"><span class="icon">🔥</span><span class="val">0</span></div>
       <div class="resource" data-res="materials"><span class="icon">🔩</span><span class="val">0</span></div>
       <div class="clock"><span class="phase-icon">☀</span><span class="phase-label">День</span></div>
@@ -29,8 +28,7 @@ export class ShelterUI {
   }
 
   update(resources, gameTime) {
-    this.resourceBar.querySelector('[data-res="water"] .val').textContent = Math.floor(resources.water);
-    this.resourceBar.querySelector('[data-res="food"] .val').textContent = Math.floor(resources.food);
+    this.resourceBar.querySelector('[data-res="provisions"] .val').textContent = Math.floor(resources.provisions);
     this.resourceBar.querySelector('[data-res="heat"] .val').textContent = Math.floor(resources.heat);
     this.resourceBar.querySelector('[data-res="materials"] .val').textContent = Math.floor(resources.materials);
 

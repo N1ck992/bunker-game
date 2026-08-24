@@ -15,20 +15,12 @@
     "healthLossPerTickOutsideSafeRange": 1
   },
   "resources": {
-    "startingWater": 60,
-    "startingFood": 60,
+    "startingProvisions": 60,
     "startingHeat": 40,
     "startingMaterials": 30,
-    "consumptionPerCharacter": {
-      "water": 1.2,
-      "food": 1.4
-    },
     "tickIntervalMs": 3000
   },
   "needs": {
-    "hungerDecayPerTick": 1.5,
-    "thirstDecayPerTick": 1.6,
-    "criticalThreshold": 15,
     "healthLossWhenCritical": 2
   },
   "movement": {
@@ -37,6 +29,6 @@
   "combat": {
     "meleeAgilityAttackSpeedPercent": 3,
     "agilityBaseline": 5,
-    "attackAnimSeconds": 0.35
+    "attackAnimSeconds": 2
   }
 }

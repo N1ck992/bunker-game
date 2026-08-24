@@ -1,40 +1,30 @@
 // ResourceSystem.js
-// Tracks the four base resources and applies production - consumption per tick.
+// Tracks the three base resources and applies production per tick.
 // Deliberately dumb: it doesn't know about rooms or characters directly, it's
 // just handed numbers each tick by Game.js.
 
 export class ResourceSystem {
   constructor(balance, initial = {}) {
-    this.water = initial.water ?? balance.resources.startingWater;
-    this.food = initial.food ?? balance.resources.startingFood;
+    this.provisions = initial.provisions ?? balance.resources.startingProvisions;
     this.heat = initial.heat ?? balance.resources.startingHeat;
     this.materials = initial.materials ?? balance.resources.startingMaterials;
 
-    this.consumptionPerCharacter = balance.resources.consumptionPerCharacter;
-    this.lastDelta = { water: 0, food: 0, heat: 0, materials: 0 };
+    this.lastDelta = { provisions: 0, heat: 0, materials: 0 };
   }
 
   /**
-   * @param {{water:number,food:number,heat:number,materials:number}} production
-   * @param {number} characterCount - active characters consuming water/food
+   * Provisions never drain on their own — only production adds to any of
+   * these three, none of them has an automatic per-character upkeep cost.
+   * @param {{provisions:number,heat:number,materials:number}} production
    */
-  applyTick(production, characterCount) {
-    const consumption = {
-      water: this.consumptionPerCharacter.water * characterCount,
-      food: this.consumptionPerCharacter.food * characterCount,
-      heat: 0,
-      materials: 0
-    };
-
+  applyTick(production) {
     const delta = {
-      water: production.water - consumption.water,
-      food: production.food - consumption.food,
-      heat: production.heat - consumption.heat,
-      materials: production.materials - consumption.materials
+      provisions: production.provisions ?? 0,
+      heat: production.heat ?? 0,
+      materials: production.materials ?? 0
     };
 
-    this.water = Math.max(0, this.water + delta.water);
-    this.food = Math.max(0, this.food + delta.food);
+    this.provisions = Math.max(0, this.provisions + delta.provisions);
     this.heat = Math.max(0, this.heat + delta.heat);
     this.materials = Math.max(0, this.materials + delta.materials);
 
@@ -43,7 +33,7 @@ export class ResourceSystem {
   }
 
   /**
-   * Adds raw amounts straight away, bypassing production/consumption math.
+   * Adds raw amounts straight away, bypassing production math.
    * Used for one-off gains like a character rummaging through furniture.
    * @param {{[resource:string]: number}} amounts
    */
@@ -67,6 +57,6 @@ export class ResourceSystem {
   }
 
   toSaveData() {
-    return { water: this.water, food: this.food, heat: this.heat, materials: this.materials };
+    return { provisions: this.provisions, heat: this.heat, materials: this.materials };
   }
 }

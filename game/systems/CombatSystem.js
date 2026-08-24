@@ -3,27 +3,32 @@
 // movement stays entirely under player control via tap-to-move — it just
 // auto-attacks whatever active enemy is within its equipped weapon's range,
 // on that weapon's own cooldown. No weapon equipped -> falls back to
-// UNARMED_ATTACK below (bare-handed melee) rather than standing there doing
-// nothing — a settler always has *some* way to fight back.
+// INNATE_ATTACK below rather than standing there doing nothing.
 
-// Bare-handed fallback, shaped exactly like a weapon item (see items.json)
-// so CombatSystem/Game can treat it identically to an equipped weapon. Short
-// melee range, modest damage, slightly slower than the one gun currently in
-// the game — good enough to survive with, not a replacement for gearing up.
-export const UNARMED_ATTACK = Object.freeze({
-  id: 'unarmed',
-  name: 'Врукопашную',
+// Every settler fires this from their own suit gauntlet — it's not a
+// "no weapon" placeholder, it's the character's built-in energy attack,
+// shaped exactly like a weapon item (see items.json) so CombatSystem/Game
+// can treat it identically to an equipped one. Ranged and energy-damage on
+// its own, always available. Weapon items (once any exist again) are meant
+// to layer stat bonuses and new abilities on top of this base attack, not
+// replace it outright — effectiveWeapon() below only does a full swap for
+// now because there's nothing in items.json to layer yet; revisit that once
+// there is.
+export const INNATE_ATTACK = Object.freeze({
+  id: 'innate_gauntlet',
+  name: 'Энергетическая перчатка',
   slot: 'weapon',
-  damage: 4,
-  damageType: 'kinetic',
-  range: 1,
-  attackCooldownSeconds: 1.4
+  damage: 12,
+  damageType: 'energy',
+  range: 10,
+  attackCooldownSeconds: 3
 });
 
 // A weapon with range 1 is close enough to be swung/punched rather than
 // aimed and fired — that's the melee/ranged split ловкость cares about (see
-// _effectiveCooldownSeconds). UNARMED_ATTACK (range 1) counts as melee too,
-// so bare-handed fighters still benefit from agility.
+// _effectiveCooldownSeconds). INNATE_ATTACK is ranged (range 6), so it
+// doesn't get the agility speed-up; that stays reserved for actual melee
+// weapons, if any ever exist.
 const MELEE_RANGE_THRESHOLD = 1;
 
 // Floor on the agility-boosted cooldown so a very high-ловкость melee
@@ -100,16 +105,17 @@ export class CombatSystem {
           this.combatBalance.attackAnimSeconds ?? 0.35,
           character.attackCooldownSeconds
         );
+        character.attackAnimDuration = character.attackAnimRemaining;
         target.takeDamage(weapon.damage);
         this.onAttack?.(character, target, weapon);
       }
     }
   }
 
-  /** The item in `character`'s weapon slot, or UNARMED_ATTACK if empty/invalid — shared with Game._commandAttack so manual "Атаковать" orders agree with what CombatSystem will actually fire with. */
+  /** The item in `character`'s weapon slot, or INNATE_ATTACK if empty/invalid — shared with Game._commandAttack so manual "Атаковать" orders agree with what CombatSystem will actually fire with. */
   static effectiveWeapon(character, itemsById) {
     const weapon = character.weapon ? itemsById.get(character.weapon) : null;
-    return weapon && weapon.slot === 'weapon' ? weapon : UNARMED_ATTACK;
+    return weapon && weapon.slot === 'weapon' ? weapon : INNATE_ATTACK;
   }
 
   /** A weapon close enough in range to be melee (fists, knives, ...) rather than aimed/fired at a distance — see MELEE_RANGE_THRESHOLD. */

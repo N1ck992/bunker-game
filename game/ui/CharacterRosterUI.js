@@ -21,9 +21,8 @@
 // select a settler by tapping their portrait instead of hunting for the
 // tiny sprite on the canvas — same selection callback the canvas tap uses.
 
-const WARN_THRESHOLD = 30; // rough "needs attention" line, separate from the
-                             // exact criticalThreshold in balance.json — this
-                             // is just a visual cue, not a gameplay value.
+const WARN_THRESHOLD = 30; // rough "needs attention" line — just a visual
+                             // cue, not a gameplay value.
 
 export class CharacterRosterUI {
   /**
@@ -148,9 +147,7 @@ export class CharacterRosterUI {
     card.classList.toggle('has-vehicle', !!character.vehicle);
     card.classList.toggle('not-in-party', character.inParty === false);
 
-    const warning =
-      character.isActive &&
-      (character.hunger <= WARN_THRESHOLD || character.thirst <= WARN_THRESHOLD);
+    const warning = character.isActive && character.health <= WARN_THRESHOLD;
     card.classList.toggle('warning', warning);
 
     card.querySelector('.roster-avatar-name').textContent = character.name;

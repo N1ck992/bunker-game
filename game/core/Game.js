@@ -51,16 +51,24 @@ const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, 
 // between room scenes exactly the same way they always switched between
 // floors: _switchLevel/leadsToFile doesn't know or care which rendering
 // mode either side uses.
-const ROOM_VISIBLE_COLS = 26; // how many grid columns are visible across the viewport width at once
+const ROOM_VISIBLE_COLS = 26; // how many grid columns are visible across the viewport width at once —
+                               // default for any room scene that doesn't set its own visibleCols below
 const ROOM_CAMERA_LERP_PER_SEC = 6; // higher = camera snaps to the character faster
 
 // AFK fidget (look left/right, sniff armpit, recoil, return) — a one-shot
-// 5-frame gag that plays after a character has stood around doing nothing
+// 8-frame gag that plays after a character has stood around doing nothing
 // for a while, then holds on the idle pose again until the next trigger.
 const AFK_TRIGGER_SECONDS = 8;
 const AFK_FRAME_SECONDS = 0.35;
 const IDLE_FPS = 2.2; // slow head-turn breathing loop, not meant to read as active motion
-const RESOURCE_LABELS = { food: 'еды', water: 'воды', heat: 'тепла', materials: 'материалов' };
+const RESOURCE_LABELS = { provisions: 'провизии', heat: 'тепла', materials: 'материалов' };
+// Energy bolt VFX (see _loadEffectSprites/_renderAttackEffects) — travel time
+// scales with distance so a shot across the room doesn't cross the screen in
+// the same eyeblink as a point-blank one, then the impact clip plays once at
+// the target, fixed-length regardless of range.
+const ATTACK_EFFECT_TRAVEL_BASE_MS = 60;
+const ATTACK_EFFECT_TRAVEL_PER_TILE_MS = 25;
+const ATTACK_EFFECT_IMPACT_MS = 500;
 const RECRUIT_RANGE_TILES = 1.5; // how close a party member must walk to auto-recruit a waiting NPC
 const MAX_PARTY_SIZE = 5; // hard cap on how many settlers can be checked "в отряде" at once
 // Only Ольга (char_2) can hack a "hack:<seconds>" door's keypad — see
@@ -172,20 +180,23 @@ class Game {
       balance,
       (character, enemy) => this._toast(`${character.name} открывает огонь по цели: ${enemy.name}!`),
       (character, enemy) => {
+        const dist = Math.hypot(enemy.position.col - character.position.col, enemy.position.row - character.position.row);
         this._attackEffects.push({
           from: { ...character.position },
           to: { ...enemy.position },
-          start: this._now ?? performance.now()
+          start: this._now ?? performance.now(),
+          travelMs: ATTACK_EFFECT_TRAVEL_BASE_MS + dist * ATTACK_EFFECT_TRAVEL_PER_TILE_MS
         });
       }
     );
     this.squadCombatSystem = new SquadCombatSystem(this.movementSystem);
-    this._attackEffects = []; // transient tracer effects for ranged hits, see _renderAttackEffects
+    this._attackEffects = []; // in-flight/impacting energy bolt VFX, see _renderAttackEffects
 
     this._buildDom();
     this._loadBunkerImage();
     this._loadCharacterSprites();
     this._loadEnemySprites();
+    this._loadEffectSprites();
     this._bindInput();
 
     // Auto-select the player's only character so its panel is one tap away,
@@ -428,7 +439,11 @@ class Game {
         makeImage('game/assets/characters/char_idle_1.png'),
         makeImage('game/assets/characters/char_idle_2.png'),
         makeImage('game/assets/characters/char_idle_3.png'),
-        makeImage('game/assets/characters/char_idle_4.png')
+        makeImage('game/assets/characters/char_idle_4.png'),
+        makeImage('game/assets/characters/char_idle_5.png'),
+        makeImage('game/assets/characters/char_idle_6.png'),
+        makeImage('game/assets/characters/char_idle_7.png'),
+        makeImage('game/assets/characters/char_idle_8.png')
       ],
       // Held still by default — a single frame, looped trivially below the
       // same way the animated char_2 examine set is, so both share one
@@ -444,7 +459,7 @@ class Game {
         makeImage('game/assets/characters/char_run_6.png'),
         makeImage('game/assets/characters/char_run_7.png')
       ],
-      // Look left → look right → sniff armpit → recoil "фуу" → return, 5
+      // Look left → look right → sniff armpit → recoil "фуу" → return, 8
       // frames — a one-shot fidget played by _updateCharacterAfk after a
       // stretch of true idle, not a continuous loop like run/attack.
       afk: [
@@ -452,9 +467,12 @@ class Game {
         makeImage('game/assets/characters/char_afk_1.png'),
         makeImage('game/assets/characters/char_afk_2.png'),
         makeImage('game/assets/characters/char_afk_3.png'),
-        makeImage('game/assets/characters/char_afk_4.png')
+        makeImage('game/assets/characters/char_afk_4.png'),
+        makeImage('game/assets/characters/char_afk_5.png'),
+        makeImage('game/assets/characters/char_afk_6.png'),
+        makeImage('game/assets/characters/char_afk_7.png')
       ],
-      // Draw → aim → fire ×4 → recover, 11 frames — cycled while
+      // Draw → aim → fire ×6 → recover, 12 frames — cycled while
       // character.combatState === 'attacking' (set by CombatSystem).
       attack: [
         makeImage('game/assets/characters/char_attack_0.png'),
@@ -467,7 +485,8 @@ class Game {
         makeImage('game/assets/characters/char_attack_7.png'),
         makeImage('game/assets/characters/char_attack_8.png'),
         makeImage('game/assets/characters/char_attack_9.png'),
-        makeImage('game/assets/characters/char_attack_10.png')
+        makeImage('game/assets/characters/char_attack_10.png'),
+        makeImage('game/assets/characters/char_attack_11.png')
       ]
     };
 
@@ -592,6 +611,28 @@ class Game {
         attack: attack.map(makeImage)
       });
     }
+  }
+
+  /**
+   * The energy bolt CombatSystem's onAttack fires — see _attackEffects/
+   * _renderAttackEffects. Two clips cut from one VFX sheet: a 12-frame
+   * "projectile" (the bolt growing from a spark to a full comet as it
+   * flies) and a 12-frame "impact" (the burst on arrival, growing then
+   * fading). Every INNATE_ATTACK shot uses this same pair regardless of
+   * shooter — there's only ever been the one energy gauntlet in the game so
+   * far (see CombatSystem.js); once real weapon items exist, this can grow
+   * into a per-weapon lookup the same way character sprite sets are.
+   */
+  _loadEffectSprites() {
+    const num = (n) => String(n).padStart(2, '0');
+    this.effectSprites = {
+      projectile: Array.from({ length: 12 }, (_, i) =>
+        makeImage(`game/assets/effects/energy_bolt/projectile_${num(i)}.png`)
+      ),
+      impact: Array.from({ length: 12 }, (_, i) =>
+        makeImage(`game/assets/effects/energy_bolt/impact_${num(i)}.png`)
+      )
+    };
   }
 
   // Registers a floor's art in the persistent stack (this.discoveredLevels)
@@ -748,7 +789,8 @@ class Game {
     const boxHeight = this.sceneWrap.clientHeight;
     const cellSize = this.mapData.cellSize;
 
-    this.scale = boxWidth / (ROOM_VISIBLE_COLS * cellSize);
+    const visibleCols = this.mapData.visibleCols ?? ROOM_VISIBLE_COLS;
+    this.scale = boxWidth / (visibleCols * cellSize);
     this.roomWidthPx = this.mapData.cols * cellSize * this.scale;
     this.roomHeightPx = this.mapData.rows * cellSize * this.scale;
 
@@ -1027,10 +1069,16 @@ class Game {
    *
    * Width: as wide as the enemy's own rendered sprite image (same drawW
    * math as _renderEnemies), not just its one grid column.
-   * Height: from the floor tile it's standing on up to the ceiling of this
-   * room — the contiguous run of walkable tiles above it in the same column
-   * — instead of just its own row, since the room art is much taller than a
-   * single tile.
+   * Height: from the floor tile it's standing on up up to whichever is
+   * taller — the ceiling of this room (the contiguous run of walkable tiles
+   * above it in the same column, for the old multi-row-tall floor-stack
+   * interiors) or the sprite's own rendered height (drawH, same math as
+   * _renderEnemies). Room-mode scenes (see game/map/scenes/*.json) only mark
+   * their single floor row walkable — movement is horizontal-only there —
+   * so the ceiling-climb alone collapsed to a one-tile sliver right at the
+   * enemy's feet, well short of the visibly tall sprite standing above it;
+   * flooring the height at drawH keeps the tap target covering the whole
+   * sprite in both room modes instead of just the old floor-stack one.
    */
   _enemyHitBounds(enemy) {
     const cellSize = this.mapData.cellSize;
@@ -1047,12 +1095,14 @@ class Game {
     while (ceilingRow > 0 && this.pathfinder.isWalkable(enemy.position.col, ceilingRow - 1)) {
       ceilingRow--;
     }
+    const bottom = (enemy.position.row + 1) * cellSize;
+    const top = Math.min(ceilingRow * cellSize, bottom - drawH);
 
     return {
       left: centerX - drawW / 2,
       right: centerX + drawW / 2,
-      top: ceilingRow * cellSize,
-      bottom: (enemy.position.row + 1) * cellSize
+      top,
+      bottom
     };
   }
 
@@ -1214,8 +1264,9 @@ class Game {
    * Once there the path is empty, so the hero simply stands and faces the
    * target while CombatSystem's per-frame auto-fire does the rest — the
    * hero never chases past that point. No weapon equipped -> falls back to
-   * CombatSystem.UNARMED_ATTACK (bare-handed melee, see CombatSystem.js)
-   * instead of refusing the order — a settler can always throw a punch.
+   * CombatSystem.INNATE_ATTACK (the built-in energy gauntlet, see
+   * CombatSystem.js) instead of refusing the order — a settler can always
+   * fire back.
    */
   _commandAttack(enemy) {
     const character = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
@@ -1984,10 +2035,8 @@ class Game {
     if (this._resourceTickAccumulator >= this.balance.resources.tickIntervalMs) {
       this._resourceTickAccumulator = 0;
       const production = this.roomSystem.totalProduction();
-      const activeCount = this.characters.filter((c) => c.isActive).length;
-      const delta = this.resourceSystem.applyTick(production, activeCount);
-      if (this.resourceSystem.food <= 5) this.shelterUI.flashLowResource('food');
-      if (this.resourceSystem.water <= 5) this.shelterUI.flashLowResource('water');
+      this.resourceSystem.applyTick(production);
+      if (this.resourceSystem.provisions <= 5) this.shelterUI.flashLowResource('provisions');
     }
 
     // Kept running even while the player is looking at the bunker screen,
@@ -2635,7 +2684,7 @@ class Game {
       if (isMoving) {
         // Moving always wins — a character walking into range cancels any
         // stale "attacking" pose from the previous target, same as examine.
-        const RUN_FPS = 11; // 8-frame cycle now (was 10 at RUN_FPS 14) — scaled down to keep strides per second the same
+        const RUN_FPS = 7; // slowed down per feedback — 11 cycled the 8 frames too fast/close together
         const runFrames = directional
           ? (character.facingDir < 0 ? spriteSet.runLeft : spriteSet.runRight)
           : spriteSet.run;
@@ -2648,8 +2697,15 @@ class Game {
         // revolver, say) doesn't loop the attack animation nonstop while
         // waiting out attackCooldownRemaining (see the reload bar drawn
         // further down).
-        const ATTACK_FPS = 10;
-        const frameIndex = Math.floor((this._now / 1000) * ATTACK_FPS) % spriteSet.attack.length;
+        const ATTACK_FPS = 6; // slowed down per feedback, plays the 12-frame swing over ~2s (see attackAnimSeconds)
+        // Elapsed-since-the-swing-started (not the absolute game clock, which
+        // used to make the cycle start mid-frame depending on when the swing
+        // happened to fire — see attackAnimDuration) and clamped to the last
+        // frame instead of wrapping, so a swing always plays draw→fire→
+        // recover in order once and holds on the recovery pose, same idea as
+        // the afk fidget below.
+        const elapsed = character.attackAnimDuration - character.attackAnimRemaining;
+        const frameIndex = Math.min(spriteSet.attack.length - 1, Math.floor(elapsed * ATTACK_FPS));
         sprite = spriteSet.attack[frameIndex];
       } else if (character.combatState === 'attacking') {
         const frameIndex = Math.floor((this._now / 1000) * IDLE_FPS) % spriteSet.idle.length;
@@ -2799,39 +2855,60 @@ class Game {
   }
 
   /**
-   * Ranged weapons have no art yet, so a shot is represented as a short-lived
-   * tracer line (character -> target) instead of a projectile sprite. Effects
-   * are pushed by CombatSystem's onAttack callback and pruned here once their
-   * lifetime elapses — nothing else references this.attackEffects.
+   * A shot is a two-phase VFX: the energy bolt travels from shooter to
+   * target playing this.effectSprites.projectile (growing from a spark to a
+   * full comet as it flies — see _loadEffectSprites), then holds at the
+   * target and plays .impact once (burst growing then fading) before the
+   * effect is dropped. Effects are pushed by CombatSystem's onAttack
+   * callback (with travelMs already computed from shot distance) and pruned
+   * here once travelMs + ATTACK_EFFECT_IMPACT_MS elapses — nothing else
+   * references this._attackEffects.
    */
   _renderAttackEffects() {
     const ctx = this.ctx;
     const cs = this.mapData.cellSize * this.scale;
-    const LIFETIME_MS = 140;
     const now = this._now ?? performance.now();
 
-    this._attackEffects = this._attackEffects.filter((fx) => now - fx.start < LIFETIME_MS);
+    this._attackEffects = this._attackEffects.filter(
+      (fx) => now - fx.start < fx.travelMs + ATTACK_EFFECT_IMPACT_MS
+    );
 
     for (const fx of this._attackEffects) {
-      const t = (now - fx.start) / LIFETIME_MS;
+      const elapsed = now - fx.start;
       const fromX = (fx.from.col + 0.5) * cs;
       const fromY = (fx.from.row + 0.5) * cs - cs * 3; // roughly chest height, not feet
       const toX = (fx.to.col + 0.5) * cs;
       const toY = (fx.to.row + 0.5) * cs - cs * 2;
+      const facingLeft = toX < fromX;
+
+      let sprite, x, y, drawH;
+      if (elapsed < fx.travelMs) {
+        const t = elapsed / fx.travelMs;
+        const frames = this.effectSprites.projectile;
+        sprite = frames[Math.min(frames.length - 1, Math.floor(t * frames.length))];
+        x = lerp(fromX, toX, t);
+        y = lerp(fromY, toY, t);
+        drawH = cs * 0.9;
+      } else {
+        const t = (elapsed - fx.travelMs) / ATTACK_EFFECT_IMPACT_MS;
+        const frames = this.effectSprites.impact;
+        sprite = frames[Math.min(frames.length - 1, Math.floor(t * frames.length))];
+        x = toX;
+        y = toY;
+        drawH = cs * 1.6;
+      }
+      if (!sprite.complete || sprite.naturalWidth === 0) continue;
+      const drawW = drawH * (sprite.naturalWidth / sprite.naturalHeight);
 
       ctx.save();
-      ctx.globalAlpha = 1 - t;
-      ctx.strokeStyle = '#fff2b3';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(fromX, fromY);
-      ctx.lineTo(toX, toY);
-      ctx.stroke();
-
-      ctx.fillStyle = '#fff2b3';
-      ctx.beginPath();
-      ctx.arc(toX, toY, 3, 0, Math.PI * 2);
-      ctx.fill();
+      // Additive blend so the glow lights up against the scene instead of
+      // sitting on top of it as a flat sticker — the source art's own soft
+      // white haze around each frame all but disappears under 'lighter'.
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.translate(x, y);
+      // Source art always points right; mirror it for a shot fired leftward.
+      if (facingLeft) ctx.scale(-1, 1);
+      ctx.drawImage(sprite, -drawW / 2, -drawH / 2, drawW, drawH);
       ctx.restore();
     }
   }

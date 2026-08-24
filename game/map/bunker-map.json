@@ -1668,8 +1668,7 @@
    "locked": false,
    "interaction": {
     "produces": {
-     "food": 0.3,
-     "water": 0.2
+     "provisions": 0.5
     },
     "durationSeconds": 8,
     "cooldownSeconds": 25

@@ -51,13 +51,20 @@ export class SquadCombatSystem {
     const dirToEnemy = engager.position.col >= engagedCharacter.position.col ? 1 : -1;
 
     squad.forEach((character, i) => {
-      // Already under fire or firing back — holds position, same rule
-      // MovementSystem.moveTo already enforces for everyone else.
-      if (character.combatState === 'attacking' || character.isBeingAttacked) return;
+      // Already firing back — holds position, same rule MovementSystem.moveTo
+      // already enforces for everyone else. Deliberately *not* skipping on
+      // isBeingAttacked alone: that used to double as "already close enough"
+      // back when the party's one weapon was a range-6 pistol (getting hit
+      // from the mutant's attackDistance of 3 already meant well within
+      // shooting range). Now every character is melee-only (range 1), so an
+      // enemy attacking from 2-3 tiles away leaves them out of their own
+      // swing range — skipping the walk-in here stranded them taking hits
+      // forever without ever landing one back.
+      if (character.combatState === 'attacking') return;
 
       const standoff = FRONT_STANDOFF_TILES + i * LINE_SPACING_TILES;
       const col = engager.position.col - dirToEnemy * standoff;
-      this.movementSystem.moveTo(character, { col, row }, pathfinder);
+      this.movementSystem.moveTo(character, { col, row }, pathfinder, { allowWhileUnderFire: true });
     });
   }
 

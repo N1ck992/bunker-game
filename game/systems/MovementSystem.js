@@ -36,16 +36,26 @@ export class MovementSystem {
   /**
    * Kick off movement toward a target tile using the given pathfinder.
    * Returns true if a path was found and assigned.
+   * @param {{allowWhileUnderFire?: boolean}} [options] - set only by
+   *   SquadCombatSystem's own formation walk-in (see there for why).
    */
-  moveTo(character, target, pathfinder) {
+  moveTo(character, target, pathfinder, { allowWhileUnderFire = false } = {}) {
     if (!character.isActive) return false;
     // Characters only (enemies don't have combatState — see Enemy.js's
     // aiState instead, which EnemySystem already handles on its own): once
-    // engaged — either firing back (combatState 'attacking') or just being
-    // shot at (isBeingAttacked, set every frame by EnemySystem) — a
-    // character holds position, no repositioning until the fight actually
-    // ends (target dead/out of range, or the attacker breaks off).
-    if (character.combatState === 'attacking' || character.isBeingAttacked) return false;
+    // already firing back (combatState 'attacking'), a character holds
+    // position — no player-issued repositioning until the fight actually
+    // ends (target dead/out of range, or the attacker breaks off). Merely
+    // being shot at (isBeingAttacked, set every frame by EnemySystem) blocks
+    // player orders the same way — no kiting away mid-fight — but
+    // SquadCombatSystem passes allowWhileUnderFire so it can still walk a
+    // melee character the rest of the way into their own swing range: with
+    // every weapon in the game melee-range-1 now, an enemy attacking from
+    // 2-3 tiles away leaves the target isBeingAttacked without them ever
+    // being close enough to hit back, and without this bypass they'd be
+    // stuck taking hits forever.
+    if (character.combatState === 'attacking') return false;
+    if (character.isBeingAttacked && !allowWhileUnderFire) return false;
     const path = pathfinder.findPath(character.position, target);
     if (path === null) return false;
     character.path = path;

@@ -41,7 +41,7 @@ export class RoomSystem {
 
   /** Sums production across all accessible rooms, respecting worker fill ratio. */
   totalProduction() {
-    const total = { water: 0, food: 0, heat: 0, materials: 0 };
+    const total = { provisions: 0, heat: 0, materials: 0 };
     for (const room of this.rooms) {
       const out = room.currentOutput();
       for (const key of Object.keys(total)) {

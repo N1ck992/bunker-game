@@ -1,14 +1,6 @@
 {
   "items": [
     {
-      "id": "warm_clothes",
-      "name": "Тёплая одежда",
-      "slot": "clothing",
-      "coldResist": 8,
-      "heatResist": -2,
-      "healthModifier": 0
-    },
-    {
       "id": "light_clothes",
       "name": "Лёгкая одежда",
       "slot": "clothing",
@@ -37,16 +29,6 @@
       "heatResist": 5,
       "healthModifier": 0,
       "allowsTravel": true
-    },
-    {
-      "id": "kinetic_pistol",
-      "name": "Кинетический пистолет",
-      "slot": "weapon",
-      "damage": 10,
-      "damageType": "kinetic",
-      "range": 6,
-      "attackCooldownSeconds": 1.2,
-      "icon": "game/assets/items/kinetic_pistol.png"
     }
   ]
 }

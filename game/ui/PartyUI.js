@@ -98,8 +98,8 @@ export class PartyUI {
   }
 
   /**
-   * Full characteristic readout (health/hunger/thirst/temperature +
-   * attributes) for whichever squad member is currently selected (the
+   * Full characteristic readout (health/temperature + attributes) for
+   * whichever squad member is currently selected (the
    * lead — see _openPartyUI's onSelectLead). This is the one and only
    * place these stats are shown — the roster's per-character menu now only
    * offers Щит/Очередь (formation controls), not a stats view — see
@@ -114,14 +114,6 @@ export class PartyUI {
         <div class="squad-stat-row">
           <span>Здоровье</span>
           <div class="squad-stat-bar"><div class="squad-stat-fill health" style="width:${character.health}%"></div></div>
-        </div>
-        <div class="squad-stat-row">
-          <span>Голод</span>
-          <div class="squad-stat-bar"><div class="squad-stat-fill hunger" style="width:${character.hunger}%"></div></div>
-        </div>
-        <div class="squad-stat-row">
-          <span>Жажда</span>
-          <div class="squad-stat-bar"><div class="squad-stat-fill thirst" style="width:${character.thirst}%"></div></div>
         </div>
         <div class="squad-stat-row squad-stat-temp">
           <span>Температура</span>

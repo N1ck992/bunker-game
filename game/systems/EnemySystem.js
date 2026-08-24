@@ -149,14 +149,24 @@ export class EnemySystem {
     enemy.targetCharacterId = target.id;
     enemy.path = [];
     enemy.facingDir = target.position.col >= enemy.position.col ? 1 : -1;
-    // Pins the target in place for this frame — see MovementSystem.moveTo
-    // and the isBeingAttacked reset at the top of update().
+    // Pins the target in place — see MovementSystem.moveTo and the
+    // isBeingAttacked reset at the top of update().
     target.isBeingAttacked = true;
     // The target holds position under fire the same way an attacking
     // character does — clears any tap-to-move order already in flight so
-    // getting hit interrupts a walk instead of finishing it.
-    target.path = [];
-    target.moveProgress = 0;
+    // getting hit interrupts a walk instead of finishing it. Only done once,
+    // right as this attack sequence starts (not every tick it continues):
+    // every character is melee-range-1 now, so a mutant attacking from 2-3
+    // tiles away leaves SquadCombatSystem one walk-in order to actually
+    // close that gap while isBeingAttacked stays true (see
+    // MovementSystem.moveTo's allowWhileUnderFire) — wiping the path back
+    // to [] on every subsequent tick undid that order before the target
+    // could physically cross a single tile, stranding them taking hits
+    // forever without ever landing one back.
+    if (!wasAlreadyAttacking) {
+      target.path = [];
+      target.moveProgress = 0;
+    }
 
     if (!wasAlreadyAttacking && !enemy.hasEngagedOnce) {
       enemy.hasEngagedOnce = true;

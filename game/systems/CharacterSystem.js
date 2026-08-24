@@ -1,6 +1,8 @@
 // CharacterSystem.js
-// Owns need decay (hunger/thirst) and the active/inactive state machine
-// described in spec section 14. Does not implement death.
+// Owns the active/inactive state machine described in spec section 14.
+// Does not implement death. Provisions/hunger/thirst no longer factor in
+// here — health only ticks down from unsafe temperature now (see
+// applyNeedsTick).
 
 export class CharacterSystem {
   constructor(balance) {
@@ -23,33 +25,15 @@ export class CharacterSystem {
   /** Called on the slower "needs" tick, not every frame. */
   applyNeedsTick(characters, temperatureSystem) {
     for (const character of characters) {
-      character.hunger = Math.max(0, character.hunger - this.cfg.hungerDecayPerTick);
-      character.thirst = Math.max(0, character.thirst - this.cfg.thirstDecayPerTick);
-
       const outOfSafeTemp = character.temperature < 10 || character.temperature > 32;
-      const critical =
-        character.hunger <= this.cfg.criticalThreshold ||
-        character.thirst <= this.cfg.criticalThreshold ||
-        outOfSafeTemp;
 
-      if (critical) {
+      if (outOfSafeTemp) {
         character.health = Math.max(0, character.health - this.cfg.healthLossWhenCritical);
-      }
-
-      if (character.health <= 0 || critical && character.health <= this.cfg.healthLossWhenCritical) {
-        // Only flip to inactive once health has actually bottomed out from criticality,
-        // not on the very first critical tick — gives the player a moment to react.
       }
 
       if (character.health <= 0) {
         character.setInactive();
-      } else if (
-        character.state === 'inactive' &&
-        character.hunger > this.cfg.criticalThreshold &&
-        character.thirst > this.cfg.criticalThreshold &&
-        !outOfSafeTemp &&
-        character.health > 20
-      ) {
+      } else if (character.state === 'inactive' && !outOfSafeTemp && character.health > 20) {
         character.setActive();
       }
     }

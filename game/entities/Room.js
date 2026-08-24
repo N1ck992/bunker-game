@@ -38,7 +38,7 @@ export class Room {
   /** Production scaled by how many of the maxWorkers slots are filled. */
   currentOutput() {
     if (!this.accessible || this.maxWorkers === 0) {
-      return { water: 0, food: 0, heat: 0, materials: 0 };
+      return { provisions: 0, heat: 0, materials: 0 };
     }
     const ratio = this.workers.length / this.maxWorkers;
     const out = {};

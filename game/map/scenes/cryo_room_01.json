@@ -4,6 +4,7 @@
  "cellSize": 32,
  "cols": 48,
  "rows": 8,
+ "visibleCols": 44,
  "legend": {
   "0": "недоступно / стена",
   "1": "проход (пол комнаты)"
@@ -441,14 +442,22 @@
    "row": 7,
    "state": "open",
    "locked": false,
-   "leadsTo": "corridor_stub_right",
-   "label": "Дверь — направо",
-   "leadsToFile": "game/map/scenes/corridor_stub_right.json"
+   "leadsTo": "technical_bay_01",
+   "label": "Дверь — в технический отсек",
+   "leadsToFile": "game/map/scenes/technical_bay_01.json"
   }
  ],
  "spawnPoint": {
   "col": 24,
   "row": 7
  },
- "enemies": []
+ "enemies": [
+  {
+   "id": "mutant_stalker_01",
+   "raceId": "mutants",
+   "unitId": "mutant_stalker",
+   "col": 36,
+   "row": 7
+  }
+ ]
 }
