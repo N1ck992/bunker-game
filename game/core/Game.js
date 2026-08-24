@@ -42,6 +42,18 @@ import { installOrientationLockRetry } from './OrientationLock.js';
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
 
+// ---- 2.5D parallax room scenes ----------------------------------------
+// A map whose JSON has a "parallax" block (see game/map/scenes/*.json) is a
+// "room scene": a single horizontal stage with its own camera that follows
+// the lead character, instead of the older single-image-per-floor stack
+// (see _renderFloorStack/_registerFloor, still used for any map that has no
+// "parallax" block — nothing about that old path changed). Doors switch
+// between room scenes exactly the same way they always switched between
+// floors: _switchLevel/leadsToFile doesn't know or care which rendering
+// mode either side uses.
+const ROOM_VISIBLE_COLS = 26; // how many grid columns are visible across the viewport width at once
+const ROOM_CAMERA_LERP_PER_SEC = 6; // higher = camera snaps to the character faster
+
 // AFK fidget (look left/right, sniff armpit, recoil, return) — a one-shot
 // 5-frame gag that plays after a character has stood around doing nothing
 // for a while, then holds on the idle pose again until the next trigger.
@@ -65,7 +77,7 @@ class Game {
   async init() {
     const [balance, mapData, roomsData, charactersData, itemsData] = await Promise.all([
       fetchJson('game/data/balance.json'),
-      fetchJson('game/map/bunker-map.json'),
+      fetchJson('game/map/scenes/cryo_room_01.json'),
       fetchJson('game/data/rooms.json'),
       fetchJson('game/data/characters.json'),
       fetchJson('game/data/items.json')
@@ -430,9 +442,7 @@ class Game {
         makeImage('game/assets/characters/char_run_4.png'),
         makeImage('game/assets/characters/char_run_5.png'),
         makeImage('game/assets/characters/char_run_6.png'),
-        makeImage('game/assets/characters/char_run_7.png'),
-        makeImage('game/assets/characters/char_run_8.png'),
-        makeImage('game/assets/characters/char_run_9.png')
+        makeImage('game/assets/characters/char_run_7.png')
       ],
       // Look left → look right → sniff armpit → recoil "фуу" → return, 5
       // frames — a one-shot fidget played by _updateCharacterAfk after a
@@ -630,10 +640,43 @@ class Game {
   }
 
   _loadBunkerImage() {
-    this.topDepth = this.mapData.depth ?? -1;
-    this.discoveredLevels = new Map();
-    this._registerFloor(this.mapData);
+    this._roomMode = !!this.mapData.parallax;
+    if (this._roomMode) {
+      this._loadRoomLayers(this.mapData);
+    } else {
+      this.topDepth = this.mapData.depth ?? -1;
+      this.discoveredLevels = new Map();
+      this._registerFloor(this.mapData);
+    }
     this._resizeCanvas();
+  }
+
+  /**
+   * Loads a room scene's parallax layer images (see the "parallax" block in
+   * game/map/scenes/*.json). Any layer the room's JSON doesn't define
+   * (e.g. the stub corridors only have a background) is simply skipped by
+   * _renderParallaxLayers — a room scene needs at minimum a background.
+   */
+  _loadRoomLayers(mapData) {
+    const p = mapData.parallax;
+    const load = (src) => {
+      if (!src) return null;
+      const img = new Image();
+      img.onerror = () => console.error(`[Game] Не удалось загрузить слой окружения: ${src}`);
+      img.src = src;
+      return img;
+    };
+    this.roomLayers = {
+      background: load(p.background),
+      midground: load(p.midground),
+      foreground: load(p.foreground),
+      floor: load(p.floor),
+      factors: {
+        background: p.factors?.background ?? 1,
+        midground: p.factors?.midground ?? 1,
+        foreground: p.factors?.foreground ?? 1
+      }
+    };
   }
 
   // Floors stack into one tall world (like a bunker cross-section): the
@@ -643,6 +686,10 @@ class Game {
   // active — so a newly-opened floor simply appears attached below (or
   // above) the ones already there instead of replacing them.
   _resizeCanvas() {
+    if (this._roomMode) {
+      this._resizeCanvasRoom();
+      return;
+    }
     const boxWidth = this.sceneWrap.clientWidth;
     const boxHeight = this.sceneWrap.clientHeight;
     const { width: imgW } = this.mapData.imageSize;
@@ -687,6 +734,119 @@ class Game {
     // up with the top of this floor's slot rather than row 0.
     this.offsetY = layout.cumulativeY - layout.cropTopRow * cellSize * this.scale;
     this.sceneWrap.scrollTop = layout.cumulativeY;
+  }
+
+  // Room-scene equivalent of _resizeCanvas/_focusActiveFloor above: instead
+  // of a tall canvas stacking every discovered floor, the canvas is exactly
+  // the visible viewport and a camera (this.offsetX/offsetY, same fields
+  // the rest of the renderer already uses) pans across the room. Only
+  // ROOM_VISIBLE_COLS worth of the room are ever on screen at once, which
+  // is what makes the camera-follow actually visible instead of the whole
+  // room just being scaled to fit like the old floor art was.
+  _resizeCanvasRoom() {
+    const boxWidth = this.sceneWrap.clientWidth;
+    const boxHeight = this.sceneWrap.clientHeight;
+    const cellSize = this.mapData.cellSize;
+
+    this.scale = boxWidth / (ROOM_VISIBLE_COLS * cellSize);
+    this.roomWidthPx = this.mapData.cols * cellSize * this.scale;
+    this.roomHeightPx = this.mapData.rows * cellSize * this.scale;
+
+    this.canvas.width = boxWidth;
+    this.canvas.height = boxHeight;
+    // No native DOM scrolling in room mode — the camera is drawn, not
+    // scrolled to (see _renderFloorStack's comment for how the old floor
+    // stack used sceneWrap.scrollTop instead).
+    this.sceneWrap.scrollTop = 0;
+
+    // Keep the floor row a fixed distance above the bottom of the screen,
+    // same idea as _focusActiveFloor lining a floor's row up with its slot.
+    const floorRow = this.mapData.spawnPoint.row;
+    const bottomMargin = boxHeight * 0.12;
+    this.offsetY = boxHeight - (floorRow + 1) * cellSize * this.scale - bottomMargin;
+
+    this._updateCamera(0); // snap instantly on load/resize, no lerp
+  }
+
+  /**
+   * Moves the camera toward the selected (or first) party member's column
+   * every frame, clamped so it never shows past the room's own left/right
+   * edges. dt===0 (room just loaded/resized) snaps instantly instead of
+   * easing in from wherever the camera happened to be.
+   */
+  _updateCamera(dt) {
+    if (!this._roomMode) return;
+    const cellSize = this.mapData.cellSize;
+    const leader = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
+    const focusCol = leader ? leader.position.col : this.mapData.spawnPoint.col;
+    const targetWorldX = (focusCol + 0.5) * cellSize * this.scale;
+    const maxCamX = Math.max(0, this.roomWidthPx - this.canvas.width);
+    const targetCamX = Math.min(maxCamX, Math.max(0, targetWorldX - this.canvas.width / 2));
+
+    if (this._camX === undefined || dt === 0) {
+      this._camX = targetCamX;
+    } else {
+      const t = Math.min(1, dt * ROOM_CAMERA_LERP_PER_SEC);
+      this._camX += (targetCamX - this._camX) * t;
+    }
+    this.offsetX = -this._camX;
+  }
+
+  /**
+   * Draws one or more of a room's parallax layers (background/midground/
+   * foreground — see _loadRoomLayers). Each layer is stretched across the
+   * *whole room width* (not just the viewport) and scrolled at its own
+   * factor via a width+position formula that keeps both the left and right
+   * edges pinned to the viewport edges at the two ends of the camera's
+   * travel — where the room's own doors sit (see game/map/scenes/*.json,
+   * doors are authored close to column 1 / cols-2) — no matter what the
+   * factor is. Only the middle of the pan drifts at a different apparent
+   * speed, which is what actually reads as depth. A factor of 1 is exactly
+   * the old "one flat image" behaviour; <1 drifts slower (further away),
+   * >1 drifts faster (closer than the gameplay layer).
+   */
+  _renderParallaxLayers(names) {
+    const layers = this.roomLayers;
+    if (!layers) return;
+    const ctx = this.ctx;
+    const canvasW = this.canvas.width;
+
+    for (const name of names) {
+      const img = layers[name];
+      if (!img || !(img.complete && img.naturalWidth > 0)) continue;
+      const factor = layers.factors[name] ?? 1;
+
+      const drawW = canvasW + (this.roomWidthPx - canvasW) * factor;
+      const drawX = -this._camX * factor;
+
+      // Every layer is stretched across the *same* room height and drawn
+      // at the same y — the foreground's own art (hanging cables against a
+      // transparent lower half, see game/assets/scenes/*/foreground.png)
+      // is what keeps the floor clear, not a hard crop here. An earlier
+      // version clipped this layer's height to fake that, which left a
+      // faint seam baked right across the room at the clip line.
+      ctx.drawImage(img, drawX, this.offsetY, drawW, this.roomHeightPx);
+    }
+  }
+
+  /**
+   * The floor grate texture lives in the *gameplay* layer (see the task's
+   * layer order: Background, Midground, Gameplay, Heroes/Monsters,
+   * Foreground) since it's the ground characters actually walk on — drawn
+   * inside the same ctx.translate(offsetX, offsetY) block as interactables/
+   * characters below, so it always tracks 1:1 with them instead of having
+   * its own parallax factor.
+   */
+  _renderRoomFloor() {
+    if (!this._roomMode) return;
+    const img = this.roomLayers?.floor;
+    if (!img || !(img.complete && img.naturalWidth > 0)) return;
+    const ctx = this.ctx;
+    const cellSize = this.mapData.cellSize;
+    const floorRow = this.mapData.spawnPoint.row;
+    const stripH = cellSize * this.scale * 1.6;
+    const y = (floorRow + 1) * cellSize * this.scale - stripH * 0.55;
+    ctx.drawImage(img, 0, y, this.roomWidthPx, stripH);
   }
 
   _bindInput() {
@@ -1433,7 +1593,12 @@ class Game {
       }
 
       this.mapData = mapData;
-      this._registerFloor(mapData);
+      this._roomMode = !!mapData.parallax;
+      if (this._roomMode) {
+        this._loadRoomLayers(mapData);
+      } else {
+        this._registerFloor(mapData);
+      }
       this.enemies = await this._loadEnemies(mapData);
       this._loadEnemySprites();
 
@@ -1792,6 +1957,7 @@ class Game {
   }
 
   _update(dt) {
+    this._updateCamera(dt);
     this.gameTime.update(dt);
     this.movementSystem.update(this.characters, dt);
     this.enemySystem.update(this.enemies, this.characters, dt);
@@ -1841,7 +2007,11 @@ class Game {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    this._renderFloorStack();
+    if (this._roomMode) {
+      this._renderParallaxLayers(['background', 'midground']);
+    } else {
+      this._renderFloorStack();
+    }
 
     // Night darkening overlay tied to GameTime, cheap but sells the day/night loop.
     if (!this.gameTime.isDay) {
@@ -1852,12 +2022,15 @@ class Game {
     // Everything below is authored in the active floor's image-space;
     // translate once so every draw call can keep using col/row * cellSize *
     // scale like before — this.offsetY now points at wherever that floor
-    // sits in the stacked world instead of always being 0.
+    // sits in the stacked world instead of always being 0 (old floor-stack
+    // mode), or wherever the camera has panned to (room mode, offsetX now
+    // moves too — see _updateCamera).
     ctx.save();
     ctx.translate(this.offsetX, this.offsetY);
 
     if (DEBUG_GRID) this._renderDebugGrid();
 
+    this._renderRoomFloor();
     this._renderSurfaceLabel();
     this._renderInteractables();
     this._renderEnemies();
@@ -1866,6 +2039,14 @@ class Game {
     this._renderAttackEffects();
 
     ctx.restore();
+
+    // Foreground draws last, in screen space (its own parallax factor, not
+    // the gameplay translate above) — see the task's layer order: it sits
+    // in front of the hero/monsters, same as thick pipes/cables would
+    // physically hang between the camera and the room.
+    if (this._roomMode) {
+      this._renderParallaxLayers(['foreground']);
+    }
   }
 
   // Draws every discovered floor's art at its own fixed spot in the stacked
@@ -2042,6 +2223,9 @@ class Game {
     // artwork so it reads as "there, but locked" rather than dead space.
     // Only the top/surface floor shows this — lower floors are cropped to
     // their interior band and never draw that part of the art at all.
+    // Room scenes (see _roomMode) never have a vault-door surface art, so
+    // this cosmetic label is old-floor-stack-only.
+    if (this._roomMode) return;
     if (this.mapData.depth !== this.topDepth) return;
 
     const ctx = this.ctx;
@@ -2451,7 +2635,7 @@ class Game {
       if (isMoving) {
         // Moving always wins — a character walking into range cancels any
         // stale "attacking" pose from the previous target, same as examine.
-        const RUN_FPS = 14; // 10-frame cycle now, vs. the old 3-frame one — bumped up so full strides per second stay the same
+        const RUN_FPS = 11; // 8-frame cycle now (was 10 at RUN_FPS 14) — scaled down to keep strides per second the same
         const runFrames = directional
           ? (character.facingDir < 0 ? spriteSet.runLeft : spriteSet.runRight)
           : spriteSet.run;
