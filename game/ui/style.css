@@ -504,7 +504,7 @@ canvas {
  * from — each cap's width follows automatically via aspect-ratio, so the
  * pipe is the only piece that actually stretches/tiles with screen width. */
 :root {
-  --hud-bar-h: 70px;
+  --hud-bar-h: 96px;
 }
 
 .hud-left {
@@ -719,9 +719,9 @@ canvas {
   border: 1px solid var(--amber-dim);
   color: var(--amber);
   border-radius: 10px;
-  padding: 7px 12px;
+  padding: 9px 15px;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   cursor: pointer;
@@ -730,7 +730,7 @@ canvas {
 }
 .party-btn:active,
 .select-all-btn:active { background: var(--steel-700); }
-.party-btn-icon { font-size: 13px; }
+.party-btn-icon { font-size: 16px; }
 
 /* Active "Выбрать всех" — whole squad follows the tank on the next tap. */
 .select-all-btn.active {
@@ -1277,6 +1277,6 @@ canvas {
   .bottom-bar { padding: 5px 10px; gap: 6px; }
   .roster-wrap { gap: 6px; }
   .party-btn, .select-all-btn { padding: 5px 10px; font-size: 10px; }
-  :root { --hud-bar-h: 54px; }
+  :root { --hud-bar-h: 74px; }
   .character-panel, .construction-modal { max-height: 78vh; }
 }
