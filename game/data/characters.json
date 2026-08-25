@@ -159,14 +159,20 @@
         ],
         "examine": ["game/assets/characters/char_examine.png"],
         "run": [
-          "game/assets/characters/char_run_0.png",
-          "game/assets/characters/char_run_1.png",
-          "game/assets/characters/char_run_2.png",
-          "game/assets/characters/char_run_3.png",
-          "game/assets/characters/char_run_4.png",
-          "game/assets/characters/char_run_5.png",
-          "game/assets/characters/char_run_6.png",
-          "game/assets/characters/char_run_7.png"
+          "game/assets/characters/char_3/run_00.png",
+          "game/assets/characters/char_3/run_01.png",
+          "game/assets/characters/char_3/run_02.png",
+          "game/assets/characters/char_3/run_03.png",
+          "game/assets/characters/char_3/run_04.png",
+          "game/assets/characters/char_3/run_05.png",
+          "game/assets/characters/char_3/run_06.png",
+          "game/assets/characters/char_3/run_07.png",
+          "game/assets/characters/char_3/run_08.png",
+          "game/assets/characters/char_3/run_09.png",
+          "game/assets/characters/char_3/run_10.png",
+          "game/assets/characters/char_3/run_11.png",
+          "game/assets/characters/char_3/run_12.png",
+          "game/assets/characters/char_3/run_13.png"
         ],
         "afk": [
           "game/assets/characters/char_afk_0.png",
