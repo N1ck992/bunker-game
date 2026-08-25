@@ -48,6 +48,42 @@ html, body {
   scroll-behavior: auto; /* floor switches jump instantly, never animate */
 }
 
+/* Zoom in/out — see the DOM-order comment in Game._buildDom for why this
+ * is a sticky, zero-height wrapper (.zoom-controls-wrap) with the actual
+ * buttons absolutely positioned inside it, rather than just a sticky div
+ * with content: a sticky element's "stuck" behavior is anchored to where
+ * it would sit in normal flow, and this needs to be pinned to the very
+ * top of the (very tall) scrollable room stack regardless of that. */
+.zoom-controls-wrap {
+  position: sticky;
+  top: 0;
+  height: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+.zoom-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: auto;
+}
+.zoom-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(20, 23, 15, 0.85);
+  border: 1px solid var(--amber-dim);
+  color: var(--amber);
+  font-size: 18px;
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
+}
+.zoom-btn:active { background: var(--steel-700); }
+
 canvas {
   display: block;
   width: 100%;

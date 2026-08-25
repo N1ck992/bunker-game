@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=18';
-import { MovementSystem } from '../systems/MovementSystem.js?v=18';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=18';
-import { RoomSystem } from '../systems/RoomSystem.js?v=18';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=18';
-import { WorldSystem } from '../systems/WorldSystem.js?v=18';
-import { InventorySystem } from '../systems/InventorySystem.js?v=18';
-import { CombatSystem } from '../systems/CombatSystem.js?v=18';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=18';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=19';
+import { MovementSystem } from '../systems/MovementSystem.js?v=19';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=19';
+import { RoomSystem } from '../systems/RoomSystem.js?v=19';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=19';
+import { WorldSystem } from '../systems/WorldSystem.js?v=19';
+import { InventorySystem } from '../systems/InventorySystem.js?v=19';
+import { CombatSystem } from '../systems/CombatSystem.js?v=19';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=19';
 
-import { GameTime } from './GameTime.js?v=18';
-import { ResourceSystem } from './ResourceSystem.js?v=18';
-import { TemperatureSystem } from './TemperatureSystem.js?v=18';
-import { SaveSystem } from './SaveSystem.js?v=18';
+import { GameTime } from './GameTime.js?v=19';
+import { ResourceSystem } from './ResourceSystem.js?v=19';
+import { TemperatureSystem } from './TemperatureSystem.js?v=19';
+import { SaveSystem } from './SaveSystem.js?v=19';
 
-import { Character } from '../entities/Character.js?v=18';
-import { Room } from '../entities/Room.js?v=18';
-import { Enemy } from '../entities/Enemy.js?v=18';
-import { Item } from '../entities/Item.js?v=18';
-import { EnemySystem } from '../systems/EnemySystem.js?v=18';
-import { SkillSystem } from '../systems/SkillSystem.js?v=18';
+import { Character } from '../entities/Character.js?v=19';
+import { Room } from '../entities/Room.js?v=19';
+import { Enemy } from '../entities/Enemy.js?v=19';
+import { Item } from '../entities/Item.js?v=19';
+import { EnemySystem } from '../systems/EnemySystem.js?v=19';
+import { SkillSystem } from '../systems/SkillSystem.js?v=19';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=18';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=18';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=18';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=18';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=18';
-import { PartyUI } from '../ui/PartyUI.js?v=18';
-import { InventoryUI } from '../ui/InventoryUI.js?v=18';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=18';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=18';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=18';
-import { showStartMenu } from '../ui/StartMenu.js?v=18';
-import { installOrientationLockRetry } from './OrientationLock.js?v=18';
+import { ShelterUI } from '../ui/ShelterUI.js?v=19';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=19';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=19';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=19';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=19';
+import { PartyUI } from '../ui/PartyUI.js?v=19';
+import { InventoryUI } from '../ui/InventoryUI.js?v=19';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=19';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=19';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=19';
+import { showStartMenu } from '../ui/StartMenu.js?v=19';
+import { installOrientationLockRetry } from './OrientationLock.js?v=19';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -355,6 +355,37 @@ class Game {
 
     this.sceneWrap = document.createElement('div');
     this.sceneWrap.className = 'scene-wrap';
+
+    // Zoom controls — a sticky, zero-height wrapper placed BEFORE the
+    // canvas so its normal flow position is at the very top of the
+    // scrollable content; the actual buttons inside are absolutely
+    // positioned within it. That combination is what keeps them pinned to
+    // the top-right corner of the visible viewport as the room stack
+    // scrolls underneath, instead of scrolling away with the (very tall)
+    // canvas like a plain sibling would. Zooming out shrinks every
+    // stacked room together so more of the base is visible at once (see
+    // _setZoom); combat automatically snaps this back to 1 and re-centers
+    // on the fight (see _update), so this is purely for looking around
+    // between fights, not something that stays pulled out while
+    // something's happening.
+    this.zoomControlsWrap = document.createElement('div');
+    this.zoomControlsWrap.className = 'zoom-controls-wrap';
+    this.zoomControls = document.createElement('div');
+    this.zoomControls.className = 'zoom-controls';
+    const zoomOutBtn = document.createElement('button');
+    zoomOutBtn.className = 'zoom-btn';
+    zoomOutBtn.textContent = '−';
+    zoomOutBtn.setAttribute('aria-label', 'Отдалить');
+    zoomOutBtn.addEventListener('click', () => this._setZoom((this._zoomLevel ?? 1) + 0.4));
+    const zoomInBtn = document.createElement('button');
+    zoomInBtn.className = 'zoom-btn';
+    zoomInBtn.textContent = '+';
+    zoomInBtn.setAttribute('aria-label', 'Приблизить');
+    zoomInBtn.addEventListener('click', () => this._setZoom((this._zoomLevel ?? 1) - 0.4));
+    this.zoomControls.appendChild(zoomOutBtn);
+    this.zoomControls.appendChild(zoomInBtn);
+    this.zoomControlsWrap.appendChild(this.zoomControls);
+    this.sceneWrap.appendChild(this.zoomControlsWrap);
 
     this.canvas = document.createElement('canvas');
     this.ctx = this.canvas.getContext('2d');
@@ -726,13 +757,18 @@ class Game {
   _resizeCanvasRoom() {
     const boxWidth = this.sceneWrap.clientWidth;
     const boxHeight = this.sceneWrap.clientHeight;
+    const zoom = this._zoomLevel ?? 1;
 
     this.roomStackLayout = new Map();
     const rooms = [...this.discoveredRooms.values()].sort((a, b) => a.depth - b.depth);
     let cumulativeY = 0;
     for (const room of rooms) {
       const cellSize = room.mapData.cellSize;
-      const scale = boxWidth / (room.mapData.cols * cellSize);
+      // Dividing by zoom (>1 = zoomed out) shrinks every room's own scale
+      // together, so more of the stack fits in the same physical canvas —
+      // canvas.width itself never changes, only how many world-pixels map
+      // to it. See _setZoom.
+      const scale = boxWidth / (zoom * room.mapData.cols * cellSize);
       const heightPx = room.mapData.rows * cellSize * scale;
       this.roomStackLayout.set(room.mapData.id, { cumulativeY, heightPx, scale });
       cumulativeY += heightPx;
@@ -753,15 +789,35 @@ class Game {
     this._focusActiveRoom();
   }
 
-  // Scrolls straight to the active room's slot in the stack — no tween,
-  // same instant-jump behaviour _focusActiveFloor always had. Rooms above/
-  // below stay in the world, scrollable, exactly like other floors do.
+  /**
+   * Zoomed out (level > 1) shrinks every room so more of the stack is
+   * visible at once — see _resizeCanvasRoom. Called by the +/- controls
+   * (see _buildDom) and forced back to 1 the moment any party member is in
+   * combat (see _update) so a fight is never happening off in a
+   * shrunk-down, hard-to-read corner of the screen.
+   */
+  _setZoom(level) {
+    if (!this._roomMode) return;
+    this._zoomLevel = Math.max(1, Math.min(3, level));
+    this._resizeCanvasRoom();
+  }
+
+  // Scrolls to centre the active room's slot vertically in the viewport
+  // (not just align its top edge — a room shorter than the viewport used
+  // to leave its floor/characters pushed toward the bottom half of the
+  // screen, or even a hair off it, reading as "the hero is stuck up near
+  // the top of the level"). No tween, same instant-jump behaviour
+  // _focusActiveFloor always had. Rooms above/below stay in the world,
+  // scrollable, exactly like other floors do.
   _focusActiveRoom() {
     const layout = this.roomStackLayout.get(this.mapData.id);
     if (!layout) return;
     this.offsetX = 0;
     this.offsetY = layout.cumulativeY;
-    this.sceneWrap.scrollTop = layout.cumulativeY;
+    const viewportH = this.sceneWrap.clientHeight;
+    const maxScroll = Math.max(0, this.canvas.height - viewportH);
+    const centered = layout.cumulativeY - (viewportH - layout.heightPx) / 2;
+    this.sceneWrap.scrollTop = Math.min(maxScroll, Math.max(0, centered));
   }
 
   /**
@@ -2041,6 +2097,25 @@ class Game {
     this.movementSystem.update(this.enemies, dt);
     this.combatSystem.update(this.characters, this.enemies, dt);
     this.skillSystem.update(this.characters, this.enemies, dt);
+
+    // While anyone in the active party is actually fighting — attacking or
+    // being attacked — the camera locks onto them: zoom snaps back to 1 if
+    // it was pulled out, and the view re-centers on the room every frame,
+    // overriding any manual scroll away from the fight. Only checked in
+    // room mode; the legacy floor stack never had a zoom to reset.
+    if (this._roomMode) {
+      const inCombat = this.characters.some(
+        (c) => c.isActive && c.inParty !== false && (c.combatState === 'attacking' || c.isBeingAttacked)
+      );
+      if (inCombat) {
+        if ((this._zoomLevel ?? 1) !== 1) {
+          this._zoomLevel = 1;
+          this._resizeCanvasRoom();
+        } else {
+          this._focusActiveRoom();
+        }
+      }
+    }
     this._updateCharacterAfk(dt);
     this._updateRecruitEncounters();
     this._updatePendingFurnitureInteractions();
