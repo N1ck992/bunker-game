@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=25';
-import { MovementSystem } from '../systems/MovementSystem.js?v=25';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=25';
-import { RoomSystem } from '../systems/RoomSystem.js?v=25';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=25';
-import { WorldSystem } from '../systems/WorldSystem.js?v=25';
-import { InventorySystem } from '../systems/InventorySystem.js?v=25';
-import { CombatSystem } from '../systems/CombatSystem.js?v=25';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=25';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=26';
+import { MovementSystem } from '../systems/MovementSystem.js?v=26';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=26';
+import { RoomSystem } from '../systems/RoomSystem.js?v=26';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=26';
+import { WorldSystem } from '../systems/WorldSystem.js?v=26';
+import { InventorySystem } from '../systems/InventorySystem.js?v=26';
+import { CombatSystem } from '../systems/CombatSystem.js?v=26';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=26';
 
-import { GameTime } from './GameTime.js?v=25';
-import { ResourceSystem } from './ResourceSystem.js?v=25';
-import { TemperatureSystem } from './TemperatureSystem.js?v=25';
-import { SaveSystem } from './SaveSystem.js?v=25';
+import { GameTime } from './GameTime.js?v=26';
+import { ResourceSystem } from './ResourceSystem.js?v=26';
+import { TemperatureSystem } from './TemperatureSystem.js?v=26';
+import { SaveSystem } from './SaveSystem.js?v=26';
 
-import { Character } from '../entities/Character.js?v=25';
-import { Room } from '../entities/Room.js?v=25';
-import { Enemy } from '../entities/Enemy.js?v=25';
-import { Item } from '../entities/Item.js?v=25';
-import { EnemySystem } from '../systems/EnemySystem.js?v=25';
-import { SkillSystem } from '../systems/SkillSystem.js?v=25';
+import { Character } from '../entities/Character.js?v=26';
+import { Room } from '../entities/Room.js?v=26';
+import { Enemy } from '../entities/Enemy.js?v=26';
+import { Item } from '../entities/Item.js?v=26';
+import { EnemySystem } from '../systems/EnemySystem.js?v=26';
+import { SkillSystem } from '../systems/SkillSystem.js?v=26';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=25';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=25';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=25';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=25';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=25';
-import { PartyUI } from '../ui/PartyUI.js?v=25';
-import { InventoryUI } from '../ui/InventoryUI.js?v=25';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=25';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=25';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=25';
-import { showStartMenu } from '../ui/StartMenu.js?v=25';
-import { installOrientationLockRetry } from './OrientationLock.js?v=25';
+import { ShelterUI } from '../ui/ShelterUI.js?v=26';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=26';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=26';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=26';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=26';
+import { PartyUI } from '../ui/PartyUI.js?v=26';
+import { InventoryUI } from '../ui/InventoryUI.js?v=26';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=26';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=26';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=26';
+import { showStartMenu } from '../ui/StartMenu.js?v=26';
+import { installOrientationLockRetry } from './OrientationLock.js?v=26';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -802,7 +802,19 @@ class Game {
   _updateCamera(dt) {
     if (!this._roomMode || this._overview) return;
     const cellSize = this.mapData.cellSize;
-    const leader = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
+    // A selected-but-now-dead character (or nobody selected and the first
+    // roster slot happens to be dead — e.g. Mark) never anchors the
+    // camera: every settler has equal standing here, so this falls
+    // through to whichever active one is actually available instead of
+    // staying locked onto a corpse and stranding the rest of the party
+    // off-screen. See also _update's auto-deselect-on-death, which keeps
+    // getSelected() from returning a dead character in the first place
+    // once the player taps elsewhere.
+    const rawSelected = this.characterSystem.getSelected(this.characters);
+    const leader =
+      (rawSelected?.isActive ? rawSelected : null) ??
+      this.characters.find((c) => c.isActive) ??
+      this.characters[0];
     const focusCol = leader ? leader.position.col : this.mapData.spawnPoint.col;
     const targetWorldX = (focusCol + 0.5) * cellSize * this.scale;
     const maxCamX = Math.max(0, this.roomWidthPx - this.canvas.width);
@@ -2203,6 +2215,20 @@ class Game {
     }, 2500);
   }
 
+  /**
+   * Every settler has equal standing — nobody is "the" controlled
+   * character, they're just whoever's currently selected. If that
+   * happens to be someone who just died, clear the selection so the very
+   * next tap (on the floor, or on another living settler) acts on them
+   * normally instead of quietly failing against a corpse — moveTo already
+   * refuses on an inactive character, which without this reads as "you
+   * can't walk there" when the real issue is who's selected, not where.
+   */
+  _deselectIfDead() {
+    const selected = this.characterSystem.getSelected(this.characters);
+    if (selected && !selected.isActive) this.characterSystem.deselect();
+  }
+
   _toast(message) {
     this.toastEl.textContent = message;
     this.toastEl.classList.remove('hidden');
@@ -2249,6 +2275,7 @@ class Game {
     }
     if (this._roomMode && !this._overview) this._updateCamera(dt);
     this._checkPartyWipe();
+    this._deselectIfDead();
     this._updateCharacterAfk(dt);
     this._updateRecruitEncounters();
     this._updatePendingFurnitureInteractions();
