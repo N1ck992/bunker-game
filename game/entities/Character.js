@@ -6,6 +6,12 @@ export class Character {
     this.id = data.id;
     this.name = data.name;
     this.avatar = data.avatar ?? null; // path to portrait art, null falls back to initials in the roster UI
+    // Full-body art for the Отряд screen's centre portrait frame (see
+    // game/ui/PartyUI.js) — reuses this character's own idle sprite (first
+    // frame) rather than needing separate dedicated art, so it's always in
+    // sync with whatever's set in "sprites" (see game/data/characters.json).
+    // null falls back to a generic placeholder icon there.
+    this.fullBodyArt = data.sprites?.idle?.[0] ?? null;
 
     this.health = data.health ?? 100;
     this.strength = data.strength ?? 5;

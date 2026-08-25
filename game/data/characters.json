@@ -4,7 +4,7 @@
     {
       "id": "char_1",
       "name": "Mark",
-      "avatar": "game/assets/characters/avatars/char_1.png",
+      "avatar": "game/assets/characters/avatars/char_3.png",
       "health": 100,
       "strength": 5,
       "endurance": 5,

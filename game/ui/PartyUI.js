@@ -63,7 +63,7 @@ export class PartyUI {
           <div class="squad-scene">
             <div class="squad-portrait-block">
               <div class="squad-portrait-frame">
-                ${lead ? '<span class="squad-portrait-placeholder-icon">🧍</span>' : '<span class="squad-portrait-placeholder-icon squad-portrait-placeholder-empty">—</span>'}
+                ${this._fullBodyHtml(lead)}
               </div>
               <div class="squad-loadout-mini">
                 <div class="squad-loadout-mini-cell" title="Техника">${this._iconHtml(vehicleItem, '🚙')}</div>
@@ -131,6 +131,18 @@ export class PartyUI {
     return character.avatar
       ? `<img src="${character.avatar}" alt="">`
       : `<div class="squad-avatar-fallback">${character.name.charAt(0).toUpperCase()}</div>`;
+  }
+
+  /**
+   * Full-body render for the squad screen's centre frame — the character's
+   * own idle sprite (see Character.fullBodyArt) if it has one, else the old
+   * generic silhouette/empty-slot icon.
+   */
+  _fullBodyHtml(character) {
+    if (!character) return '<span class="squad-portrait-placeholder-icon squad-portrait-placeholder-empty">—</span>';
+    return character.fullBodyArt
+      ? `<img class="squad-portrait-img" src="${character.fullBodyArt}" alt="">`
+      : '<span class="squad-portrait-placeholder-icon">🧍</span>';
   }
 
   _iconHtml(item, fallbackEmoji) {

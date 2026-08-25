@@ -935,6 +935,12 @@ canvas {
 }
 .squad-portrait-placeholder-empty { font-size: 28px; }
 
+.squad-portrait-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .squad-loadout-mini {
   flex: 0 0 auto;
   display: flex;
