@@ -21,21 +21,23 @@ export class ShelterUI {
       <div class="resource" data-res="provisions"><span class="icon">🥫</span><span class="val">0</span></div>
       <div class="resource" data-res="heat"><span class="icon">🔥</span><span class="val">0</span></div>
       <div class="resource" data-res="materials"><span class="icon">🔩</span><span class="val">0</span></div>
-      <div class="clock"><span class="phase-icon">☀</span><span class="phase-label">День</span></div>
     `;
 
     this.topRoot.appendChild(this.resourceBar);
   }
 
+  /**
+   * @param {object} resources - ResourceSystem instance/snapshot
+   * @param {GameTime} [gameTime] - unused for now; day/night display is
+   *   removed from the HUD while the cycle itself is disabled (see
+   *   Game._update's commented gameTime.update()). Kept as a parameter so
+   *   Game._update's call site doesn't need touching if the cycle comes
+   *   back and this method starts reading it again.
+   */
   update(resources, gameTime) {
     this.resourceBar.querySelector('[data-res="provisions"] .val').textContent = Math.floor(resources.provisions);
     this.resourceBar.querySelector('[data-res="heat"] .val').textContent = Math.floor(resources.heat);
     this.resourceBar.querySelector('[data-res="materials"] .val').textContent = Math.floor(resources.materials);
-
-    const phaseIcon = this.resourceBar.querySelector('.phase-icon');
-    const phaseLabel = this.resourceBar.querySelector('.phase-label');
-    phaseIcon.textContent = gameTime.isDay ? '☀' : '☾';
-    phaseLabel.textContent = gameTime.isDay ? 'День' : 'Ночь';
   }
 
   flashLowResource(resKey) {
