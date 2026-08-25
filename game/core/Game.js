@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=23';
-import { MovementSystem } from '../systems/MovementSystem.js?v=23';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=23';
-import { RoomSystem } from '../systems/RoomSystem.js?v=23';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=23';
-import { WorldSystem } from '../systems/WorldSystem.js?v=23';
-import { InventorySystem } from '../systems/InventorySystem.js?v=23';
-import { CombatSystem } from '../systems/CombatSystem.js?v=23';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=23';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=24';
+import { MovementSystem } from '../systems/MovementSystem.js?v=24';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=24';
+import { RoomSystem } from '../systems/RoomSystem.js?v=24';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=24';
+import { WorldSystem } from '../systems/WorldSystem.js?v=24';
+import { InventorySystem } from '../systems/InventorySystem.js?v=24';
+import { CombatSystem } from '../systems/CombatSystem.js?v=24';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=24';
 
-import { GameTime } from './GameTime.js?v=23';
-import { ResourceSystem } from './ResourceSystem.js?v=23';
-import { TemperatureSystem } from './TemperatureSystem.js?v=23';
-import { SaveSystem } from './SaveSystem.js?v=23';
+import { GameTime } from './GameTime.js?v=24';
+import { ResourceSystem } from './ResourceSystem.js?v=24';
+import { TemperatureSystem } from './TemperatureSystem.js?v=24';
+import { SaveSystem } from './SaveSystem.js?v=24';
 
-import { Character } from '../entities/Character.js?v=23';
-import { Room } from '../entities/Room.js?v=23';
-import { Enemy } from '../entities/Enemy.js?v=23';
-import { Item } from '../entities/Item.js?v=23';
-import { EnemySystem } from '../systems/EnemySystem.js?v=23';
-import { SkillSystem } from '../systems/SkillSystem.js?v=23';
+import { Character } from '../entities/Character.js?v=24';
+import { Room } from '../entities/Room.js?v=24';
+import { Enemy } from '../entities/Enemy.js?v=24';
+import { Item } from '../entities/Item.js?v=24';
+import { EnemySystem } from '../systems/EnemySystem.js?v=24';
+import { SkillSystem } from '../systems/SkillSystem.js?v=24';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=23';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=23';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=23';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=23';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=23';
-import { PartyUI } from '../ui/PartyUI.js?v=23';
-import { InventoryUI } from '../ui/InventoryUI.js?v=23';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=23';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=23';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=23';
-import { showStartMenu } from '../ui/StartMenu.js?v=23';
-import { installOrientationLockRetry } from './OrientationLock.js?v=23';
+import { ShelterUI } from '../ui/ShelterUI.js?v=24';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=24';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=24';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=24';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=24';
+import { PartyUI } from '../ui/PartyUI.js?v=24';
+import { InventoryUI } from '../ui/InventoryUI.js?v=24';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=24';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=24';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=24';
+import { showStartMenu } from '../ui/StartMenu.js?v=24';
+import { installOrientationLockRetry } from './OrientationLock.js?v=24';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -55,6 +55,8 @@ const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, 
 const ROOM_VISIBLE_COLS = 19; // how many grid columns are visible across the viewport width at once,
                                // in the normal (not-zoomed-out) camera-follow view — default for any
                                // room scene that doesn't set its own visibleCols
+const INITIAL_ROOM_FILE = 'game/map/scenes/cryo_room_01.json'; // must match the fetchJson call in init() —
+                                                                // see _loadBunkerImage/_registerRoom's fileUrl
 const ROOM_CAMERA_LERP_PER_SEC = 6; // higher = camera snaps to the character faster
 const FOREGROUND_FADE_FRACTION = 0.16; // fraction of the viewport width each foreground
                                         // edge fades out over — see _renderForegroundFaded
@@ -89,7 +91,7 @@ class Game {
   async init() {
     const [balance, mapData, roomsData, charactersData, itemsData, skillsData] = await Promise.all([
       fetchJson('game/data/balance.json'),
-      fetchJson('game/map/scenes/cryo_room_01.json'),
+      fetchJson(INITIAL_ROOM_FILE),
       fetchJson('game/data/rooms.json'),
       fetchJson('game/data/characters.json'),
       fetchJson('game/data/items.json'),
@@ -639,7 +641,7 @@ class Game {
     this._roomMode = !!this.mapData.parallax;
     if (this._roomMode) {
       this.discoveredRooms = new Map();
-      const entry = this._registerRoom(this.mapData);
+      const entry = this._registerRoom(this.mapData, INITIAL_ROOM_FILE);
       this.roomLayers = entry.layers;
     } else {
       this.topDepth = this.mapData.depth ?? -1;
@@ -657,11 +659,14 @@ class Game {
    * world, stacked above/below each other, instead of being replaced the
    * moment the party walks on — mirrors _registerFloor's job for the
    * older non-parallax floor art. Returns the (new or existing) entry.
+   * fileUrl is stored on the entry too — see _travelToRoom, which needs it
+   * to re-run _switchLevel for a room the player tapped directly in
+   * overview mode rather than through one of its own doors.
    */
-  _registerRoom(mapData) {
+  _registerRoom(mapData, fileUrl) {
     let entry = this.discoveredRooms.get(mapData.id);
     if (!entry) {
-      entry = { mapData, layers: this._buildRoomLayers(mapData), depth: this.discoveredRooms.size };
+      entry = { mapData, layers: this._buildRoomLayers(mapData), depth: this.discoveredRooms.size, fileUrl };
       this.discoveredRooms.set(mapData.id, entry);
     }
     return entry;
@@ -1019,6 +1024,15 @@ class Game {
   _onTap(e) {
     if (this.mode === 'worldmap') {
       this._onWorldMapTap(e);
+      return;
+    }
+
+    // Overview mode (see _setOverview) shows the whole base at once —
+    // tapping a room here sends the whole party straight there instead of
+    // the normal single-room tap handling below, which assumes coordinates
+    // within just the active room's own grid.
+    if (this._roomMode && this._overview) {
+      this._onOverviewTap(e);
       return;
     }
 
@@ -1751,6 +1765,44 @@ class Game {
    * to the new floor instantly, no slide/tween, since that's where play
    * continues.
    */
+  /**
+   * Tapping a room in overview mode (see _setOverview) sends the whole
+   * party there directly, even if it's a different room than they're
+   * currently in — figures out which room was tapped from its vertical
+   * slot in the (already fully-visible, unscrolled) overview layout, then
+   * hands off to _travelToRoom. Tapping the room the party is already in
+   * just zooms back to the normal follow view on it, same as "Приблизить".
+   */
+  _onOverviewTap(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const tapY = e.clientY - rect.top;
+    for (const [roomId, layout] of this.roomStackLayout ?? []) {
+      if (tapY < layout.cumulativeY || tapY >= layout.cumulativeY + layout.heightPx) continue;
+      if (roomId === this.mapData.id) {
+        this._setOverview(false);
+      } else {
+        this._travelToRoom(roomId);
+      }
+      return;
+    }
+  }
+
+  /**
+   * Moves the whole party to a previously-discovered room directly from
+   * overview mode (see _onOverviewTap) — reuses _switchLevel exactly like
+   * walking up to that room's own door would, just triggered by a tap on
+   * the overview instead. Turns overview off first so _switchLevel's own
+   * _resizeCanvas() call lands straight in the normal follow view on
+   * arrival, instead of re-fitting the overview and then immediately
+   * having to switch again.
+   */
+  _travelToRoom(roomId) {
+    const entry = this.discoveredRooms?.get(roomId);
+    if (!entry?.fileUrl) return;
+    this._overview = false;
+    this._switchLevel(entry.fileUrl, roomId);
+  }
+
   async _switchLevel(fileUrl, levelId) {
     if (this._switchingLevel) return;
     this._switchingLevel = true;
@@ -1772,7 +1824,7 @@ class Game {
         // here before — either way the room they're LEAVING stays in
         // discoveredRooms too, so it keeps showing in the background (see
         // _renderRoomStackBackdrop) instead of disappearing.
-        const entry = this._registerRoom(mapData);
+        const entry = this._registerRoom(mapData, fileUrl);
         this.roomLayers = entry.layers;
       } else {
         this._registerFloor(mapData);
