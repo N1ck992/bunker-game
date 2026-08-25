@@ -24,7 +24,7 @@ export class CharacterUI {
         <button class="close-btn">✕</button>
       </div>
       <div class="stat-row"><span>Здоровье</span><div class="bar"><div class="fill health" style="width:${character.health}%"></div></div></div>
-      <div class="stat-row"><span>Температура</span><span>${Math.round(character.temperature)}°</span></div>
+      <!-- Температура временно скрыта — механика отключена, см. Game._update (TEMPERATURE_ENABLED) -->
       <div class="attrs">
         <span>СИЛ ${character.strength}</span>
         <span>ВЫН ${character.endurance}</span>

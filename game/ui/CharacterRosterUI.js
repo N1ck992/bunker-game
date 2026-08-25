@@ -89,10 +89,12 @@ export class CharacterRosterUI {
    *   Game.followAllParty), reflected on the button's active style.
    */
   update(characters, selectedId, followAllActive) {
-    // Only worth showing the controls once there's an actual squad to manage.
-    const showButtons = characters.length >= 2;
-    this.partyBtn.classList.toggle('hidden', !showButtons);
-    this.selectAllBtn.classList.toggle('hidden', !showButtons);
+    // Always shown now (used to hide until a second squad member joined,
+    // per "characters.length >= 2" — removed per request so Отряд/Выбрать
+    // всех are reachable from the very start, e.g. to preview the empty
+    // squad screen before anyone's been recruited).
+    this.partyBtn.classList.remove('hidden');
+    this.selectAllBtn.classList.remove('hidden');
     this.selectAllBtn.classList.toggle('active', !!followAllActive);
 
     // "Current" character for the single-portrait readout: whoever's

@@ -1980,7 +1980,13 @@ class Game {
 
   _update(dt) {
     this._updateCamera(dt);
-    this.gameTime.update(dt);
+    // Day/night cycle temporarily disabled — see TEMPERATURE_ENABLED comment
+    // above the night-overlay check in _render. gameTime.update() is what
+    // actually advances the phase, so leaving it uncalled freezes the game
+    // in whatever phase the save/default started in (day) — nothing else
+    // reads gameTime.progress right now that this would break. One-line
+    // uncomment to bring the cycle back.
+    // this.gameTime.update(dt);
     this.movementSystem.update(this.characters, dt);
     this.enemySystem.update(this.enemies, this.characters, dt);
     this.squadCombatSystem.update(this.characters, this.enemies, this.pathfinder);
@@ -2033,8 +2039,13 @@ class Game {
       this._renderFloorStack();
     }
 
-    // Night darkening overlay tied to GameTime, cheap but sells the day/night loop.
-    if (!this.gameTime.isDay) {
+    // Night darkening overlay tied to GameTime — disabled along with the
+    // day/night cycle itself (see _update's commented gameTime.update()).
+    // gameTime.isDay stays true the whole time now, so this never fires
+    // anyway, but the flag below is the actual on/off switch to flip back
+    // when the cycle returns.
+    const DAY_NIGHT_ENABLED = false;
+    if (DAY_NIGHT_ENABLED && !this.gameTime.isDay) {
       ctx.fillStyle = 'rgba(5,5,20,0.35)';
       ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }

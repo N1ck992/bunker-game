@@ -115,10 +115,7 @@ export class PartyUI {
           <span>Здоровье</span>
           <div class="squad-stat-bar"><div class="squad-stat-fill health" style="width:${character.health}%"></div></div>
         </div>
-        <div class="squad-stat-row squad-stat-temp">
-          <span>Температура</span>
-          <span>${Math.round(character.temperature)}°</span>
-        </div>
+        <!-- Температура временно скрыта — механика отключена, см. Game._update (TEMPERATURE_ENABLED) -->
         <div class="squad-attrs">
           <span>СИЛ ${character.strength}</span>
           <span>ВЫН ${character.endurance}</span>
