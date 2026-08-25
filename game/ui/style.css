@@ -646,12 +646,14 @@ canvas {
 
 .party-btn,
 .select-all-btn {
-  height: var(--hud-bar-h);
+  height: calc(var(--hud-bar-h) * 0.5);
   aspect-ratio: 759 / 531; /* native size of hud_btn_party.png / hud_btn_select_all.png */
+  background-color: transparent;
   background-repeat: no-repeat;
   background-size: 100% 100%;
   background-position: center;
   border: none;
+  appearance: none;
   padding: 0;
   cursor: pointer;
   filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
