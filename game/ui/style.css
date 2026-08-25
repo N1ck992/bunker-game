@@ -750,15 +750,7 @@ canvas {
   position: relative;
 }
 
-.squad-hero-card {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-}
-
-.squad-hero-card img,
+.squad-select-card img,
 .squad-avatar-fallback {
   width: 56px;
   height: 56px;
@@ -774,18 +766,26 @@ canvas {
   color: var(--squad-ink-dim);
 }
 
-.squad-loadout-card {
+/* Left column of the Отряд screen: three stacked cards — hero portrait and
+ * vehicle icon are both tappable (toggle what the centre/right panels show,
+ * see PartyUI._viewMode), the gadget card underneath is display-only until
+ * gadget items actually exist. */
+.squad-select-card {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.squad-loadout-half {
-  flex: 1;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 8px;
+  font-family: inherit;
+  cursor: pointer;
 }
+.squad-select-card:disabled { cursor: default; opacity: 0.6; }
+.squad-select-card.active {
+  border-color: var(--squad-gold, #d9a441);
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 0 0 2px rgba(217,164,65,0.5);
+}
+.squad-static-card { cursor: default; }
 
 /* Shared diagonal seam used by both the left-column loadout card and the
  * bottom-row squad slots — a thin gold line running corner-to-corner with
@@ -936,6 +936,13 @@ canvas {
   font-size: 11px;
 }
 
+.squad-item-desc {
+  margin-top: 10px;
+  color: var(--squad-ink-dim);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .squad-bottom-row {
   flex: 0 0 auto;
   display: flex;
@@ -993,7 +1000,7 @@ canvas {
 @media screen and (orientation: landscape) and (max-height: 420px) {
   .squad-frame { inset: 6px; padding: 6px; gap: 6px; }
   .squad-left-col { width: 76px; }
-  .squad-hero-card img, .squad-avatar-fallback { width: 44px; height: 44px; }
+  .squad-select-card img, .squad-avatar-fallback { width: 44px; height: 44px; }
   .squad-bottom-row { height: auto; }
   .squad-slot { height: 76px; }
   .squad-portrait-frame { width: 90px; height: 150px; }
