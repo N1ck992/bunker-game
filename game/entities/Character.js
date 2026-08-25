@@ -60,6 +60,23 @@ export class Character {
     this.attackAnimDuration = 0;
     this.combatState = 'idle'; // 'idle' | 'attacking'
     this.targetEnemyId = null;
+
+    // Ultimate-style ability system (see game/data/skills.json,
+    // SkillSystem.js): "skill" in characters.json is the id of the one
+    // this character has, if any. concentration climbs on its own while
+    // they're in the fight (either attacking or under attack — see
+    // SkillSystem) and, on reaching concentrationMax, the skill fires by
+    // itself and the bar resets to 0 — no player input involved, this is
+    // a passive "comes online periodically" ability, not something to
+    // activate manually.
+    this.skillId = data.skill ?? null;
+    this.concentration = 0;
+    this.concentrationMax = 100;
+    // Seconds left on an active guardian_shield-type effect (see
+    // SkillSystem._trigger) — while > 0, Character.takeDamage below blocks
+    // all incoming damage outright, regardless of which character actually
+    // cast the shield.
+    this.shieldRemaining = 0;
     // Whether some enemy is currently attacking this character, refreshed
     // every frame by EnemySystem — separate from combatState, which only
     // tracks this character's own weapon fire. A character under attack
@@ -91,8 +108,7 @@ export class Character {
     // isTank marks the one settler enemies should prefer to attack first —
     // see EnemySystem._pickTarget.
     this.inParty = data.inParty ?? true;
-    this.isTank = data.isTank ?? false;
-    // Firing-line stand order behind the tank (see SquadCombatSystem —
+    this.isTank = data.isTank ?? false;    // Firing-line stand order behind the tank (see SquadCombatSystem —
     // lower numbers stand closer to the tank, higher/unset ones fall back
     // to roster order). Set from the roster's per-character menu — see
     // CharacterMenuUI's "Очередь" picker / Game._setQueueOrder. Irrelevant
@@ -122,6 +138,11 @@ export class Character {
   }
 
   takeDamage(amount) {
+    // An active guardian_shield effect (see SkillSystem) blocks all
+    // incoming damage outright — checked here, at the one place every
+    // damage source (EnemySystem, anything else in the future) already
+    // funnels through, rather than duplicating the check at each call site.
+    if (this.shieldRemaining > 0) return;
     this.health = Math.max(0, this.health - amount);
     if (this.health <= 0) this.setInactive();
   }
@@ -144,6 +165,7 @@ export class Character {
       id: this.id,
       name: this.name,
       avatar: this.avatar,
+      skill: this.skillId,
       health: this.health,
       strength: this.strength,
       endurance: this.endurance,

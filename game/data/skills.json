@@ -1,0 +1,31 @@
+{
+  "comment": "Умения, срабатывающие сами по себе, когда шкала Концентрации героя (Character.concentration) заполняется — см. SkillSystem.js. chargeSeconds — сколько секунд боя нужно, чтобы набрать полную шкалу. Herой получает умение через поле \"skill\" в characters.json (id из этого файла).",
+  "skills": [
+    {
+      "id": "boosted_attack",
+      "name": "Усиленная атака",
+      "description": "Наносит одиночный мощный удар по текущей цели героя.",
+      "type": "boosted_attack",
+      "chargeSeconds": 18,
+      "damage": 40
+    },
+    {
+      "id": "mass_attack",
+      "name": "Массовая атака",
+      "description": "Наносит урон всем врагам поблизости от героя одновременно.",
+      "type": "mass_attack",
+      "chargeSeconds": 22,
+      "damage": 20,
+      "radius": 4
+    },
+    {
+      "id": "guardian_shield",
+      "name": "Защитный щит",
+      "description": "Создаёт вокруг себя и союзников поблизости щит, полностью блокирующий урон от врагов на несколько секунд.",
+      "type": "guardian_shield",
+      "chargeSeconds": 25,
+      "radius": 3,
+      "duration": 5
+    }
+  ]
+}

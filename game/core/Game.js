@@ -5,39 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=15';
-import { MovementSystem } from '../systems/MovementSystem.js?v=15';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=15';
-import { RoomSystem } from '../systems/RoomSystem.js?v=15';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=15';
-import { WorldSystem } from '../systems/WorldSystem.js?v=15';
-import { InventorySystem } from '../systems/InventorySystem.js?v=15';
-import { CombatSystem } from '../systems/CombatSystem.js?v=15';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=15';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=16';
+import { MovementSystem } from '../systems/MovementSystem.js?v=16';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=16';
+import { RoomSystem } from '../systems/RoomSystem.js?v=16';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=16';
+import { WorldSystem } from '../systems/WorldSystem.js?v=16';
+import { InventorySystem } from '../systems/InventorySystem.js?v=16';
+import { CombatSystem } from '../systems/CombatSystem.js?v=16';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=16';
 
-import { GameTime } from './GameTime.js?v=15';
-import { ResourceSystem } from './ResourceSystem.js?v=15';
-import { TemperatureSystem } from './TemperatureSystem.js?v=15';
-import { SaveSystem } from './SaveSystem.js?v=15';
+import { GameTime } from './GameTime.js?v=16';
+import { ResourceSystem } from './ResourceSystem.js?v=16';
+import { TemperatureSystem } from './TemperatureSystem.js?v=16';
+import { SaveSystem } from './SaveSystem.js?v=16';
 
-import { Character } from '../entities/Character.js?v=15';
-import { Room } from '../entities/Room.js?v=15';
-import { Enemy } from '../entities/Enemy.js?v=15';
-import { Item } from '../entities/Item.js?v=15';
-import { EnemySystem } from '../systems/EnemySystem.js?v=15';
+import { Character } from '../entities/Character.js?v=16';
+import { Room } from '../entities/Room.js?v=16';
+import { Enemy } from '../entities/Enemy.js?v=16';
+import { Item } from '../entities/Item.js?v=16';
+import { EnemySystem } from '../systems/EnemySystem.js?v=16';
+import { SkillSystem } from '../systems/SkillSystem.js?v=16';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=15';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=15';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=15';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=15';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=15';
-import { PartyUI } from '../ui/PartyUI.js?v=15';
-import { InventoryUI } from '../ui/InventoryUI.js?v=15';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=15';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=15';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=15';
-import { showStartMenu } from '../ui/StartMenu.js?v=15';
-import { installOrientationLockRetry } from './OrientationLock.js?v=15';
+import { ShelterUI } from '../ui/ShelterUI.js?v=16';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=16';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=16';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=16';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=16';
+import { PartyUI } from '../ui/PartyUI.js?v=16';
+import { InventoryUI } from '../ui/InventoryUI.js?v=16';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=16';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=16';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=16';
+import { showStartMenu } from '../ui/StartMenu.js?v=16';
+import { installOrientationLockRetry } from './OrientationLock.js?v=16';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -82,17 +83,19 @@ const FOLLOW_DISTANCE_TILES = 3; // how far "Выбрать всех" followers 
 
 class Game {
   async init() {
-    const [balance, mapData, roomsData, charactersData, itemsData] = await Promise.all([
+    const [balance, mapData, roomsData, charactersData, itemsData, skillsData] = await Promise.all([
       fetchJson('game/data/balance.json'),
       fetchJson('game/map/scenes/cryo_room_01.json'),
       fetchJson('game/data/rooms.json'),
       fetchJson('game/data/characters.json'),
-      fetchJson('game/data/items.json')
+      fetchJson('game/data/items.json'),
+      fetchJson('game/data/skills.json')
     ]);
 
     this.balance = balance;
     this.mapData = mapData;
     this.itemsById = new Map(itemsData.items.map((i) => [i.id, new Item(i)]));
+    this.skillsById = new Map(skillsData.skills.map((s) => [s.id, s]));
 
     const save = new SaveSystem().load();
     this.saveSystem = new SaveSystem();
@@ -200,6 +203,9 @@ class Game {
       }
     );
     this.squadCombatSystem = new SquadCombatSystem(this.movementSystem);
+    this.skillSystem = new SkillSystem(this.skillsById, (character, skill) => {
+      this._toast(`${character.name} применяет умение: ${skill.name}!`);
+    });
     this._attackEffects = []; // in-flight/impacting energy bolt VFX, see _renderAttackEffects
 
     this._buildDom();
@@ -2033,6 +2039,7 @@ class Game {
     this.squadCombatSystem.update(this.characters, this.enemies, this.pathfinder);
     this.movementSystem.update(this.enemies, dt);
     this.combatSystem.update(this.characters, this.enemies, dt);
+    this.skillSystem.update(this.characters, this.enemies, dt);
     this._updateCharacterAfk(dt);
     this._updateRecruitEncounters();
     this._updatePendingFurnitureInteractions();
@@ -2818,6 +2825,37 @@ class Game {
         ctx.fillRect(x - barW / 2, cdBarY, barW, 3);
         ctx.fillStyle = readyRatio >= 1 ? '#8be26b' : '#4caf50';
         ctx.fillRect(x - barW / 2, cdBarY, barW * readyRatio, 3);
+        ctx.restore();
+      }
+
+      // Концентрация bar — a second, thinner strip just below the reload
+      // bar (or in its usual spot if not currently attacking), only for
+      // characters with a skill (see Character.skillId/SkillSystem). Fills
+      // up on its own while the character's in the fight; SkillSystem
+      // resets it to 0 the instant it fires the skill.
+      if (character.skillId) {
+        ctx.save();
+        const barW = cs * 1.2;
+        const barY = groundY - drawH - 11;
+        const ratio = character.concentration / character.concentrationMax;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(x - barW / 2, barY, barW, 3);
+        ctx.fillStyle = ratio >= 1 ? '#ffe066' : '#4aa3e0';
+        ctx.fillRect(x - barW / 2, barY, barW * ratio, 3);
+        ctx.restore();
+      }
+
+      // Guardian_shield visual — a soft cyan ring around anyone currently
+      // shielded (see Character.shieldRemaining/SkillSystem), so it's clear
+      // at a glance why they're taking no damage.
+      if (character.shieldRemaining > 0) {
+        ctx.save();
+        ctx.globalAlpha = 0.55;
+        ctx.strokeStyle = '#7fe0ff';
+        ctx.lineWidth = Math.max(2, cs * 0.06);
+        ctx.beginPath();
+        ctx.ellipse(x, groundY - drawH * 0.5, drawW * 0.62, drawH * 0.58, 0, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.restore();
       }
     }
