@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=20';
-import { MovementSystem } from '../systems/MovementSystem.js?v=20';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=20';
-import { RoomSystem } from '../systems/RoomSystem.js?v=20';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=20';
-import { WorldSystem } from '../systems/WorldSystem.js?v=20';
-import { InventorySystem } from '../systems/InventorySystem.js?v=20';
-import { CombatSystem } from '../systems/CombatSystem.js?v=20';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=20';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=21';
+import { MovementSystem } from '../systems/MovementSystem.js?v=21';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=21';
+import { RoomSystem } from '../systems/RoomSystem.js?v=21';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=21';
+import { WorldSystem } from '../systems/WorldSystem.js?v=21';
+import { InventorySystem } from '../systems/InventorySystem.js?v=21';
+import { CombatSystem } from '../systems/CombatSystem.js?v=21';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=21';
 
-import { GameTime } from './GameTime.js?v=20';
-import { ResourceSystem } from './ResourceSystem.js?v=20';
-import { TemperatureSystem } from './TemperatureSystem.js?v=20';
-import { SaveSystem } from './SaveSystem.js?v=20';
+import { GameTime } from './GameTime.js?v=21';
+import { ResourceSystem } from './ResourceSystem.js?v=21';
+import { TemperatureSystem } from './TemperatureSystem.js?v=21';
+import { SaveSystem } from './SaveSystem.js?v=21';
 
-import { Character } from '../entities/Character.js?v=20';
-import { Room } from '../entities/Room.js?v=20';
-import { Enemy } from '../entities/Enemy.js?v=20';
-import { Item } from '../entities/Item.js?v=20';
-import { EnemySystem } from '../systems/EnemySystem.js?v=20';
-import { SkillSystem } from '../systems/SkillSystem.js?v=20';
+import { Character } from '../entities/Character.js?v=21';
+import { Room } from '../entities/Room.js?v=21';
+import { Enemy } from '../entities/Enemy.js?v=21';
+import { Item } from '../entities/Item.js?v=21';
+import { EnemySystem } from '../systems/EnemySystem.js?v=21';
+import { SkillSystem } from '../systems/SkillSystem.js?v=21';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=20';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=20';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=20';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=20';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=20';
-import { PartyUI } from '../ui/PartyUI.js?v=20';
-import { InventoryUI } from '../ui/InventoryUI.js?v=20';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=20';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=20';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=20';
-import { showStartMenu } from '../ui/StartMenu.js?v=20';
-import { installOrientationLockRetry } from './OrientationLock.js?v=20';
+import { ShelterUI } from '../ui/ShelterUI.js?v=21';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=21';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=21';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=21';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=21';
+import { PartyUI } from '../ui/PartyUI.js?v=21';
+import { InventoryUI } from '../ui/InventoryUI.js?v=21';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=21';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=21';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=21';
+import { showStartMenu } from '../ui/StartMenu.js?v=21';
+import { installOrientationLockRetry } from './OrientationLock.js?v=21';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -52,6 +52,10 @@ const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, 
 // between room scenes exactly the same way they always switched between
 // floors: _switchLevel/leadsToFile doesn't know or care which rendering
 // mode either side uses.
+const ROOM_VISIBLE_COLS = 26; // how many grid columns are visible across the viewport width at once,
+                               // in the normal (not-zoomed-out) camera-follow view — default for any
+                               // room scene that doesn't set its own visibleCols
+const ROOM_CAMERA_LERP_PER_SEC = 6; // higher = camera snaps to the character faster
 const FOREGROUND_FADE_FRACTION = 0.16; // fraction of the viewport width each foreground
                                         // edge fades out over — see _renderForegroundFaded
 
@@ -360,14 +364,12 @@ class Game {
     // canvas so its normal flow position is at the very top of the
     // scrollable content; the actual buttons inside are absolutely
     // positioned within it. That combination is what keeps them pinned to
-    // the top-right corner of the visible viewport as the room stack
-    // scrolls underneath, instead of scrolling away with the (very tall)
-    // canvas like a plain sibling would. Zooming out shrinks every
-    // stacked room together so more of the base is visible at once (see
-    // _setZoom); combat automatically snaps this back to 1 and re-centers
-    // on the fight (see _update), so this is purely for looking around
-    // between fights, not something that stays pulled out while
-    // something's happening.
+    // the top-right corner of the visible viewport. "Отдалить" shows every
+    // discovered room at once (_resizeCanvasOverview); "Приблизить"
+    // returns to the normal camera-follow single-room view — see
+    // _setOverview. Combat automatically forces the follow view back on
+    // and re-centers on the fight (see _update), so overview is purely
+    // for looking around the base between fights.
     this.zoomControlsWrap = document.createElement('div');
     this.zoomControlsWrap.className = 'zoom-controls-wrap';
     this.zoomControls = document.createElement('div');
@@ -376,12 +378,12 @@ class Game {
     zoomOutBtn.className = 'zoom-btn';
     zoomOutBtn.textContent = '−';
     zoomOutBtn.setAttribute('aria-label', 'Отдалить');
-    zoomOutBtn.addEventListener('click', () => this._setZoom((this._zoomLevel ?? 1) + 0.4));
+    zoomOutBtn.addEventListener('click', () => this._setOverview(true));
     const zoomInBtn = document.createElement('button');
     zoomInBtn.className = 'zoom-btn';
     zoomInBtn.textContent = '+';
     zoomInBtn.setAttribute('aria-label', 'Приблизить');
-    zoomInBtn.addEventListener('click', () => this._setZoom((this._zoomLevel ?? 1) - 0.4));
+    zoomInBtn.addEventListener('click', () => this._setOverview(false));
     this.zoomControls.appendChild(zoomOutBtn);
     this.zoomControls.appendChild(zoomInBtn);
     this.zoomControlsWrap.appendChild(this.zoomControls);
@@ -698,7 +700,8 @@ class Game {
   // above) the ones already there instead of replacing them.
   _resizeCanvas() {
     if (this._roomMode) {
-      this._resizeCanvasRoom();
+      if (this._overview) this._resizeCanvasOverview();
+      else this._resizeCanvasRoomFollow();
       return;
     }
     const boxWidth = this.sceneWrap.clientWidth;
@@ -750,28 +753,95 @@ class Game {
   // Room-scene equivalent of _resizeCanvas/_focusActiveFloor above: every
   // discovered room stacks into one tall world exactly like the old floor
   // art did, just built from parallax layers instead of flat floor images
-  // (see _registerRoom/discoveredRooms) — no more camera panning within a
-  // room, since visibleCols et al are gone; each room simply fills the
-  // full viewport width at its own scale and the party scrolls vertically
-  // between rooms, same native scrollTop the floor stack always used.
-  _resizeCanvasRoom() {
+  // Normal (not overview) room view: back to how a single room worked
+  // originally, before the Fallout-Shelter-style stack — the canvas is
+  // exactly the visible viewport and a camera (this.offsetX/_camX, updated
+  // every frame by _updateCamera) follows the selected/leading party
+  // member horizontally across the room, showing only ROOM_VISIBLE_COLS
+  // worth of it at once rather than the whole width. Only the active
+  // room's own art/entities are ever drawn in this mode — see _render's
+  // this._overview check. See _resizeCanvasOverview for the other mode
+  // (button-toggled — see _setOverview), which is what actually shows the
+  // rest of the discovered base at once.
+  _resizeCanvasRoomFollow() {
     const boxWidth = this.sceneWrap.clientWidth;
     const boxHeight = this.sceneWrap.clientHeight;
-    const zoom = this._zoomLevel ?? 1;
+    const cellSize = this.mapData.cellSize;
+
+    const visibleCols = this.mapData.visibleCols ?? ROOM_VISIBLE_COLS;
+    this.scale = boxWidth / (visibleCols * cellSize);
+    this.roomWidthPx = this.mapData.cols * cellSize * this.scale;
+    this.roomHeightPx = this.mapData.rows * cellSize * this.scale;
+
+    this.canvas.width = boxWidth;
+    this.canvas.height = boxHeight;
+    // No native DOM scrolling in this mode — the camera pans instead (see
+    // _updateCamera).
+    this.sceneWrap.scrollTop = 0;
+
+    // Keep the floor row a fixed distance above the bottom of the screen.
+    const floorRow = this.mapData.spawnPoint.row;
+    const bottomMargin = boxHeight * 0.12;
+    this.offsetY = boxHeight - (floorRow + 1) * cellSize * this.scale - bottomMargin;
+
+    this._updateCamera(0); // snap instantly on load/resize/mode-switch, no lerp
+  }
+
+  /**
+   * Moves the camera toward the selected (or first) party member's column
+   * every frame (see _update), clamped so it never shows past the room's
+   * own left/right edges. dt===0 (room just loaded/resized/switched back
+   * from overview) snaps instantly instead of easing in from wherever the
+   * camera happened to be. No-ops in overview mode — see _setOverview.
+   */
+  _updateCamera(dt) {
+    if (!this._roomMode || this._overview) return;
+    const cellSize = this.mapData.cellSize;
+    const leader = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
+    const focusCol = leader ? leader.position.col : this.mapData.spawnPoint.col;
+    const targetWorldX = (focusCol + 0.5) * cellSize * this.scale;
+    const maxCamX = Math.max(0, this.roomWidthPx - this.canvas.width);
+    const targetCamX = Math.min(maxCamX, Math.max(0, targetWorldX - this.canvas.width / 2));
+
+    if (this._camX === undefined || dt === 0) {
+      this._camX = targetCamX;
+    } else {
+      const t = Math.min(1, dt * ROOM_CAMERA_LERP_PER_SEC);
+      this._camX += (targetCamX - this._camX) * t;
+    }
+    this.offsetX = -this._camX;
+  }
+
+  /**
+   * Overview mode (toggled by the −/+ controls — see _setOverview): every
+   * discovered room stacked and shrunk to fit the *whole* base into the
+   * viewport at once, no scrolling needed — this is what actually answers
+   * "let me see all the floors I've opened". Unlike the normal
+   * camera-follow view, nothing here tracks the party; it's a static
+   * look-around. Combat forces this back off — see _update.
+   */
+  _resizeCanvasOverview() {
+    const boxWidth = this.sceneWrap.clientWidth;
+    const boxHeight = this.sceneWrap.clientHeight;
+    const rooms = [...this.discoveredRooms.values()].sort((a, b) => a.depth - b.depth);
+
+    // First pass at "fit to width" scale per room, same formula the old
+    // single-room-per-screen stack used — then, if the rooms stacked at
+    // that scale would be taller than the viewport, shrink every room by
+    // the same factor so the whole stack fits without scrolling.
+    let naturalTotalHeight = 0;
+    for (const room of rooms) {
+      const cellSize = room.mapData.cellSize;
+      const scale = boxWidth / (room.mapData.cols * cellSize);
+      naturalTotalHeight += room.mapData.rows * cellSize * scale;
+    }
+    const fitFactor = naturalTotalHeight > boxHeight ? boxHeight / naturalTotalHeight : 1;
 
     this.roomStackLayout = new Map();
-    const rooms = [...this.discoveredRooms.values()].sort((a, b) => a.depth - b.depth);
     let cumulativeY = 0;
     for (const room of rooms) {
       const cellSize = room.mapData.cellSize;
-      // Dividing by zoom (>1 = zoomed out) shrinks every room's own scale
-      // together, so more of the stack fits in the same physical canvas —
-      // canvas.width itself never changes. widthPx is this room's own
-      // width at that scale (< boxWidth once zoomed out), centred within
-      // the canvas via xOffset — drawing it at the full canvas width
-      // regardless of zoom would stretch/squash the art instead of
-      // shrinking it as one piece. See _setZoom.
-      const scale = boxWidth / (zoom * room.mapData.cols * cellSize);
+      const scale = (boxWidth / (room.mapData.cols * cellSize)) * fitFactor;
       const widthPx = room.mapData.cols * cellSize * scale;
       const heightPx = room.mapData.rows * cellSize * scale;
       const xOffset = (boxWidth - widthPx) / 2;
@@ -780,49 +850,27 @@ class Game {
     }
 
     this.canvas.width = boxWidth;
-    this.canvas.height = Math.max(boxHeight, cumulativeY);
+    this.canvas.height = boxHeight; // exactly the viewport — the whole point is no scrolling
+    this.sceneWrap.scrollTop = 0;
 
-    // Every other pixel-space calc (movement, tap hit-testing, sprite
-    // sizing) reads this.scale/this.roomWidthPx/this.roomHeightPx as "the
-    // active room's own" — same fields the old single-room camera code
-    // used, just sourced from this room's stack slot now instead of a pan.
     const activeLayout = this.roomStackLayout.get(this.mapData.id);
     this.scale = activeLayout.scale;
     this.roomWidthPx = activeLayout.widthPx;
     this.roomHeightPx = activeLayout.heightPx;
-
-    this._focusActiveRoom();
+    this.offsetX = activeLayout.xOffset;
+    this.offsetY = activeLayout.cumulativeY;
   }
 
   /**
-   * Zoomed out (level > 1) shrinks every room so more of the stack is
-   * visible at once — see _resizeCanvasRoom. Called by the +/- controls
-   * (see _buildDom) and forced back to 1 the moment any party member is in
-   * combat (see _update) so a fight is never happening off in a
-   * shrunk-down, hard-to-read corner of the screen.
+   * Toggled by the −/+ controls (see _buildDom) — true shows the whole
+   * discovered base at once (_resizeCanvasOverview), false is the normal
+   * camera-follow single-room view (_resizeCanvasRoomFollow). Forced back
+   * to false the moment any party member is in combat (see _update).
    */
-  _setZoom(level) {
+  _setOverview(value) {
     if (!this._roomMode) return;
-    this._zoomLevel = Math.max(1, Math.min(3, level));
-    this._resizeCanvasRoom();
-  }
-
-  // Scrolls to centre the active room's slot vertically in the viewport
-  // (not just align its top edge — a room shorter than the viewport used
-  // to leave its floor/characters pushed toward the bottom half of the
-  // screen, or even a hair off it, reading as "the hero is stuck up near
-  // the top of the level"). No tween, same instant-jump behaviour
-  // _focusActiveFloor always had. Rooms above/below stay in the world,
-  // scrollable, exactly like other floors do.
-  _focusActiveRoom() {
-    const layout = this.roomStackLayout.get(this.mapData.id);
-    if (!layout) return;
-    this.offsetX = layout.xOffset;
-    this.offsetY = layout.cumulativeY;
-    const viewportH = this.sceneWrap.clientHeight;
-    const maxScroll = Math.max(0, this.canvas.height - viewportH);
-    const centered = layout.cumulativeY - (viewportH - layout.heightPx) / 2;
-    this.sceneWrap.scrollTop = Math.min(maxScroll, Math.max(0, centered));
+    this._overview = value;
+    this._resizeCanvas();
   }
 
   /**
@@ -834,9 +882,10 @@ class Game {
    * moment you leave. Drawn before the active room's own layers so it
    * never overlaps/overdraws them (different Y slots anyway, but the
    * active room should still "win" if anything ever lines up). Each
-   * room's own widthPx/xOffset (see _resizeCanvasRoom) keeps it correctly
-   * centred and proportioned at the current zoom level, same as the
-   * active room.
+   * room's own widthPx/xOffset (see _resizeCanvasOverview) keeps it
+   * correctly centred and proportioned to fit the whole base on screen,
+   * same as the active room. Only ever called in overview mode — see
+   * _render.
    */
   _renderRoomStackBackdrop() {
     if (!this.discoveredRooms || this.discoveredRooms.size <= 1) return;
@@ -867,11 +916,11 @@ class Game {
   /**
    * Draws one or more of the *active* room's parallax layers (background/
    * midground/foreground — see _buildRoomLayers). Drawn at this room's own
-   * widthPx/xOffset (see _resizeCanvasRoom) so zooming out shrinks the art
-   * as one piece instead of stretching it — full canvas width only at
-   * zoom level 1, where xOffset is 0 and widthPx already equals it. Other,
-   * previously-visited rooms are drawn separately, underneath this one —
-   * see _renderRoomStackBackdrop.
+   * widthPx/xOffset — the full camera-pan width in the normal follow view
+   * (_resizeCanvasRoomFollow), or the shrunk, centred overview size
+   * (_resizeCanvasOverview) — so overview shrinks the art as one piece
+   * instead of stretching it. Other, previously-visited rooms are drawn
+   * separately (overview only) — see _renderRoomStackBackdrop.
    */
   _renderParallaxLayers(names) {
     const layers = this.roomLayers;
@@ -2087,9 +2136,6 @@ class Game {
   }
 
   _update(dt) {
-    // Rooms no longer pan a camera (see _resizeCanvasRoom) — the whole
-    // stack scrolls natively instead, so there's nothing to update here
-    // every frame any more.
     // Day/night cycle temporarily disabled — see TEMPERATURE_ENABLED comment
     // above the night-overlay check in _render. gameTime.update() is what
     // actually advances the phase, so leaving it uncalled freezes the game
@@ -2105,23 +2151,17 @@ class Game {
     this.skillSystem.update(this.characters, this.enemies, dt);
 
     // While anyone in the active party is actually fighting — attacking or
-    // being attacked — the camera locks onto them: zoom snaps back to 1 if
-    // it was pulled out, and the view re-centers on the room every frame,
-    // overriding any manual scroll away from the fight. Only checked in
-    // room mode; the legacy floor stack never had a zoom to reset.
-    if (this._roomMode) {
+    // being attacked — the camera locks onto them: overview mode (if it
+    // was on) turns off and the normal follow view snaps back on, so a
+    // fight is never happening off-screen in a shrunk-down base overview.
+    // Only checked in room mode; the legacy floor stack never had this.
+    if (this._roomMode && this._overview) {
       const inCombat = this.characters.some(
         (c) => c.isActive && c.inParty !== false && (c.combatState === 'attacking' || c.isBeingAttacked)
       );
-      if (inCombat) {
-        if ((this._zoomLevel ?? 1) !== 1) {
-          this._zoomLevel = 1;
-          this._resizeCanvasRoom();
-        } else {
-          this._focusActiveRoom();
-        }
-      }
+      if (inCombat) this._setOverview(false);
     }
+    if (this._roomMode && !this._overview) this._updateCamera(dt);
     this._updateCharacterAfk(dt);
     this._updateRecruitEncounters();
     this._updatePendingFurnitureInteractions();
@@ -2164,7 +2204,10 @@ class Game {
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     if (this._roomMode) {
-      this._renderRoomStackBackdrop();
+      // Other discovered rooms only draw in overview mode (see
+      // _setOverview) — the normal camera-follow view shows just the
+      // active room, same as it always did before overview existed.
+      if (this._overview) this._renderRoomStackBackdrop();
       this._renderParallaxLayers(['background', 'midground']);
     } else {
       this._renderFloorStack();
@@ -2184,9 +2227,10 @@ class Game {
     // Everything below is authored in the active room/floor's own
     // image-space; translate once so every draw call can keep using
     // col/row * cellSize * scale like before — this.offsetY points at
-    // wherever the active room/floor sits in the stacked world (see
-    // _focusActiveRoom/_focusActiveFloor), offsetX is always 0 now that
-    // nothing pans horizontally any more.
+    // wherever the active room/floor sits in the stacked world, offsetX is
+    // the camera pan in the normal follow view (_updateCamera), the
+    // overview's own centring offset in overview mode, or 0 for the
+    // legacy floor stack.
     ctx.save();
     ctx.translate(this.offsetX, this.offsetY);
 
