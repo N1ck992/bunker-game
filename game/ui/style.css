@@ -82,7 +82,7 @@ canvas {
   align-items: flex-end;
   gap: 0;
   padding: 6px 10px;
-  background: var(--steel-900);
+  background: var(--steel-950);
 }
 
 /* Resource bar — slim HUD strip above the scene */
