@@ -150,15 +150,12 @@
       "levelId": "technical_bay_01",
       "sprites": {
         "idle": [
-          "game/assets/characters/char_idle_0.png",
-          "game/assets/characters/char_idle_1.png",
-          "game/assets/characters/char_idle_2.png",
-          "game/assets/characters/char_idle_3.png",
-          "game/assets/characters/char_idle_4.png",
-          "game/assets/characters/char_idle_5.png",
-          "game/assets/characters/char_idle_6.png",
-          "game/assets/characters/char_idle_7.png",
-          "game/assets/characters/char_idle_8.png"
+          "game/assets/characters/char_3/idle_00.png",
+          "game/assets/characters/char_3/idle_01.png",
+          "game/assets/characters/char_3/idle_02.png",
+          "game/assets/characters/char_3/idle_03.png",
+          "game/assets/characters/char_3/idle_04.png",
+          "game/assets/characters/char_3/idle_05.png"
         ],
         "examine": ["game/assets/characters/char_examine.png"],
         "run": [
