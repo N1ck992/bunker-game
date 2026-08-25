@@ -2918,7 +2918,13 @@ function makeImage(src) {
 }
 
 async function fetchJson(path) {
-  const res = await fetch(path);
+  // no-store so a stale browser cache never serves outdated game data
+  // (characters, map scenes, items, balance, ...) after a fresh deploy —
+  // this bit the project once already (a newly-added character silently
+  // missing because the phone's browser kept serving the old
+  // characters.json). Small files, fetched a handful of times at
+  // load/floor-switch, so skipping the cache costs nothing noticeable.
+  const res = await fetch(path, { cache: 'no-store' });
   if (!res.ok) throw new Error(`Failed to load ${path}: ${res.status}`);
   return res.json();
 }

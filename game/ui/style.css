@@ -504,7 +504,7 @@ canvas {
  * from — each cap's width follows automatically via aspect-ratio, so the
  * pipe is the only piece that actually stretches/tiles with screen width. */
 :root {
-  --hud-bar-h: 96px;
+  --hud-bar-h: 128px;
 }
 
 .hud-left {
@@ -1323,6 +1323,6 @@ canvas {
   .bottom-bar { padding: 5px 10px; gap: 6px; }
   .roster-wrap { gap: 6px; }
   .party-btn, .select-all-btn { padding: 5px 10px; font-size: 10px; }
-  :root { --hud-bar-h: 74px; }
+  :root { --hud-bar-h: 96px; }
   .character-panel, .construction-modal { max-height: 78vh; }
 }
