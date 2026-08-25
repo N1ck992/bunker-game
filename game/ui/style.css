@@ -561,12 +561,12 @@ canvas {
  * .ui-root) to still be able to render above the roster and stay clickable
  * — a nested z-index like .enemy-menu's 60 can never outrank a sibling
  * context's z-index on its own. */
-/* Holds .hud-right (the current-character portrait readout) plus the
- * Отряд/Выбрать всех buttons (.roster-controls) stacked directly above it —
- * column-reverse means the first DOM child (.hud-right, see
- * CharacterRosterUI._build) is anchored at the very corner (main-start of
- * the reversed axis is the bottom), and .roster-controls, appended after
- * it, stacks above. */
+/* Holds the party avatar row (bottom-right corner, where the old single
+ * portrait readout used to be) plus the Отряд/Выбрать всех buttons
+ * (.roster-controls) stacked directly above it — column-reverse means the
+ * first DOM child (.roster-avatars, see CharacterRosterUI._build) is
+ * anchored at the very corner (main-start of the reversed axis is the
+ * bottom), and .roster-controls, appended after it, stacks above. */
 .roster-wrap {
   z-index: 5; /* above the canvas, below .top-root/.ui-root and everything in them */
   display: flex;
@@ -576,7 +576,7 @@ canvas {
   max-width: 100%;
 }
 
-/* Отряд / Выбрать всех, stacked right above the portrait panel. */
+/* Отряд / Выбрать всех, stacked right above the avatar row. */
 .roster-controls {
   display: flex;
   justify-content: flex-end;
@@ -584,19 +584,22 @@ canvas {
   gap: 8px;
 }
 
-/* Small avatar column for the whole in-party squad, between the buttons
- * (above) and the main portrait panel (below) — see
- * CharacterRosterUI._updatePartyAvatars. */
-.roster-party-avatars {
+/* Whole in-party squad, one avatar each, anchored to the bottom-right
+ * corner — row-reverse so the first DOM entry (the tank/lead, see
+ * CharacterRosterUI._updatePartyAvatars) sits right in the corner and
+ * each new squad member appends further to its left, growing the row
+ * right-to-left as people join. Tapping one selects that character. */
+.roster-avatars {
   display: flex;
-  flex-direction: column;
+  flex-direction: row-reverse;
   align-items: flex-end;
-  gap: 6px;
+  gap: 8px;
 }
 
-.roster-mini-avatar {
-  width: 40px;
-  height: 40px;
+.roster-avatar {
+  position: relative;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   overflow: hidden;
   padding: 0;
@@ -605,13 +608,13 @@ canvas {
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
-.roster-mini-avatar img {
+.roster-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: top center;
 }
-.roster-mini-avatar-fallback {
+.roster-avatar-fallback {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -619,135 +622,26 @@ canvas {
   height: 100%;
   color: var(--text-dim);
   font-weight: bold;
-  font-size: 14px;
+  font-size: 18px;
 }
-.roster-mini-avatar.active { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(232,176,75,0.4); }
-.roster-mini-avatar.inactive { opacity: 0.45; }
+.roster-avatar.active { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(232,176,75,0.4); }
+.roster-avatar.inactive { opacity: 0.45; }
+.roster-avatar.not-in-party { opacity: 0.5; }
 
-/* Single portrait readout — the right end of the pipe-and-panel HUD bar
- * (see .hud-left/.hud-pipe above). Shows whichever character
- * CharacterRosterUI resolves as "current" (selected, else tank, else the
- * first active settler) — not the whole squad; the rest of the party is
- * still reachable via Отряд (.roster-controls, above). */
-.hud-right {
-  position: relative;
-  flex: 0 0 auto;
-  height: var(--hud-bar-h);
-  aspect-ratio: 372 / 250; /* native size of hud_bar_right_frame.png */
-  cursor: pointer;
-}
-
-/* The frame graphic has its inner cavity (face + level badge + bar area)
- * cut fully transparent (see game/assets/ui/hud_bar_right_frame.png) so it
- * can sit on top, in normal document order, of the live portrait/badge/bar
- * beneath it, letting the metal border show through in front of them. */
-.hud-right-frame {
-  position: absolute;
-  inset: 0;
-  background-image: url('../assets/ui/hud_bar_right_frame.png');
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  pointer-events: none;
-}
-
-/* The cavity itself — percentages measured from the same crop the frame's
- * cutout rectangle came from (168,26,175,192 out of 372x250). */
-.hud-portrait-slot {
-  position: absolute;
-  left: 45.2%;
-  top: 10.4%;
-  width: 47%;
-  height: 76.8%;
-  background: var(--steel-900);
-  overflow: hidden;
-}
-
-.hud-portrait-img {
+/* Health, drawn straight onto the avatar instead of a separate number/bar
+ * — a thin strip along the bottom edge of the circle, filled
+ * green→yellow→red as health drops (see
+ * CharacterRosterUI._updatePartyAvatars for the thresholds). */
+.roster-avatar-hp {
   position: absolute;
   left: 0;
-  top: 0;
-  width: 100%;
-  height: 62%;
-  object-fit: cover;
-  object-position: top center;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  background: rgba(0,0,0,0.55);
 }
-
-.hud-portrait-fallback {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 62%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--steel-800);
-  color: var(--text-dim);
-  font-weight: bold;
-  font-size: 20px;
-}
-
-/* Health readout, baked as a number + bar in the reference art — recreated
- * live here instead: this game has no separate "level" stat, so the number
- * slot shows rounded HP and the bar fills to match, rather than inventing a
- * level that doesn't exist. */
-.hud-hp-badge {
-  position: absolute;
-  left: 0;
-  bottom: 6%;
-  width: 27%;
-  height: 22%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--steel-950);
-  border: 1px solid var(--amber-dim);
-  color: var(--amber);
-  font-weight: bold;
-  font-size: 12px;
-}
-
-.hud-hp-track {
-  position: absolute;
-  right: 2%;
-  bottom: 9%;
-  width: 68%;
-  height: 15%;
-  background: var(--steel-950);
-  border: 1px solid var(--steel-700);
-}
-
-.hud-hp-fill {
+.roster-avatar-hp-fill {
   height: 100%;
-  background: var(--amber);
-}
-.hud-hp-fill.warning { background: #d4a83a; }
-.hud-hp-fill.critical { background: var(--rust); }
-
-/* Tank/vehicle badges, pinned to the frame's own top corners — same idea as
- * the old roster avatar's corner badges. */
-.hud-badge {
-  position: absolute;
-  top: 2%;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--steel-950);
-  border: 1px solid var(--amber);
-  font-size: 11px;
-  line-height: 18px;
-  text-align: center;
-  display: none;
-  z-index: 3;
-}
-.hud-badge-tank { left: 2%; }
-.hud-badge-vehicle { right: 2%; }
-.hud-right.tank .hud-badge-tank { display: block; }
-.hud-right.has-vehicle .hud-badge-vehicle { display: block; }
-
-.hud-right.inactive .hud-portrait-slot,
-.hud-right.not-in-party .hud-portrait-slot {
-  opacity: 0.5;
 }
 
 .party-btn,
@@ -778,10 +672,6 @@ canvas {
   border-color: var(--amber);
   color: var(--steel-950);
 }
-
-/* Benched (unchecked "в отряде" in Отряд) still shows here if selected —
- * .hud-right.not-in-party above dims it the same way .inactive does, just
- * as a visual "sitting out" cue rather than blocking selection. */
 
 /* ---------------------------------------------------------------------
  * Отряд (squad) screen — game/ui/PartyUI.js

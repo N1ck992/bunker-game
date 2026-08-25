@@ -1,7 +1,7 @@
 // LeftBarUI.js
 // Left end of the pipe-and-panel HUD bar below the scene (see .hud-left in
 // style.css and where Game._buildDom mounts this into .bottom-bar, right
-// before .hud-pipe and CharacterRosterUI's .hud-right). The double-panel
+// before .hud-pipe and CharacterRosterUI's avatar row). The double-panel
 // art (game/assets/ui/hud_bar_left.png) already has the icon + label baked
 // into each square, in this exact order — Инвентарь first/left, Карта
 // second — so the two buttons here are just invisible hit targets sized to
