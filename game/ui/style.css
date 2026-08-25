@@ -661,7 +661,7 @@ canvas {
   font-size: 18px;
 }
 .roster-avatar.active { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(232,176,75,0.4); }
-.roster-avatar.inactive { opacity: 0.45; }
+.roster-avatar.inactive { opacity: 0.6; filter: grayscale(1); }
 .roster-avatar.not-in-party { opacity: 0.5; }
 
 /* Health, drawn straight onto the avatar instead of a separate number/bar
@@ -763,6 +763,7 @@ button.squad-hole:disabled { cursor: default; }
 .squad-gadget-side { left: 9.11%; top: 51.76%; width: 9.11%; height: 12.7%; display: flex; align-items: center; justify-content: center; }
 .squad-select-avatar.active,
 .squad-select-vehicle-side.active { box-shadow: 0 0 0 3px var(--squad-gold-bright, #f5c878); border-radius: inherit; }
+.squad-select-avatar.inactive { opacity: 0.6; filter: grayscale(1); }
 
 .squad-select-avatar img,
 .squad-avatar-fallback {
@@ -904,6 +905,7 @@ button.squad-hole:disabled { cursor: default; }
 .squad-slot-3 { left: 56.45%; }
 .squad-slot-4 { left: 72.33%; }
 .squad-slot.active { box-shadow: 0 0 0 2px var(--squad-gold-bright, #f5c878); }
+.squad-slot.inactive .squad-slot-avatar { opacity: 0.6; filter: grayscale(1); }
 .squad-slot-avatar { width: 92%; aspect-ratio: 1; border-radius: 50%; overflow: hidden; margin-top: 2%; }
 .squad-slot-avatar img, .squad-slot .squad-avatar-fallback { width: 100%; height: 100%; object-fit: cover; }
 .squad-slot-vehicle { width: 100%; height: 34%; margin-top: 6%; display: flex; align-items: center; justify-content: center; }

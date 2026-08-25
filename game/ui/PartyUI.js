@@ -64,7 +64,7 @@ export class PartyUI {
       <div class="squad-frame">
         <button class="squad-hole squad-back-btn" aria-label="Назад"></button>
 
-        <button class="squad-hole squad-select-avatar ${this._viewMode === 'hero' ? 'active' : ''}" data-view="hero" ${lead ? '' : 'disabled'}>
+        <button class="squad-hole squad-select-avatar ${this._viewMode === 'hero' ? 'active' : ''} ${lead && !lead.isActive ? 'inactive' : ''}" data-view="hero" ${lead ? '' : 'disabled'}>
           ${this._avatarHtml(lead)}
         </button>
         <button class="squad-hole squad-select-vehicle-side ${this._viewMode === 'vehicle' ? 'active' : ''}" data-view="vehicle" ${lead ? '' : 'disabled'}>
@@ -173,7 +173,7 @@ export class PartyUI {
   _slotHtml(character, itemsById, isLead, index) {
     const vehicleItem = itemsById?.get(character.vehicle);
     return `
-      <button class="squad-slot squad-slot-${index} ${isLead ? 'active' : ''}" data-id="${character.id}">
+      <button class="squad-slot squad-slot-${index} ${isLead ? 'active' : ''} ${!character.isActive ? 'inactive' : ''}" data-id="${character.id}">
         <div class="squad-slot-avatar">${this._avatarHtml(character)}</div>
         <div class="squad-slot-vehicle">${this._iconHtml(vehicleItem, '🚙')}</div>
       </button>

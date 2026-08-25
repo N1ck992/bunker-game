@@ -4,11 +4,23 @@
 // into Game.init(), which already loads the save itself — this module only
 // decides *whether* to clear the save first, it doesn't touch game logic.
 
-import { SaveSystem } from '../core/SaveSystem.js?v=21';
-import { requestLandscapeLock } from '../core/OrientationLock.js?v=21';
+import { SaveSystem } from '../core/SaveSystem.js?v=22';
+import { requestLandscapeLock } from '../core/OrientationLock.js?v=22';
 
 export function showStartMenu(onStart) {
   const app = document.getElementById('app');
+
+  // Set by Game._checkPartyWipe after a full party wipe — clears the save
+  // and reloads with this flag so the player lands straight back in the
+  // cryo room instead of having to tap "Новая игра" themselves after
+  // already having just read a "you died" toast.
+  if (new URLSearchParams(window.location.search).get('restart') === '1') {
+    window.history.replaceState(null, '', window.location.pathname);
+    requestLandscapeLock();
+    new SaveSystem().clear();
+    onStart();
+    return;
+  }
 
   const menu = document.createElement('div');
   menu.className = 'start-menu';

@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=21';
-import { MovementSystem } from '../systems/MovementSystem.js?v=21';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=21';
-import { RoomSystem } from '../systems/RoomSystem.js?v=21';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=21';
-import { WorldSystem } from '../systems/WorldSystem.js?v=21';
-import { InventorySystem } from '../systems/InventorySystem.js?v=21';
-import { CombatSystem } from '../systems/CombatSystem.js?v=21';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=21';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=22';
+import { MovementSystem } from '../systems/MovementSystem.js?v=22';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=22';
+import { RoomSystem } from '../systems/RoomSystem.js?v=22';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=22';
+import { WorldSystem } from '../systems/WorldSystem.js?v=22';
+import { InventorySystem } from '../systems/InventorySystem.js?v=22';
+import { CombatSystem } from '../systems/CombatSystem.js?v=22';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=22';
 
-import { GameTime } from './GameTime.js?v=21';
-import { ResourceSystem } from './ResourceSystem.js?v=21';
-import { TemperatureSystem } from './TemperatureSystem.js?v=21';
-import { SaveSystem } from './SaveSystem.js?v=21';
+import { GameTime } from './GameTime.js?v=22';
+import { ResourceSystem } from './ResourceSystem.js?v=22';
+import { TemperatureSystem } from './TemperatureSystem.js?v=22';
+import { SaveSystem } from './SaveSystem.js?v=22';
 
-import { Character } from '../entities/Character.js?v=21';
-import { Room } from '../entities/Room.js?v=21';
-import { Enemy } from '../entities/Enemy.js?v=21';
-import { Item } from '../entities/Item.js?v=21';
-import { EnemySystem } from '../systems/EnemySystem.js?v=21';
-import { SkillSystem } from '../systems/SkillSystem.js?v=21';
+import { Character } from '../entities/Character.js?v=22';
+import { Room } from '../entities/Room.js?v=22';
+import { Enemy } from '../entities/Enemy.js?v=22';
+import { Item } from '../entities/Item.js?v=22';
+import { EnemySystem } from '../systems/EnemySystem.js?v=22';
+import { SkillSystem } from '../systems/SkillSystem.js?v=22';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=21';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=21';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=21';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=21';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=21';
-import { PartyUI } from '../ui/PartyUI.js?v=21';
-import { InventoryUI } from '../ui/InventoryUI.js?v=21';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=21';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=21';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=21';
-import { showStartMenu } from '../ui/StartMenu.js?v=21';
-import { installOrientationLockRetry } from './OrientationLock.js?v=21';
+import { ShelterUI } from '../ui/ShelterUI.js?v=22';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=22';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=22';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=22';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=22';
+import { PartyUI } from '../ui/PartyUI.js?v=22';
+import { InventoryUI } from '../ui/InventoryUI.js?v=22';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=22';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=22';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=22';
+import { showStartMenu } from '../ui/StartMenu.js?v=22';
+import { installOrientationLockRetry } from './OrientationLock.js?v=22';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -52,7 +52,7 @@ const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, 
 // between room scenes exactly the same way they always switched between
 // floors: _switchLevel/leadsToFile doesn't know or care which rendering
 // mode either side uses.
-const ROOM_VISIBLE_COLS = 26; // how many grid columns are visible across the viewport width at once,
+const ROOM_VISIBLE_COLS = 19; // how many grid columns are visible across the viewport width at once,
                                // in the normal (not-zoomed-out) camera-follow view — default for any
                                // room scene that doesn't set its own visibleCols
 const ROOM_CAMERA_LERP_PER_SEC = 6; // higher = camera snaps to the character faster
@@ -2117,6 +2117,30 @@ class Game {
     return Math.hypot(a.col - b.col, a.row - b.row);
   }
 
+  /**
+   * Whole-party wipe (every recruited settler down, none left standing) —
+   * checked every frame. Mark dying alone doesn't trigger this: he's just
+   * one recruited character among however many, same as anyone else — the
+   * party keeps going on whoever's still up until literally nobody is.
+   * Once it fires, the save is cleared and the game reloads fresh into
+   * the cryo-room start (see StartMenu.js's ?restart handling) — same
+   * clean slate as "Новая игра", just triggered automatically instead of
+   * from the menu.
+   */
+  _checkPartyWipe() {
+    if (this._partyWiped) return;
+    if (!this.characters || this.characters.length === 0) return;
+    const allDown = this.characters.every((c) => !c.isActive);
+    if (!allDown) return;
+
+    this._partyWiped = true;
+    this._toast('Отряд погиб... Возвращаемся в криоотсек.');
+    setTimeout(() => {
+      this.saveSystem.clear();
+      window.location.href = window.location.pathname + '?restart=1';
+    }, 2500);
+  }
+
   _toast(message) {
     this.toastEl.textContent = message;
     this.toastEl.classList.remove('hidden');
@@ -2162,6 +2186,7 @@ class Game {
       if (inCombat) this._setOverview(false);
     }
     if (this._roomMode && !this._overview) this._updateCamera(dt);
+    this._checkPartyWipe();
     this._updateCharacterAfk(dt);
     this._updateRecruitEncounters();
     this._updatePendingFurnitureInteractions();
@@ -2921,7 +2946,10 @@ class Game {
         // directional sets (char_2) already have real per-direction frames
         // (or a same-either-way placeholder), so they're never flipped.
         if (character.facingDir < 0 && !directional) ctx.scale(-1, 1);
-        if (!character.isActive) ctx.globalAlpha = 0.5;
+        if (!character.isActive) {
+          ctx.globalAlpha = 0.6;
+          ctx.filter = 'grayscale(1)';
+        }
         ctx.drawImage(sprite, -drawW / 2, 0, drawW, drawH);
       }
 
