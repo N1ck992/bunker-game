@@ -40,12 +40,14 @@ export class PartyUI {
   /**
    * @param {Character[]} characters - recruited, in-party settlers (up to SLOT_LIMIT)
    * @param {Map<string, Item>} itemsById
+   * @param {Map<string, object>} skillsById - game/data/skills.json entries, for the ability name/description under the stats
    * @param {(characterId:string) => void} onSelectLead - fired when a bottom slot is tapped
    * @param {() => void} onClose
    */
-  show(characters, itemsById, onSelectLead, onClose) {
+  show(characters, itemsById, skillsById, onSelectLead, onClose) {
     this._characters = characters;
     this._itemsById = itemsById;
+    this._skillsById = skillsById;
     this._onSelectLead = onSelectLead;
     this._onClose = onClose;
 
@@ -97,7 +99,7 @@ export class PartyUI {
     this.panel.querySelectorAll('[data-view]').forEach((el) => {
       el.addEventListener('click', () => {
         this._viewMode = el.dataset.view;
-        this.show(this._characters, this._itemsById, this._onSelectLead, this._onClose);
+        this.show(this._characters, this._itemsById, this._skillsById, this._onSelectLead, this._onClose);
       });
     });
 
@@ -110,15 +112,33 @@ export class PartyUI {
    * squad_panel_frame.png. `character` null (vehicle view, or nobody
    * recruited yet) leaves every value hole empty rather than showing
    * mismatched data in hero-labelled slots.
+   *
+   * Концентрация and the ability description have no baked spot in the
+   * reference art at all (it predates the skill system) — drawn as a
+   * plain overlay in the open panel space just under the stats box
+   * instead, styled to blend in rather than edited into the image itself.
    */
   _statValuesHtml(character) {
     const ratio = character ? Math.max(0, Math.min(1, character.health / 100)) : 0;
+    const skill = character?.skillId ? this._skillsById?.get(character.skillId) : null;
+    const concRatio = character?.skillId ? character.concentration / character.concentrationMax : 0;
+
     return `
       <div class="squad-hole squad-stat-health"><div class="squad-stat-fill" style="width:${character ? ratio * 100 : 0}%"></div></div>
       <div class="squad-hole squad-stat-str">${character ? character.strength : ''}</div>
       <div class="squad-hole squad-stat-end">${character ? character.endurance : ''}</div>
       <div class="squad-hole squad-stat-agi">${character ? character.agility : ''}</div>
       <div class="squad-hole squad-stat-int">${character ? character.intelligence : ''}</div>
+      ${skill ? `
+        <div class="squad-hole squad-stat-conc-row">
+          <span class="squad-stat-conc-label">КОНЦ</span>
+          <div class="squad-stat-conc-track"><div class="squad-stat-conc-fill" style="width:${concRatio * 100}%"></div></div>
+        </div>
+        <div class="squad-hole squad-ability-box">
+          <div class="squad-ability-name">${skill.name}</div>
+          <div class="squad-ability-desc">${skill.description}</div>
+        </div>
+      ` : ''}
     `;
   }
 

@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=16';
-import { MovementSystem } from '../systems/MovementSystem.js?v=16';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=16';
-import { RoomSystem } from '../systems/RoomSystem.js?v=16';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=16';
-import { WorldSystem } from '../systems/WorldSystem.js?v=16';
-import { InventorySystem } from '../systems/InventorySystem.js?v=16';
-import { CombatSystem } from '../systems/CombatSystem.js?v=16';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=16';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=17';
+import { MovementSystem } from '../systems/MovementSystem.js?v=17';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=17';
+import { RoomSystem } from '../systems/RoomSystem.js?v=17';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=17';
+import { WorldSystem } from '../systems/WorldSystem.js?v=17';
+import { InventorySystem } from '../systems/InventorySystem.js?v=17';
+import { CombatSystem } from '../systems/CombatSystem.js?v=17';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=17';
 
-import { GameTime } from './GameTime.js?v=16';
-import { ResourceSystem } from './ResourceSystem.js?v=16';
-import { TemperatureSystem } from './TemperatureSystem.js?v=16';
-import { SaveSystem } from './SaveSystem.js?v=16';
+import { GameTime } from './GameTime.js?v=17';
+import { ResourceSystem } from './ResourceSystem.js?v=17';
+import { TemperatureSystem } from './TemperatureSystem.js?v=17';
+import { SaveSystem } from './SaveSystem.js?v=17';
 
-import { Character } from '../entities/Character.js?v=16';
-import { Room } from '../entities/Room.js?v=16';
-import { Enemy } from '../entities/Enemy.js?v=16';
-import { Item } from '../entities/Item.js?v=16';
-import { EnemySystem } from '../systems/EnemySystem.js?v=16';
-import { SkillSystem } from '../systems/SkillSystem.js?v=16';
+import { Character } from '../entities/Character.js?v=17';
+import { Room } from '../entities/Room.js?v=17';
+import { Enemy } from '../entities/Enemy.js?v=17';
+import { Item } from '../entities/Item.js?v=17';
+import { EnemySystem } from '../systems/EnemySystem.js?v=17';
+import { SkillSystem } from '../systems/SkillSystem.js?v=17';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=16';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=16';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=16';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=16';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=16';
-import { PartyUI } from '../ui/PartyUI.js?v=16';
-import { InventoryUI } from '../ui/InventoryUI.js?v=16';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=16';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=16';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=16';
-import { showStartMenu } from '../ui/StartMenu.js?v=16';
-import { installOrientationLockRetry } from './OrientationLock.js?v=16';
+import { ShelterUI } from '../ui/ShelterUI.js?v=17';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=17';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=17';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=17';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=17';
+import { PartyUI } from '../ui/PartyUI.js?v=17';
+import { InventoryUI } from '../ui/InventoryUI.js?v=17';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=17';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=17';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=17';
+import { showStartMenu } from '../ui/StartMenu.js?v=17';
+import { installOrientationLockRetry } from './OrientationLock.js?v=17';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -1936,6 +1936,7 @@ class Game {
     this.partyUI.show(
       squad,
       this.itemsById,
+      this.skillsById,
       (characterId) => {
         for (const character of this.characters) {
           // Only one lead/tank at a time — tapping a squad slot makes that

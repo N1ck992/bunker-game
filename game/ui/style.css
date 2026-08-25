@@ -764,6 +764,57 @@ button.squad-hole:disabled { cursor: default; }
 .squad-stat-int { left: 73.24%; top: 50.29%; width: 6.51%; height: 6.15%; }
 .squad-stat-str, .squad-stat-end, .squad-stat-agi, .squad-stat-int { font-size: 15px; }
 
+/* Концентрация + ability name/description — added by the skill system,
+ * after this screen's reference art was made, so there's no baked label
+ * for either. Placed in the open dark space just below the stats box
+ * (rather than inside its drawn border, which doesn't reach this far
+ * down) and left unboxed so they read as an extension of the panel
+ * instead of a mismatched inserted box. */
+.squad-stat-conc-row {
+  left: 73.24%;
+  top: 58%;
+  width: 17.2%;
+  height: 5%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.squad-stat-conc-label {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: var(--squad-ink, #d8c9a8);
+  flex: 0 0 auto;
+}
+.squad-stat-conc-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid var(--squad-gold-dim, #8a6a37);
+}
+.squad-stat-conc-fill { height: 100%; background: #4aa3e0; }
+
+.squad-ability-box {
+  left: 73.24%;
+  top: 63.5%;
+  width: 17.2%;
+  height: 6%;
+  overflow: hidden;
+}
+.squad-ability-name {
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--squad-gold-bright, #f5c878);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.squad-ability-desc {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--squad-ink-dim, #a9967a);
+  margin-top: 2px;
+}
+
 /* Bottom row — 5 squad slots, each a union of its avatar-circle hole and
  * vehicle-icon hole from the art, one button per settler (tap = make
  * lead, see PartyUI._slotHtml). */
@@ -784,6 +835,16 @@ button.squad-hole:disabled { cursor: default; }
   flex-direction: column;
   align-items: center;
   cursor: pointer;
+  /* Reset the browser's default <button> chrome (light background/border
+   * on most mobile browsers) — this is what showed as a big white square
+   * behind each avatar. Every other interactive element on this screen is
+   * tagged .squad-hole, which already resets this; this one wasn't. */
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  color: inherit;
 }
 .squad-slot-0 { left: 8.79%; }
 .squad-slot-1 { left: 24.67%; }
