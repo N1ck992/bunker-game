@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=26';
-import { MovementSystem } from '../systems/MovementSystem.js?v=26';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=26';
-import { RoomSystem } from '../systems/RoomSystem.js?v=26';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=26';
-import { WorldSystem } from '../systems/WorldSystem.js?v=26';
-import { InventorySystem } from '../systems/InventorySystem.js?v=26';
-import { CombatSystem } from '../systems/CombatSystem.js?v=26';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=26';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=27';
+import { MovementSystem } from '../systems/MovementSystem.js?v=27';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=27';
+import { RoomSystem } from '../systems/RoomSystem.js?v=27';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=27';
+import { WorldSystem } from '../systems/WorldSystem.js?v=27';
+import { InventorySystem } from '../systems/InventorySystem.js?v=27';
+import { CombatSystem } from '../systems/CombatSystem.js?v=27';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=27';
 
-import { GameTime } from './GameTime.js?v=26';
-import { ResourceSystem } from './ResourceSystem.js?v=26';
-import { TemperatureSystem } from './TemperatureSystem.js?v=26';
-import { SaveSystem } from './SaveSystem.js?v=26';
+import { GameTime } from './GameTime.js?v=27';
+import { ResourceSystem } from './ResourceSystem.js?v=27';
+import { TemperatureSystem } from './TemperatureSystem.js?v=27';
+import { SaveSystem } from './SaveSystem.js?v=27';
 
-import { Character } from '../entities/Character.js?v=26';
-import { Room } from '../entities/Room.js?v=26';
-import { Enemy } from '../entities/Enemy.js?v=26';
-import { Item } from '../entities/Item.js?v=26';
-import { EnemySystem } from '../systems/EnemySystem.js?v=26';
-import { SkillSystem } from '../systems/SkillSystem.js?v=26';
+import { Character } from '../entities/Character.js?v=27';
+import { Room } from '../entities/Room.js?v=27';
+import { Enemy } from '../entities/Enemy.js?v=27';
+import { Item } from '../entities/Item.js?v=27';
+import { EnemySystem } from '../systems/EnemySystem.js?v=27';
+import { SkillSystem } from '../systems/SkillSystem.js?v=27';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=26';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=26';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=26';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=26';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=26';
-import { PartyUI } from '../ui/PartyUI.js?v=26';
-import { InventoryUI } from '../ui/InventoryUI.js?v=26';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=26';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=26';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=26';
-import { showStartMenu } from '../ui/StartMenu.js?v=26';
-import { installOrientationLockRetry } from './OrientationLock.js?v=26';
+import { ShelterUI } from '../ui/ShelterUI.js?v=27';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=27';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=27';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=27';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=27';
+import { PartyUI } from '../ui/PartyUI.js?v=27';
+import { InventoryUI } from '../ui/InventoryUI.js?v=27';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=27';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=27';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=27';
+import { showStartMenu } from '../ui/StartMenu.js?v=27';
+import { installOrientationLockRetry } from './OrientationLock.js?v=27';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
