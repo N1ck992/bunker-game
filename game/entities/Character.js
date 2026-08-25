@@ -18,6 +18,12 @@ export class Character {
     this.endurance = data.endurance ?? 5;
     this.agility = data.agility ?? 5;
     this.intelligence = data.intelligence ?? 5;
+    // Attribute, same footing as the four above — how fast this character's
+    // ability charge fills (see skillCharge below / SkillSystem, which reads
+    // it against balance.combat.concentrationBaseline the same way
+    // CombatSystem reads ловкость against agilityBaseline for attack speed).
+    // Not itself a progress bar — that's skillCharge.
+    this.concentration = data.concentration ?? 5;
 
     this.temperature = data.temperature ?? 20;
 
@@ -63,15 +69,16 @@ export class Character {
 
     // Ultimate-style ability system (see game/data/skills.json,
     // SkillSystem.js): "skill" in characters.json is the id of the one
-    // this character has, if any. concentration climbs on its own while
+    // this character has, if any. skillCharge climbs on its own while
     // they're in the fight (either attacking or under attack — see
-    // SkillSystem) and, on reaching concentrationMax, the skill fires by
-    // itself and the bar resets to 0 — no player input involved, this is
-    // a passive "comes online periodically" ability, not something to
-    // activate manually.
+    // SkillSystem), at a rate set by the concentration attribute above,
+    // and on reaching skillChargeMax the skill fires by itself and the bar
+    // resets to 0 — no player input involved, this is a passive
+    // "comes online periodically" ability, not something to activate
+    // manually.
     this.skillId = data.skill ?? null;
-    this.concentration = 0;
-    this.concentrationMax = 100;
+    this.skillCharge = 0;
+    this.skillChargeMax = 100;
     // Seconds left on an active guardian_shield-type effect (see
     // SkillSystem._trigger) — while > 0, Character.takeDamage below blocks
     // all incoming damage outright, regardless of which character actually
@@ -171,6 +178,7 @@ export class Character {
       endurance: this.endurance,
       agility: this.agility,
       intelligence: this.intelligence,
+      concentration: this.concentration,
       temperature: this.temperature,
       clothing: this.clothing,
       weapon: this.weapon,

@@ -10,10 +10,12 @@
 export class SkillSystem {
   /**
    * @param {Map<string, object>} skillsById - game/data/skills.json entries, keyed by id
+   * @param {object} [balance] - game/data/balance.json, for balance.combat.concentrationBaseline
    * @param {(character:Character, skill:object) => void} [onTrigger] - called every time a skill fires, for toasts/VFX
    */
-  constructor(skillsById, onTrigger) {
+  constructor(skillsById, balance, onTrigger) {
     this.skillsById = skillsById;
+    this.concentrationBaseline = balance?.combat?.concentrationBaseline ?? 5;
     this.onTrigger = onTrigger;
   }
 
@@ -38,13 +40,18 @@ export class SkillSystem {
       const inCombat = character.combatState === 'attacking' || character.isBeingAttacked;
       if (!inCombat) continue;
 
-      character.concentration = Math.min(
-        character.concentrationMax,
-        character.concentration + (character.concentrationMax / skill.chargeSeconds) * dt
+      // The концентрация attribute scales how long skill.chargeSeconds
+      // (the baseline time, at concentrationBaseline) actually takes —
+      // double the attribute roughly halves the wait, same shape as
+      // CombatSystem's agility-vs-agilityBaseline attack-speed scaling.
+      const effectiveChargeSeconds = skill.chargeSeconds * (this.concentrationBaseline / Math.max(1, character.concentration));
+      character.skillCharge = Math.min(
+        character.skillChargeMax,
+        character.skillCharge + (character.skillChargeMax / effectiveChargeSeconds) * dt
       );
 
-      if (character.concentration >= character.concentrationMax) {
-        character.concentration = 0;
+      if (character.skillCharge >= character.skillChargeMax) {
+        character.skillCharge = 0;
         this._trigger(character, skill, characters, enemies);
       }
     }

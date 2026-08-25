@@ -29,6 +29,7 @@
   "combat": {
     "meleeAgilityAttackSpeedPercent": 3,
     "agilityBaseline": 5,
-    "attackAnimSeconds": 1
+    "attackAnimSeconds": 1,
+    "concentrationBaseline": 5
   }
 }

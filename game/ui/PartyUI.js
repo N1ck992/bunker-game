@@ -121,7 +121,7 @@ export class PartyUI {
   _statValuesHtml(character) {
     const ratio = character ? Math.max(0, Math.min(1, character.health / 100)) : 0;
     const skill = character?.skillId ? this._skillsById?.get(character.skillId) : null;
-    const concRatio = character?.skillId ? character.concentration / character.concentrationMax : 0;
+    const chargeRatio = character?.skillId ? character.skillCharge / character.skillChargeMax : 0;
 
     return `
       <div class="squad-hole squad-stat-health"><div class="squad-stat-fill" style="width:${character ? ratio * 100 : 0}%"></div></div>
@@ -129,10 +129,14 @@ export class PartyUI {
       <div class="squad-hole squad-stat-end">${character ? character.endurance : ''}</div>
       <div class="squad-hole squad-stat-agi">${character ? character.agility : ''}</div>
       <div class="squad-hole squad-stat-int">${character ? character.intelligence : ''}</div>
+      <div class="squad-hole squad-stat-conc-row">
+        <span class="squad-stat-conc-label">КОНЦ</span>
+        <span class="squad-stat-conc-value">${character ? character.concentration : ''}</span>
+      </div>
       ${skill ? `
-        <div class="squad-hole squad-stat-conc-row">
-          <span class="squad-stat-conc-label">КОНЦ</span>
-          <div class="squad-stat-conc-track"><div class="squad-stat-conc-fill" style="width:${concRatio * 100}%"></div></div>
+        <div class="squad-hole squad-charge-row">
+          <span class="squad-charge-label">Заряд</span>
+          <div class="squad-charge-track"><div class="squad-charge-fill" style="width:${chargeRatio * 100}%"></div></div>
         </div>
         <div class="squad-hole squad-ability-box">
           <div class="squad-ability-name">${skill.name}</div>
