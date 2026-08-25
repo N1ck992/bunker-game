@@ -54,6 +54,8 @@ const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, 
 const ROOM_VISIBLE_COLS = 26; // how many grid columns are visible across the viewport width at once —
                                // default for any room scene that doesn't set its own visibleCols below
 const ROOM_CAMERA_LERP_PER_SEC = 6; // higher = camera snaps to the character faster
+const FOREGROUND_FADE_FRACTION = 0.16; // fraction of the viewport width each foreground
+                                        // edge fades out over — see _renderForegroundFaded
 
 // AFK fidget (look left/right, sniff armpit, recoil, return) — a one-shot
 // 8-frame gag that plays after a character has stood around doing nothing
@@ -778,6 +780,19 @@ class Game {
       const drawW = canvasW + (this.roomWidthPx - canvasW) * factor;
       const drawX = -this._camX * factor;
 
+      if (name === 'foreground') {
+        // The foreground art (pipe/cable clusters, see
+        // game/assets/scenes/*/foreground.png) is heaviest right at its own
+        // left/right edges — with visibleCols close to the room's full
+        // width (see ROOM_VISIBLE_COLS), those edges land close to the
+        // screen's own edges too, where they used to block a big chunk of
+        // the view. Faded out here in screen space (not room space) so it
+        // eases off toward both edges of the *viewport* regardless of
+        // camera position, without touching the source art.
+        this._renderForegroundFaded(img, drawX, drawW, canvasW);
+        continue;
+      }
+
       // Every layer is stretched across the *same* room height and drawn
       // at the same y — the foreground's own art (hanging cables against a
       // transparent lower half, see game/assets/scenes/*/foreground.png)
@@ -786,6 +801,45 @@ class Game {
       // faint seam baked right across the room at the clip line.
       ctx.drawImage(img, drawX, this.offsetY, drawW, this.roomHeightPx);
     }
+  }
+
+  /**
+   * Draws the foreground layer through a horizontal fade mask so its own
+   * heavy left/right edges ease out toward the viewport's edges instead of
+   * showing at full strength — see the comment in _renderParallaxLayers.
+   * Rendered into an offscreen buffer first so the fade (applied via
+   * destination-in) only erases this layer's own pixels, not whatever's
+   * already drawn on the main canvas underneath it.
+   */
+  _renderForegroundFaded(img, drawX, drawW, canvasW) {
+    const canvasH = this.canvas.height;
+    if (!this._fgFadeCanvas) {
+      this._fgFadeCanvas = document.createElement('canvas');
+      this._fgFadeCtx = this._fgFadeCanvas.getContext('2d');
+    }
+    if (this._fgFadeCanvas.width !== canvasW || this._fgFadeCanvas.height !== canvasH) {
+      this._fgFadeCanvas.width = canvasW;
+      this._fgFadeCanvas.height = canvasH;
+    }
+    const fctx = this._fgFadeCtx;
+    fctx.globalCompositeOperation = 'source-over';
+    fctx.clearRect(0, 0, canvasW, canvasH);
+    fctx.drawImage(img, drawX, this.offsetY, drawW, this.roomHeightPx);
+
+    // Fully transparent right at each screen edge, back to fully opaque by
+    // FOREGROUND_FADE_FRACTION of the viewport width in — tweak that one
+    // constant to fade a bigger or smaller strip.
+    const fadeW = canvasW * FOREGROUND_FADE_FRACTION;
+    const gradient = fctx.createLinearGradient(0, 0, canvasW, 0);
+    gradient.addColorStop(0, 'rgba(0,0,0,0)');
+    gradient.addColorStop(Math.min(1, fadeW / canvasW), 'rgba(0,0,0,1)');
+    gradient.addColorStop(Math.max(0, 1 - fadeW / canvasW), 'rgba(0,0,0,1)');
+    gradient.addColorStop(1, 'rgba(0,0,0,0)');
+    fctx.globalCompositeOperation = 'destination-in';
+    fctx.fillStyle = gradient;
+    fctx.fillRect(0, 0, canvasW, canvasH);
+
+    this.ctx.drawImage(this._fgFadeCanvas, 0, 0);
   }
 
   /**
