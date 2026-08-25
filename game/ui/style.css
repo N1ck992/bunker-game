@@ -717,7 +717,7 @@ canvas {
 button.squad-hole { cursor: pointer; }
 button.squad-hole:disabled { cursor: default; }
 
-.squad-back-btn { left: 2%; top: 2%; width: 6.5%; height: 8.5%; }
+.squad-back-btn { left: 6.19%; top: 7.81%; width: 6.51%; height: 8.79%; }
 
 /* Left column: avatar circle + vehicle icon (both tap to switch the
  * centre pose / stat values — see PartyUI._viewMode) and a static
@@ -767,9 +767,16 @@ button.squad-hole:disabled { cursor: default; }
 /* Bottom row — 5 squad slots, each a union of its avatar-circle hole and
  * vehicle-icon hole from the art, one button per settler (tap = make
  * lead, see PartyUI._slotHtml). */
-.squad-bottom-row { position: absolute; inset: 0; }
+/* Empty wrapper, purely a DOM anchor for the 5 absolutely-positioned slot
+ * buttons below — NOT sized to the frame (that would silently intercept
+ * every tap elsewhere on the screen, since it'd sit on top of the back
+ * button/avatar/vehicle holes in paint order despite having nothing
+ * visible in most of its area). pointer-events:none passes taps through
+ * everywhere except the slots themselves, which re-enable it. */
+.squad-bottom-row { position: absolute; inset: 0; pointer-events: none; }
 .squad-slot {
   position: absolute;
+  pointer-events: auto;
   top: 69.92%;
   width: 8.46%;
   height: 19.43%;
@@ -789,7 +796,7 @@ button.squad-hole:disabled { cursor: default; }
 .squad-slot-vehicle { width: 100%; height: 34%; margin-top: 6%; display: flex; align-items: center; justify-content: center; }
 .squad-slot-vehicle img { width: 70%; height: 70%; object-fit: contain; }
 
-.squad-add-slot { left: 75.9%; top: 67.77%; width: 8.07%; height: 11.33%; }
+.squad-add-slot { left: 85.6%; top: 76.17%; width: 11.07%; height: 16.6%; }
 
 /* ---------------------------------------------------------------------
  * Хранилище (storage/inventory) screen — game/ui/InventoryUI.js
