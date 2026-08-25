@@ -104,9 +104,9 @@ export class InventoryUI {
     while (slots.length < GRID_SIZE) slots.push(null);
 
     this.panel.innerHTML = `
-      <div class="squad-frame inv-frame">
-        <div class="squad-topbar inv-topbar">
-          <button class="squad-back-btn inv-back-btn" aria-label="Назад">&lsaquo;</button>
+      <div class="inv-frame">
+        <div class="inv-topbar">
+          <button class="inv-back-btn" aria-label="Назад">&lsaquo;</button>
           <h2 class="inv-title">Хранилище</h2>
         </div>
         <div class="inv-body">

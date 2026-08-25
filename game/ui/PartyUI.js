@@ -1,22 +1,29 @@
 // PartyUI.js
 // Full-screen "Отряд" screen opened from CharacterRosterUI's party button.
 //
-// Two-level selection:
-//  1. Bottom row (one slot per squad member, up to SLOT_LIMIT) — tapping a
-//     slot makes that settler the squad's lead/tank (Character.isTank, via
-//     the onSelectLead callback — same as before) and resets the left
-//     column back to "hero" view for them.
-//  2. Left column, for whichever settler is currently lead — two
-//     selectable cards (their portrait, their vehicle) plus a static
-//     gadget icon. Tapping the portrait or vehicle card switches what the
-//     centre scene and the right-hand stats panel show: the hero
-//     themselves (full body + health/attributes, as before) or their
-//     vehicle (icon + its own stats — see _itemStatsHtml). Purely a
-//     viewing toggle — it never changes the lead/tank.
+// Skinned entirely from a single reference image
+// (game/assets/ui/squad_panel_frame.png) rather than CSS-drawn chrome —
+// see .squad-frame in style.css. That art already has every static
+// label/icon baked in (back arrow, Здоровье/СИЛ/ВЫН/ЛОВ/ИНТ labels, the
+// vehicle/flashlight glyphs, the bottom row's 5 cells, the add-squad
+// icon); the regions that need to show LIVE data (avatar photo, full-body
+// pose, stat values, bottom-row thumbnails) were cut out of that image as
+// transparent holes, and every element below is an absolutely-positioned
+// overlay lined up with one specific hole — see the top of each _*Html
+// method for which one. Positions are in % of the frame image
+// (1536x1024), so they stay aligned regardless of screen size.
 //
-// this._viewMode ('hero' | 'vehicle') and this._lastLeadId are the only
-// state kept between show() calls, so the left-column toggle can re-render
-// without a round trip through Game.js — see the toggle buttons' handlers.
+// Two-level selection (unchanged from before the re-skin):
+//  1. Bottom row (one slot per squad member) — tapping a slot makes that
+//     settler the squad's lead/tank (via onSelectLead) and resets the
+//     left column back to "hero" view.
+//  2. Left column's avatar/vehicle holes are tappable and toggle what the
+//     centre pose and right-hand stat values show — the hero themselves,
+//     or their vehicle. Purely a viewing toggle, never touches the lead.
+//     The right-hand panel's labels are baked into the art as
+//     hero-specific (Здоровье/СИЛ/ВЫН/ЛОВ/ИНТ), so vehicle view leaves
+//     those value slots empty rather than mislabeling item stats into
+//     them — see _statValuesHtml.
 
 const SLOT_LIMIT = 5; // mirrors Game.js's MAX_PARTY_SIZE
 
@@ -37,8 +44,6 @@ export class PartyUI {
    * @param {() => void} onClose
    */
   show(characters, itemsById, onSelectLead, onClose) {
-    // Cached so the left-column view-mode toggle (hero/vehicle) can
-    // re-render on its own, without Game.js re-calling show().
     this._characters = characters;
     this._itemsById = itemsById;
     this._onSelectLead = onSelectLead;
@@ -47,52 +52,36 @@ export class PartyUI {
     const squad = characters.slice(0, SLOT_LIMIT);
     const lead = squad.find((c) => c.isTank) ?? squad[0] ?? null;
 
-    // A different lead than last render (bottom slot just tapped, or the
-    // screen just opened) resets the view back to "hero" — the vehicle
-    // toggle is per-viewing-session, not something that should carry over
-    // from whoever was inspected before.
     if (lead?.id !== this._lastLeadId) this._viewMode = 'hero';
     this._lastLeadId = lead?.id ?? null;
 
     const vehicleItem = lead ? itemsById?.get(lead.vehicle) : null;
     const gadgetItem = lead ? itemsById?.get(lead.gadget) : null;
-    const viewedItem = this._viewMode === 'vehicle' ? vehicleItem : null;
 
     this.panel.innerHTML = `
-      <div class="squad-frame squad-cut-corners">
-        <div class="squad-topbar">
-          <button class="squad-back-btn squad-cut-corners" aria-label="Назад">&lsaquo;</button>
-        </div>
+      <div class="squad-frame">
+        <button class="squad-hole squad-back-btn" aria-label="Назад"></button>
 
-        <div class="squad-main">
-          <div class="squad-left-col">
-            <button class="squad-card squad-select-card squad-cut-corners ${this._viewMode === 'hero' ? 'active' : ''}" data-view="hero" ${lead ? '' : 'disabled'}>
-              ${this._avatarHtml(lead)}
-            </button>
-            <button class="squad-card squad-select-card squad-cut-corners ${this._viewMode === 'vehicle' ? 'active' : ''}" data-view="vehicle" ${lead ? '' : 'disabled'}>
-              ${this._iconHtml(vehicleItem, '🚙')}
-            </button>
-            <div class="squad-card squad-select-card squad-static-card squad-cut-corners">
-              ${this._iconHtml(gadgetItem, '🔦')}
-            </div>
-          </div>
+        <button class="squad-hole squad-select-avatar ${this._viewMode === 'hero' ? 'active' : ''}" data-view="hero" ${lead ? '' : 'disabled'}>
+          ${this._avatarHtml(lead)}
+        </button>
+        <button class="squad-hole squad-select-vehicle-side ${this._viewMode === 'vehicle' ? 'active' : ''}" data-view="vehicle" ${lead ? '' : 'disabled'}>
+          ${this._iconHtml(vehicleItem, '🚙')}
+        </button>
+        <div class="squad-hole squad-gadget-side">${this._iconHtml(gadgetItem, '🔦')}</div>
 
-          <div class="squad-scene squad-cut-corners">
-            <div class="squad-portrait-block">
-              <div class="squad-portrait-frame squad-cut-corners">
-                ${this._viewMode === 'hero' ? this._fullBodyHtml(lead) : this._vehicleArtHtml(vehicleItem)}
-              </div>
-            </div>
-            ${this._viewMode === 'hero' ? this._statsHtml(lead) : this._itemStatsHtml(viewedItem, 'техника не выбрана')}
-          </div>
+        <div class="squad-hole squad-centre-pose">
+          ${this._viewMode === 'hero' ? this._fullBodyHtml(lead) : this._vehicleArtHtml(vehicleItem)}
         </div>
+        <div class="squad-hole squad-vehicle-mid">${this._iconHtml(vehicleItem, '🚙')}</div>
+        <div class="squad-hole squad-gadget-mid">${this._iconHtml(gadgetItem, '🔦')}</div>
+
+        ${this._statValuesHtml(this._viewMode === 'hero' ? lead : null)}
 
         <div class="squad-bottom-row">
-          ${squad.map((c) => this._slotHtml(c, itemsById, c.id === lead?.id)).join('')}
-          <button class="squad-slot squad-add-slot squad-cut-corners" aria-label="Создать отряд">
-            <span class="squad-add-icon">👥﹢</span>
-          </button>
+          ${squad.map((c, i) => this._slotHtml(c, itemsById, c.id === lead?.id, i)).join('')}
         </div>
+        <button class="squad-hole squad-add-slot" aria-label="Создать отряд"></button>
       </div>
     `;
 
@@ -105,7 +94,7 @@ export class PartyUI {
       el.addEventListener('click', () => onSelectLead?.(el.dataset.id));
     });
 
-    this.panel.querySelectorAll('.squad-select-card[data-view]').forEach((el) => {
+    this.panel.querySelectorAll('[data-view]').forEach((el) => {
       el.addEventListener('click', () => {
         this._viewMode = el.dataset.view;
         this.show(this._characters, this._itemsById, this._onSelectLead, this._onClose);
@@ -116,95 +105,56 @@ export class PartyUI {
   }
 
   /**
-   * Full characteristic readout (health + attributes) for whichever squad
-   * member is currently the lead — shown when the left column's "hero"
-   * card is selected. See _itemStatsHtml for the vehicle-view equivalent.
+   * Fills in just the value half of each baked stat row (Здоровье bar +
+   * СИЛ/ВЫН/ЛОВ/ИНТ numbers) — the labels themselves are part of
+   * squad_panel_frame.png. `character` null (vehicle view, or nobody
+   * recruited yet) leaves every value hole empty rather than showing
+   * mismatched data in hero-labelled slots.
    */
-  _statsHtml(character) {
-    if (!character) {
-      return `<div class="squad-stats-panel squad-stats-empty">— выберите героя —</div>`;
-    }
+  _statValuesHtml(character) {
+    const ratio = character ? Math.max(0, Math.min(1, character.health / 100)) : 0;
     return `
-      <div class="squad-stats-panel">
-        <div class="squad-stat-row">
-          <span>Здоровье</span>
-          <div class="squad-stat-bar"><div class="squad-stat-fill health" style="width:${character.health}%"></div></div>
-        </div>
-        <div class="squad-attrs">
-          <span>СИЛ ${character.strength}</span>
-          <span>ВЫН ${character.endurance}</span>
-          <span>ЛОВ ${character.agility}</span>
-          <span>ИНТ ${character.intelligence}</span>
-        </div>
-      </div>
-    `;
-  }
-
-  /**
-   * Same right-hand panel, for whichever item is currently viewed instead
-   * of a hero (see _viewMode) — its resistances/health modifier, plus
-   * flavor text if items.json gives it one (see Item.description).
-   */
-  _itemStatsHtml(item, emptyLabel) {
-    if (!item) {
-      return `<div class="squad-stats-panel squad-stats-empty">— ${emptyLabel} —</div>`;
-    }
-    return `
-      <div class="squad-stats-panel">
-        <div class="squad-stat-row"><span>${item.name}</span></div>
-        <div class="squad-attrs">
-          <span>ХОЛОД ${item.coldResist >= 0 ? '+' : ''}${item.coldResist}</span>
-          <span>ЖАРА ${item.heatResist >= 0 ? '+' : ''}${item.heatResist}</span>
-          <span>ХП ${item.healthModifier >= 0 ? '+' : ''}${item.healthModifier}</span>
-        </div>
-        ${item.description ? `<div class="squad-item-desc">${item.description}</div>` : ''}
-      </div>
+      <div class="squad-hole squad-stat-health"><div class="squad-stat-fill" style="width:${character ? ratio * 100 : 0}%"></div></div>
+      <div class="squad-hole squad-stat-str">${character ? character.strength : ''}</div>
+      <div class="squad-hole squad-stat-end">${character ? character.endurance : ''}</div>
+      <div class="squad-hole squad-stat-agi">${character ? character.agility : ''}</div>
+      <div class="squad-hole squad-stat-int">${character ? character.intelligence : ''}</div>
     `;
   }
 
   _avatarHtml(character) {
-    if (!character) return '<div class="squad-avatar-fallback">—</div>';
+    if (!character) return '';
     return character.avatar
       ? `<img src="${character.avatar}" alt="">`
       : `<div class="squad-avatar-fallback">${character.name.charAt(0).toUpperCase()}</div>`;
   }
 
-  /**
-   * Full-body render for the squad screen's centre frame — the character's
-   * own idle sprite (see Character.fullBodyArt) if it has one, else the old
-   * generic silhouette/empty-slot icon.
-   */
+  /** Full-body render for the centre pose hole — the character's own idle sprite (see Character.fullBodyArt), or nothing if it hasn't got one yet. */
   _fullBodyHtml(character) {
-    if (!character) return '<span class="squad-portrait-placeholder-icon squad-portrait-placeholder-empty">—</span>';
-    return character.fullBodyArt
-      ? `<img class="squad-portrait-img" src="${character.fullBodyArt}" alt="">`
-      : '<span class="squad-portrait-placeholder-icon">🧍</span>';
+    if (!character?.fullBodyArt) return '';
+    return `<img class="squad-pose-img" src="${character.fullBodyArt}" alt="">`;
   }
 
-  /** Vehicle equivalent of _fullBodyHtml — a big icon (real art if items.json ever gives the item one, an emoji until then), centred the same way. */
+  /** Vehicle equivalent of _fullBodyHtml. */
   _vehicleArtHtml(item) {
-    if (!item) return '<span class="squad-portrait-placeholder-icon squad-portrait-placeholder-empty">—</span>';
+    if (!item) return '';
     return item.icon
-      ? `<img class="squad-portrait-img" src="${item.icon}" alt="">`
-      : '<span class="squad-portrait-placeholder-icon">🚙</span>';
+      ? `<img class="squad-pose-img" src="${item.icon}" alt="">`
+      : '<span class="squad-pose-emoji">🚙</span>';
   }
 
   _iconHtml(item, fallbackEmoji) {
     if (item?.icon) return `<img src="${item.icon}" alt="">`;
     if (item) return `<span class="squad-icon-emoji">${fallbackEmoji}</span>`;
-    return `<span class="squad-icon-emoji squad-icon-empty">${fallbackEmoji}</span>`;
+    return '';
   }
 
-  _slotHtml(character, itemsById, isLead) {
+  _slotHtml(character, itemsById, isLead, index) {
     const vehicleItem = itemsById?.get(character.vehicle);
     return `
-      <button class="squad-slot squad-cut-corners ${isLead ? 'active' : ''}" data-id="${character.id}">
-        <div class="squad-slot-top">${this._avatarHtml(character)}</div>
-        <div class="squad-diag-divider">
-          <span class="squad-dot squad-dot-left"></span>
-          <span class="squad-dot squad-dot-right"></span>
-        </div>
-        <div class="squad-slot-bottom">${this._iconHtml(vehicleItem, '🚙')}</div>
+      <button class="squad-slot squad-slot-${index} ${isLead ? 'active' : ''}" data-id="${character.id}">
+        <div class="squad-slot-avatar">${this._avatarHtml(character)}</div>
+        <div class="squad-slot-vehicle">${this._iconHtml(vehicleItem, '🚙')}</div>
       </button>
     `;
   }
