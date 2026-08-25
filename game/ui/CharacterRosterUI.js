@@ -49,13 +49,13 @@ export class CharacterRosterUI {
 
     this.selectAllBtn = document.createElement('button');
     this.selectAllBtn.className = 'select-all-btn hidden';
-    this.selectAllBtn.innerHTML = '<span class="party-btn-icon">👥</span> Выбрать всех';
+    this.selectAllBtn.setAttribute('aria-label', 'Выбрать всех');
     this.selectAllBtn.addEventListener('click', () => this.callbacks.onToggleFollowAll?.());
     this.controls.appendChild(this.selectAllBtn);
 
     this.partyBtn = document.createElement('button');
     this.partyBtn.className = 'party-btn hidden';
-    this.partyBtn.innerHTML = '<span class="party-btn-icon">🛡</span> Отряд';
+    this.partyBtn.setAttribute('aria-label', 'Отряд');
     this.partyBtn.addEventListener('click', () => this.callbacks.onOpenParty?.());
     this.controls.appendChild(this.partyBtn);
 
