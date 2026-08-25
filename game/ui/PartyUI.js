@@ -59,27 +59,27 @@ export class PartyUI {
     const viewedItem = this._viewMode === 'vehicle' ? vehicleItem : null;
 
     this.panel.innerHTML = `
-      <div class="squad-frame">
+      <div class="squad-frame squad-cut-corners">
         <div class="squad-topbar">
-          <button class="squad-back-btn" aria-label="Назад">&lsaquo;</button>
+          <button class="squad-back-btn squad-cut-corners" aria-label="Назад">&lsaquo;</button>
         </div>
 
         <div class="squad-main">
           <div class="squad-left-col">
-            <button class="squad-card squad-select-card ${this._viewMode === 'hero' ? 'active' : ''}" data-view="hero" ${lead ? '' : 'disabled'}>
+            <button class="squad-card squad-select-card squad-cut-corners ${this._viewMode === 'hero' ? 'active' : ''}" data-view="hero" ${lead ? '' : 'disabled'}>
               ${this._avatarHtml(lead)}
             </button>
-            <button class="squad-card squad-select-card ${this._viewMode === 'vehicle' ? 'active' : ''}" data-view="vehicle" ${lead ? '' : 'disabled'}>
+            <button class="squad-card squad-select-card squad-cut-corners ${this._viewMode === 'vehicle' ? 'active' : ''}" data-view="vehicle" ${lead ? '' : 'disabled'}>
               ${this._iconHtml(vehicleItem, '🚙')}
             </button>
-            <div class="squad-card squad-select-card squad-static-card">
+            <div class="squad-card squad-select-card squad-static-card squad-cut-corners">
               ${this._iconHtml(gadgetItem, '🔦')}
             </div>
           </div>
 
-          <div class="squad-scene">
+          <div class="squad-scene squad-cut-corners">
             <div class="squad-portrait-block">
-              <div class="squad-portrait-frame">
+              <div class="squad-portrait-frame squad-cut-corners">
                 ${this._viewMode === 'hero' ? this._fullBodyHtml(lead) : this._vehicleArtHtml(vehicleItem)}
               </div>
             </div>
@@ -89,7 +89,7 @@ export class PartyUI {
 
         <div class="squad-bottom-row">
           ${squad.map((c) => this._slotHtml(c, itemsById, c.id === lead?.id)).join('')}
-          <button class="squad-slot squad-add-slot" aria-label="Создать отряд">
+          <button class="squad-slot squad-add-slot squad-cut-corners" aria-label="Создать отряд">
             <span class="squad-add-icon">👥﹢</span>
           </button>
         </div>
@@ -198,7 +198,7 @@ export class PartyUI {
   _slotHtml(character, itemsById, isLead) {
     const vehicleItem = itemsById?.get(character.vehicle);
     return `
-      <button class="squad-slot ${isLead ? 'active' : ''}" data-id="${character.id}">
+      <button class="squad-slot squad-cut-corners ${isLead ? 'active' : ''}" data-id="${character.id}">
         <div class="squad-slot-top">${this._avatarHtml(character)}</div>
         <div class="squad-diag-divider">
           <span class="squad-dot squad-dot-left"></span>

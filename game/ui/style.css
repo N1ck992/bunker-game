@@ -673,19 +673,35 @@ canvas {
 /* ---------------------------------------------------------------------
  * Отряд (squad) screen — game/ui/PartyUI.js
  * Deliberately a different, more ornate look than the rest of the flat
- * steel/amber chrome: a rusted-metal / worn-leather frame with a riveted
- * amber border, built entirely from CSS gradients (no image assets). Kept
- * scoped under .squad-screen so it never leaks into the rest of the UI.
+ * steel/amber chrome: a gunmetal/riveted-armor-plate frame with cut
+ * corners and an amber-lit border, built entirely from CSS gradients (no
+ * image assets) — echoes the hud_btn_party.png/hud_btn_select_all.png art
+ * (see .party-btn/.select-all-btn) without needing dedicated art for a
+ * whole full-screen panel. Kept scoped under .squad-screen so it never
+ * leaks into the rest of the UI.
  * ------------------------------------------------------------------- */
 :root {
-  --squad-bg-0: #0d0805;
-  --squad-bg-1: #241609;
-  --squad-bg-2: #3a230f;
-  --squad-gold: #c9973f;
+  --squad-bg-0: #08090a;
+  --squad-bg-1: #17181a;
+  --squad-bg-2: #262622;
+  --squad-gold: #d9a441;
   --squad-gold-dim: #8a6a37;
-  --squad-gold-bright: #f0c878;
+  --squad-gold-bright: #f5c878;
   --squad-ink: #d8c9a8;
   --squad-ink-dim: #a9967a;
+  --squad-corner-cut: 14px; /* how much every panel's four corners are sliced off — see .squad-cut-corners */
+}
+
+/* Shared "sliced metal plate" silhouette — cut corners plus a subtle bolt
+ * dot inset from each one, reused by the frame, the buttons/slots, and the
+ * left-column cards so the whole screen reads as one kit of parts. */
+.squad-cut-corners {
+  clip-path: polygon(
+    var(--squad-corner-cut) 0, calc(100% - var(--squad-corner-cut)) 0,
+    100% var(--squad-corner-cut), 100% calc(100% - var(--squad-corner-cut)),
+    calc(100% - var(--squad-corner-cut)) 100%, var(--squad-corner-cut) 100%,
+    0 calc(100% - var(--squad-corner-cut)), 0 var(--squad-corner-cut)
+  );
 }
 
 .squad-screen {
@@ -703,24 +719,47 @@ canvas {
   flex-direction: column;
   gap: 10px;
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(80,50,20,0.35), transparent 60%),
+    radial-gradient(ellipse at 50% 0%, rgba(217,164,65,0.14), transparent 55%),
+    repeating-linear-gradient(115deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 6px),
     linear-gradient(180deg, var(--squad-bg-1), var(--squad-bg-0) 70%);
   border: 2px solid var(--squad-gold-dim);
   box-shadow:
     inset 0 0 0 1px rgba(0,0,0,0.6),
-    inset 0 0 40px rgba(0,0,0,0.75),
+    inset 0 0 50px rgba(0,0,0,0.8),
+    inset 0 0 18px rgba(217,164,65,0.12),
     0 0 0 4px var(--squad-bg-0);
-  padding: 10px;
+  padding: 14px;
   color: var(--squad-ink);
+}
+.squad-frame::before {
+  /* corner bolts — four radial dots, positioned via the four background
+     shorthand values below rather than four separate pseudo-elements */
+  content: '';
+  position: absolute;
+  inset: 10px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle, var(--squad-gold-dim) 0 2px, transparent 2.5px) 16px 16px/8px 8px no-repeat,
+    radial-gradient(circle, var(--squad-gold-dim) 0 2px, transparent 2.5px) calc(100% - 16px) 16px/8px 8px no-repeat,
+    radial-gradient(circle, var(--squad-gold-dim) 0 2px, transparent 2.5px) 16px calc(100% - 16px)/8px 8px no-repeat,
+    radial-gradient(circle, var(--squad-gold-dim) 0 2px, transparent 2.5px) calc(100% - 16px) calc(100% - 16px)/8px 8px no-repeat;
+  opacity: 0.8;
 }
 
 .squad-topbar { display: flex; }
+
+.squad-back-btn,
+.squad-select-card,
+.squad-slot {
+  --squad-corner-cut: 8px; /* smaller elements get a smaller notch than the full frame */
+}
 
 .squad-back-btn {
   width: 40px;
   height: 34px;
   background: linear-gradient(180deg, var(--squad-bg-2), var(--squad-bg-1));
   border: 1px solid var(--squad-gold-dim);
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.6);
   color: var(--squad-gold-bright);
   font-size: 20px;
   line-height: 1;
