@@ -28,13 +28,14 @@ export class EnemySystem {
     this.movementSystem = movementSystem;
     this.onEngage = onEngage;
     this.attackAnimSeconds = balance?.combat?.attackAnimSeconds ?? DEFAULT_ATTACK_ANIM_SECONDS;
-    // Turn order for melee: keyed by the target character's id, value is
-    // the list of enemy ids currently standing at attack range of that
-    // character, in the order they'll take their turn. Only queue[0]
-    // actually swings each cycle — see _attack/_waitTurn/_rotateQueue.
-    // This is what makes several enemies on the same character attack one
-    // at a time instead of all landing hits every frame.
-    this._turnQueues = new Map();
+    // Stacking order, keyed by the target character's id — the list of
+    // enemy ids currently engaging that character, in the order they first
+    // engaged. Each enemy's position in this list (0 = closest) offsets how
+    // far back it stands (see _chase/_queueOffset), so several enemies on
+    // the same character line up one behind another instead of stacking on
+    // the same tile. Purely positional — every enemy still attacks on its
+    // own attackCooldownSeconds, independently (see _attack).
+    this._standQueues = new Map();
   }
 
   /**
@@ -43,23 +44,29 @@ export class EnemySystem {
    * @param {number} dt
    */
   update(enemies, characters, dt) {
-    // Refreshed fresh every frame below (see _attack/_waitTurn) — a
-    // character stops being "under attack" the instant every enemy
-    // targeting them backs off or dies, same frame their combatState would
-    // too.
+    // Refreshed fresh every frame below (see _attack) — a character stops
+    // being "under attack" the instant every enemy targeting them backs off
+    // or dies, same frame their combatState would too.
     for (const character of characters) character.isBeingAttacked = false;
 
-    // Drop dead/deactivated enemies from the turn queues so a kill instantly
-    // frees up its target's front-of-queue slot for the next enemy in line.
+    // Drop dead/deactivated enemies from the stacking queues so a kill
+    // instantly closes the gap for whoever was standing behind it.
     const activeIds = new Set(enemies.filter((e) => e.isActive).map((e) => e.id));
-    for (const [targetId, queue] of this._turnQueues) {
+    for (const [targetId, queue] of this._standQueues) {
       const filtered = queue.filter((id) => activeIds.has(id));
-      if (filtered.length) this._turnQueues.set(targetId, filtered);
-      else this._turnQueues.delete(targetId);
+      if (filtered.length) this._standQueues.set(targetId, filtered);
+      else this._standQueues.delete(targetId);
     }
 
     for (const enemy of enemies) {
       if (!enemy.isActive) continue;
+
+      if (enemy.attackCooldownRemaining > 0) {
+        enemy.attackCooldownRemaining = Math.max(0, enemy.attackCooldownRemaining - dt);
+      }
+      if (enemy.attackAnimRemaining > 0) {
+        enemy.attackAnimRemaining = Math.max(0, enemy.attackAnimRemaining - dt);
+      }
 
       const target = this._pickTarget(enemy, characters);
 
@@ -69,21 +76,17 @@ export class EnemySystem {
         continue;
       }
 
+      this._joinQueue(enemy, target.id);
+      const offset = this._queueOffset(enemy, target.id);
+      // Own reach, plus one extra tile per enemy already ahead of this one
+      // in the queue for the same target — see _chase, which paths to the
+      // matching standoff tile.
+      const effectiveAttackDistance = enemy.attackDistance + offset;
+
       const distance = this._distance(enemy.position, target.position);
 
-      if (distance <= enemy.attackDistance) {
-        this._joinQueue(enemy, target.id);
-        if (this._isEnemyTurn(enemy, target.id)) {
-          if (enemy.attackCooldownRemaining > 0) {
-            enemy.attackCooldownRemaining = Math.max(0, enemy.attackCooldownRemaining - dt);
-          }
-          if (enemy.attackAnimRemaining > 0) {
-            enemy.attackAnimRemaining = Math.max(0, enemy.attackAnimRemaining - dt);
-          }
-          this._attack(enemy, target, dt);
-        } else {
-          this._waitTurn(enemy, target);
-        }
+      if (distance <= effectiveAttackDistance) {
+        this._attack(enemy, target, dt);
       } else if (distance <= enemy.aggroRange || enemy.aiState === 'chasing' || enemy.alerted) {
         // enemy.alerted (see alertFaction below) skips the aggroRange gate
         // the same way an already-chasing enemy does — otherwise an alerted
@@ -91,8 +94,7 @@ export class EnemySystem {
         // _pickTarget's detection-range override would fall through to
         // _goIdle on this very first frame, before aiState ever became
         // 'chasing' to satisfy the check on its own.
-        this._leaveQueue(enemy);
-        this._chase(enemy, target, dt);
+        this._chase(enemy, target, dt, offset);
       } else {
         this._leaveQueue(enemy);
         this._goIdle(enemy);
@@ -100,38 +102,33 @@ export class EnemySystem {
     }
   }
 
-  /** True while `enemy` is the one at the front of its target's turn queue — see update(). */
-  _isEnemyTurn(enemy, targetId) {
-    const queue = this._turnQueues.get(targetId);
-    return !!queue && queue[0] === enemy.id;
+  /** This enemy's position in its target's stacking queue (0 = closest, first to engage). See _standQueues. */
+  _queueOffset(enemy, targetId) {
+    const queue = this._standQueues.get(targetId);
+    const index = queue ? queue.indexOf(enemy.id) : -1;
+    return index === -1 ? 0 : index;
   }
 
-  /** Adds `enemy` to the back of `targetId`'s turn queue if it isn't already queued for that target (moving it over from any other target's queue first). */
+  /** Adds `enemy` to the back of `targetId`'s stacking queue if it isn't already in it (moving it over from any other target's queue first). */
   _joinQueue(enemy, targetId) {
     if (enemy._queueTargetId === targetId) return;
     this._leaveQueue(enemy);
-    const queue = this._turnQueues.get(targetId) ?? [];
+    const queue = this._standQueues.get(targetId) ?? [];
     queue.push(enemy.id);
-    this._turnQueues.set(targetId, queue);
+    this._standQueues.set(targetId, queue);
     enemy._queueTargetId = targetId;
   }
 
-  /** Removes `enemy` from whichever turn queue it's currently in (target changed, lost aggro, died, etc.). */
+  /** Removes `enemy` from whichever stacking queue it's currently in (target changed, lost aggro, died, etc.) — everyone behind it shifts one slot closer next frame. */
   _leaveQueue(enemy) {
     if (!enemy._queueTargetId) return;
-    const queue = this._turnQueues.get(enemy._queueTargetId);
+    const queue = this._standQueues.get(enemy._queueTargetId);
     if (queue) {
       const filtered = queue.filter((id) => id !== enemy.id);
-      if (filtered.length) this._turnQueues.set(enemy._queueTargetId, filtered);
-      else this._turnQueues.delete(enemy._queueTargetId);
+      if (filtered.length) this._standQueues.set(enemy._queueTargetId, filtered);
+      else this._standQueues.delete(enemy._queueTargetId);
     }
     enemy._queueTargetId = null;
-  }
-
-  /** Sends the front of `targetId`'s queue to the back, handing the next enemy in line its turn — called right after the active enemy actually lands a hit (see _attack). */
-  _rotateQueue(targetId) {
-    const queue = this._turnQueues.get(targetId);
-    if (queue && queue.length > 1) queue.push(queue.shift());
   }
 
   /**
@@ -196,7 +193,7 @@ export class EnemySystem {
     return nearest;
   }
 
-  _chase(enemy, target, dt) {
+  _chase(enemy, target, dt, offset) {
     enemy.aiState = 'chasing';
     enemy.targetCharacterId = target.id;
 
@@ -205,11 +202,14 @@ export class EnemySystem {
 
     // Stop `attackDistance` tiles short of the character's own tile instead
     // of pathing straight onto it — that's the same number of tiles used
-    // below to decide when to attack, so the enemy always ends up exactly
+    // above to decide when to attack, so the enemy always ends up exactly
     // at melee range rather than on top of the character. attackDistance is
     // per-unit data (see game/data/enemies/*.json) — bump it for a unit
-    // whose sprite is wide and still overlaps visually.
-    const stopDistance = Math.max(1, Math.round(enemy.attackDistance));
+    // whose sprite is wide and still overlaps visually. `offset` (this
+    // enemy's slot in the target's stacking queue — see _queueOffset) adds
+    // one extra tile per enemy already ahead of it, so several enemies on
+    // the same target line up one behind another instead of overlapping.
+    const stopDistance = Math.max(1, Math.round(enemy.attackDistance) + offset);
     const desiredCol = target.position.col - dirToTarget * stopDistance;
 
     enemy._repathAccumulator += dt;
@@ -227,21 +227,6 @@ export class EnemySystem {
         this.movementSystem.moveTo(enemy, { col: target.position.col, row: enemy.position.row }, this.pathfinder);
       }
     }
-  }
-
-  /**
-   * Holds `enemy` in place at melee range, facing its target, without
-   * dealing damage or ticking its own cooldown — used for every enemy in a
-   * target's turn queue except the one at the front (see _isEnemyTurn).
-   * Keeps the "standing in line" read: waiting enemies stay put and ready
-   * rather than idling/wandering, they just don't get to swing yet.
-   */
-  _waitTurn(enemy, target) {
-    enemy.aiState = 'attacking';
-    enemy.targetCharacterId = target.id;
-    enemy.path = [];
-    enemy.facingDir = target.position.col >= enemy.position.col ? 1 : -1;
-    target.isBeingAttacked = true;
   }
 
   _attack(enemy, target, dt) {
@@ -283,10 +268,6 @@ export class EnemySystem {
       // head counting up to the next hit.
       enemy.attackAnimRemaining = Math.min(this.attackAnimSeconds, enemy.attackCooldownSeconds);
       target.takeDamage(enemy.damage);
-      // This enemy just used its turn — send it to the back of the line so
-      // the next enemy queued on this target swings next, instead of the
-      // same one monopolizing the target every cycle.
-      this._rotateQueue(target.id);
     }
   }
 

@@ -2614,7 +2614,7 @@ class Game {
         // revolver, say) doesn't loop the attack animation nonstop while
         // waiting out attackCooldownRemaining (see the reload bar drawn
         // further down).
-        const ATTACK_FPS = 6; // slowed down per feedback, plays the 12-frame swing over ~2s (see attackAnimSeconds)
+        const ATTACK_FPS = 12; // plays the 12-frame swing over ~1s (see balance.combat.attackAnimSeconds)
         // Elapsed-since-the-swing-started (not the absolute game clock, which
         // used to make the cycle start mid-frame depending on when the swing
         // happened to fire — see attackAnimDuration) and clamped to the last
