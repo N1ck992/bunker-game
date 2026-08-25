@@ -5,39 +5,39 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js';
-import { MovementSystem } from '../systems/MovementSystem.js';
-import { CharacterSystem } from '../systems/CharacterSystem.js';
-import { RoomSystem } from '../systems/RoomSystem.js';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js';
-import { WorldSystem } from '../systems/WorldSystem.js';
-import { InventorySystem } from '../systems/InventorySystem.js';
-import { CombatSystem } from '../systems/CombatSystem.js';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=6';
+import { MovementSystem } from '../systems/MovementSystem.js?v=6';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=6';
+import { RoomSystem } from '../systems/RoomSystem.js?v=6';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=6';
+import { WorldSystem } from '../systems/WorldSystem.js?v=6';
+import { InventorySystem } from '../systems/InventorySystem.js?v=6';
+import { CombatSystem } from '../systems/CombatSystem.js?v=6';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=6';
 
-import { GameTime } from './GameTime.js';
-import { ResourceSystem } from './ResourceSystem.js';
-import { TemperatureSystem } from './TemperatureSystem.js';
-import { SaveSystem } from './SaveSystem.js';
+import { GameTime } from './GameTime.js?v=6';
+import { ResourceSystem } from './ResourceSystem.js?v=6';
+import { TemperatureSystem } from './TemperatureSystem.js?v=6';
+import { SaveSystem } from './SaveSystem.js?v=6';
 
-import { Character } from '../entities/Character.js';
-import { Room } from '../entities/Room.js';
-import { Enemy } from '../entities/Enemy.js';
-import { Item } from '../entities/Item.js';
-import { EnemySystem } from '../systems/EnemySystem.js';
+import { Character } from '../entities/Character.js?v=6';
+import { Room } from '../entities/Room.js?v=6';
+import { Enemy } from '../entities/Enemy.js?v=6';
+import { Item } from '../entities/Item.js?v=6';
+import { EnemySystem } from '../systems/EnemySystem.js?v=6';
 
-import { ShelterUI } from '../ui/ShelterUI.js';
-import { LeftBarUI } from '../ui/LeftBarUI.js';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js';
-import { ConstructionUI } from '../ui/ConstructionUI.js';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js';
-import { PartyUI } from '../ui/PartyUI.js';
-import { InventoryUI } from '../ui/InventoryUI.js';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js';
-import { showStartMenu } from '../ui/StartMenu.js';
-import { installOrientationLockRetry } from './OrientationLock.js';
+import { ShelterUI } from '../ui/ShelterUI.js?v=6';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=6';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=6';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=6';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=6';
+import { PartyUI } from '../ui/PartyUI.js?v=6';
+import { InventoryUI } from '../ui/InventoryUI.js?v=6';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=6';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=6';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=6';
+import { showStartMenu } from '../ui/StartMenu.js?v=6';
+import { installOrientationLockRetry } from './OrientationLock.js?v=6';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
