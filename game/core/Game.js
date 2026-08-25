@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=19';
-import { MovementSystem } from '../systems/MovementSystem.js?v=19';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=19';
-import { RoomSystem } from '../systems/RoomSystem.js?v=19';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=19';
-import { WorldSystem } from '../systems/WorldSystem.js?v=19';
-import { InventorySystem } from '../systems/InventorySystem.js?v=19';
-import { CombatSystem } from '../systems/CombatSystem.js?v=19';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=19';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=20';
+import { MovementSystem } from '../systems/MovementSystem.js?v=20';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=20';
+import { RoomSystem } from '../systems/RoomSystem.js?v=20';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=20';
+import { WorldSystem } from '../systems/WorldSystem.js?v=20';
+import { InventorySystem } from '../systems/InventorySystem.js?v=20';
+import { CombatSystem } from '../systems/CombatSystem.js?v=20';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=20';
 
-import { GameTime } from './GameTime.js?v=19';
-import { ResourceSystem } from './ResourceSystem.js?v=19';
-import { TemperatureSystem } from './TemperatureSystem.js?v=19';
-import { SaveSystem } from './SaveSystem.js?v=19';
+import { GameTime } from './GameTime.js?v=20';
+import { ResourceSystem } from './ResourceSystem.js?v=20';
+import { TemperatureSystem } from './TemperatureSystem.js?v=20';
+import { SaveSystem } from './SaveSystem.js?v=20';
 
-import { Character } from '../entities/Character.js?v=19';
-import { Room } from '../entities/Room.js?v=19';
-import { Enemy } from '../entities/Enemy.js?v=19';
-import { Item } from '../entities/Item.js?v=19';
-import { EnemySystem } from '../systems/EnemySystem.js?v=19';
-import { SkillSystem } from '../systems/SkillSystem.js?v=19';
+import { Character } from '../entities/Character.js?v=20';
+import { Room } from '../entities/Room.js?v=20';
+import { Enemy } from '../entities/Enemy.js?v=20';
+import { Item } from '../entities/Item.js?v=20';
+import { EnemySystem } from '../systems/EnemySystem.js?v=20';
+import { SkillSystem } from '../systems/SkillSystem.js?v=20';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=19';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=19';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=19';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=19';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=19';
-import { PartyUI } from '../ui/PartyUI.js?v=19';
-import { InventoryUI } from '../ui/InventoryUI.js?v=19';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=19';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=19';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=19';
-import { showStartMenu } from '../ui/StartMenu.js?v=19';
-import { installOrientationLockRetry } from './OrientationLock.js?v=19';
+import { ShelterUI } from '../ui/ShelterUI.js?v=20';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=20';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=20';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=20';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=20';
+import { PartyUI } from '../ui/PartyUI.js?v=20';
+import { InventoryUI } from '../ui/InventoryUI.js?v=20';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=20';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=20';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=20';
+import { showStartMenu } from '../ui/StartMenu.js?v=20';
+import { installOrientationLockRetry } from './OrientationLock.js?v=20';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -766,11 +766,16 @@ class Game {
       const cellSize = room.mapData.cellSize;
       // Dividing by zoom (>1 = zoomed out) shrinks every room's own scale
       // together, so more of the stack fits in the same physical canvas —
-      // canvas.width itself never changes, only how many world-pixels map
-      // to it. See _setZoom.
+      // canvas.width itself never changes. widthPx is this room's own
+      // width at that scale (< boxWidth once zoomed out), centred within
+      // the canvas via xOffset — drawing it at the full canvas width
+      // regardless of zoom would stretch/squash the art instead of
+      // shrinking it as one piece. See _setZoom.
       const scale = boxWidth / (zoom * room.mapData.cols * cellSize);
+      const widthPx = room.mapData.cols * cellSize * scale;
       const heightPx = room.mapData.rows * cellSize * scale;
-      this.roomStackLayout.set(room.mapData.id, { cumulativeY, heightPx, scale });
+      const xOffset = (boxWidth - widthPx) / 2;
+      this.roomStackLayout.set(room.mapData.id, { cumulativeY, widthPx, heightPx, xOffset, scale });
       cumulativeY += heightPx;
     }
 
@@ -783,7 +788,7 @@ class Game {
     // used, just sourced from this room's stack slot now instead of a pan.
     const activeLayout = this.roomStackLayout.get(this.mapData.id);
     this.scale = activeLayout.scale;
-    this.roomWidthPx = boxWidth;
+    this.roomWidthPx = activeLayout.widthPx;
     this.roomHeightPx = activeLayout.heightPx;
 
     this._focusActiveRoom();
@@ -812,7 +817,7 @@ class Game {
   _focusActiveRoom() {
     const layout = this.roomStackLayout.get(this.mapData.id);
     if (!layout) return;
-    this.offsetX = 0;
+    this.offsetX = layout.xOffset;
     this.offsetY = layout.cumulativeY;
     const viewportH = this.sceneWrap.clientHeight;
     const maxScroll = Math.max(0, this.canvas.height - viewportH);
@@ -828,12 +833,14 @@ class Game {
    * cross-section while you're elsewhere in it, instead of vanishing the
    * moment you leave. Drawn before the active room's own layers so it
    * never overlaps/overdraws them (different Y slots anyway, but the
-   * active room should still "win" if anything ever lines up).
+   * active room should still "win" if anything ever lines up). Each
+   * room's own widthPx/xOffset (see _resizeCanvasRoom) keeps it correctly
+   * centred and proportioned at the current zoom level, same as the
+   * active room.
    */
   _renderRoomStackBackdrop() {
     if (!this.discoveredRooms || this.discoveredRooms.size <= 1) return;
     const ctx = this.ctx;
-    const canvasW = this.canvas.width;
 
     for (const [roomId, entry] of this.discoveredRooms) {
       if (roomId === this.mapData.id) continue;
@@ -843,7 +850,7 @@ class Game {
       for (const name of ['background', 'midground']) {
         const img = entry.layers[name];
         if (img && img.complete && img.naturalWidth > 0) {
-          ctx.drawImage(img, 0, layout.cumulativeY, canvasW, layout.heightPx);
+          ctx.drawImage(img, layout.xOffset, layout.cumulativeY, layout.widthPx, layout.heightPx);
         }
       }
       const floorImg = entry.layers.floor;
@@ -852,25 +859,24 @@ class Game {
         const floorRow = entry.mapData.spawnPoint.row;
         const stripH = cellSize * layout.scale * 1.6;
         const y = layout.cumulativeY + (floorRow + 1) * cellSize * layout.scale - stripH * 0.55;
-        ctx.drawImage(floorImg, 0, y, canvasW, stripH);
+        ctx.drawImage(floorImg, layout.xOffset, y, layout.widthPx, stripH);
       }
     }
   }
 
   /**
    * Draws one or more of the *active* room's parallax layers (background/
-   * midground/foreground — see _buildRoomLayers). Every layer simply fills
-   * the full canvas width now (see the _resizeCanvasRoom header comment —
-   * no more camera pan within a room), stacked at this room's own slot in
-   * the world (this.offsetY/this.roomHeightPx, set by _focusActiveRoom).
-   * Other, previously-visited rooms are drawn separately, underneath this
-   * one — see _renderRoomStackBackdrop.
+   * midground/foreground — see _buildRoomLayers). Drawn at this room's own
+   * widthPx/xOffset (see _resizeCanvasRoom) so zooming out shrinks the art
+   * as one piece instead of stretching it — full canvas width only at
+   * zoom level 1, where xOffset is 0 and widthPx already equals it. Other,
+   * previously-visited rooms are drawn separately, underneath this one —
+   * see _renderRoomStackBackdrop.
    */
   _renderParallaxLayers(names) {
     const layers = this.roomLayers;
     if (!layers) return;
     const ctx = this.ctx;
-    const canvasW = this.canvas.width;
 
     for (const name of names) {
       const img = layers[name];
@@ -884,7 +890,7 @@ class Game {
         // they'd otherwise block a big chunk of the view. Faded out here in
         // screen space so it eases off toward both edges of the viewport,
         // without touching the source art.
-        this._renderForegroundFaded(img, 0, canvasW, canvasW);
+        this._renderForegroundFaded(img, this.offsetX, this.roomWidthPx, this.canvas.width);
         continue;
       }
 
@@ -894,7 +900,7 @@ class Game {
       // is what keeps the floor clear, not a hard crop here. An earlier
       // version clipped this layer's height to fake that, which left a
       // faint seam baked right across the room at the clip line.
-      ctx.drawImage(img, 0, this.offsetY, canvasW, this.roomHeightPx);
+      ctx.drawImage(img, this.offsetX, this.offsetY, this.roomWidthPx, this.roomHeightPx);
     }
   }
 

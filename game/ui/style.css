@@ -800,36 +800,37 @@ button.squad-hole:disabled { cursor: default; }
 .squad-stat-int { left: 73.24%; top: 50.29%; width: 6.51%; height: 6.15%; }
 .squad-stat-str, .squad-stat-end, .squad-stat-agi, .squad-stat-int { font-size: 15px; }
 
-/* Концентрация (attribute value, same footing as СИЛ/ВЫН/ЛОВ/ИНТ above)
- * + the skill charge bar + ability name/description — added by the skill
- * system, after this screen's reference art was made, so there's no baked
- * label for any of them. Placed in the open dark space just below the
- * stats box (rather than inside its drawn border, which doesn't reach
- * this far down) and left unboxed so they read as an extension of the
- * panel instead of a mismatched inserted box. */
-.squad-stat-conc-row {
-  left: 73.24%;
-  top: 57%;
-  width: 17.2%;
-  height: 4%;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-}
+/* Концентрация (attribute value, same footing and exact same label/value
+ * column split as СИЛ/ВЫН/ЛОВ/ИНТ above — a label on the left where their
+ * baked labels sit, a number in the same value column at 73.24%) + the
+ * skill charge bar + ability name/description below it. Added by the
+ * skill system, after this screen's reference art was made, so none of
+ * this has a baked spot — placed in the open dark space just below the
+ * stats box (its drawn border doesn't reach this far down) using the
+ * same left margin/font/colour as the rest of the box, so it reads as a
+ * continuation of it rather than a mismatched inserted block. */
 .squad-stat-conc-label {
+  left: 60.5%;
+  top: 57.61%;
+  width: 12%;
+  height: 5.47%;
+  font-size: 15px;
   color: var(--squad-ink, #d8c9a8);
 }
 .squad-stat-conc-value {
+  left: 73.24%;
+  top: 57.61%;
+  width: 6.51%;
+  height: 5.47%;
+  font-size: 15px;
   color: var(--squad-ink, #d8c9a8);
-  font-weight: bold;
 }
 
 .squad-charge-row {
-  left: 73.24%;
-  top: 61.5%;
-  width: 17.2%;
-  height: 3.5%;
+  left: 60.5%;
+  top: 63.5%;
+  width: 29.7%;
+  height: 3.2%;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -849,25 +850,21 @@ button.squad-hole:disabled { cursor: default; }
 .squad-charge-fill { height: 100%; background: #4aa3e0; }
 
 .squad-ability-box {
-  left: 73.24%;
-  top: 65.5%;
-  width: 17.2%;
-  height: 4%;
+  left: 60.5%;
+  top: 66.8%;
+  width: 29.7%;
+  height: 3%;
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
 }
 .squad-ability-name {
-  font-size: 12px;
-  font-weight: bold;
   color: var(--squad-gold-bright, #f5c878);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: bold;
 }
 .squad-ability-desc {
-  font-size: 10px;
-  line-height: 1.25;
   color: var(--squad-ink-dim, #a9967a);
-  margin-top: 2px;
 }
 
 /* Bottom row — 5 squad slots, each a union of its avatar-circle hole and

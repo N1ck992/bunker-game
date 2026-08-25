@@ -129,18 +129,15 @@ export class PartyUI {
       <div class="squad-hole squad-stat-end">${character ? character.endurance : ''}</div>
       <div class="squad-hole squad-stat-agi">${character ? character.agility : ''}</div>
       <div class="squad-hole squad-stat-int">${character ? character.intelligence : ''}</div>
-      <div class="squad-hole squad-stat-conc-row">
-        <span class="squad-stat-conc-label">КОНЦ</span>
-        <span class="squad-stat-conc-value">${character ? character.concentration : ''}</span>
-      </div>
+      <div class="squad-hole squad-stat-conc-label">${character ? 'КОНЦ' : ''}</div>
+      <div class="squad-hole squad-stat-conc-value">${character ? character.concentration : ''}</div>
       ${skill ? `
         <div class="squad-hole squad-charge-row">
           <span class="squad-charge-label">Заряд</span>
           <div class="squad-charge-track"><div class="squad-charge-fill" style="width:${chargeRatio * 100}%"></div></div>
         </div>
         <div class="squad-hole squad-ability-box">
-          <div class="squad-ability-name">${skill.name}</div>
-          <div class="squad-ability-desc">${skill.description}</div>
+          <span class="squad-ability-name">${skill.name}</span><span class="squad-ability-desc"> — ${skill.description}</span>
         </div>
       ` : ''}
     `;
