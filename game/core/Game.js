@@ -104,6 +104,12 @@ class Game {
     // against the right defaults before the recruited/unrecruited split
     // below — see _applySave and _splitRecruits.
     this.characters = charactersData.characters.map((c) => new Character(c));
+    // Kept for _loadCharacterSprites, which runs later (after _buildDom) —
+    // each entry's "sprites" block (idle/run/afk/attack/examine paths, or
+    // runLeft/runRight for directional art) drives that character's sprite
+    // set. See game/data/characters.json and the README-style comment on
+    // _loadCharacterSprites for the schema.
+    this.charactersData = charactersData;
     // One shared backpack for the whole party (see InventorySystem) —
     // overridden below by _applySave if a save has its own partyInventory.
     this.partyInventory = charactersData.partyInventory ? [...charactersData.partyInventory] : [];
@@ -442,140 +448,37 @@ class Game {
     this.leftBarUI.setMapMode(this.mode === 'worldmap');
   }
 
-  _loadCharacterSprites() {
-    // One sprite per animation state, per spec section 25 — placeholders now,
-    // swappable for a full sheet later without touching call sites.
-    this.sprites = {
-      // Slow "looking around" breathing loop — the default pose whenever the
-      // character is truly idle and not mid-fidget (see AFK_* below).
-      idle: [
-        makeImage('game/assets/characters/char_idle_0.png'),
-        makeImage('game/assets/characters/char_idle_1.png'),
-        makeImage('game/assets/characters/char_idle_2.png'),
-        makeImage('game/assets/characters/char_idle_3.png'),
-        makeImage('game/assets/characters/char_idle_4.png'),
-        makeImage('game/assets/characters/char_idle_5.png'),
-        makeImage('game/assets/characters/char_idle_6.png'),
-        makeImage('game/assets/characters/char_idle_7.png'),
-        makeImage('game/assets/characters/char_idle_8.png')
-      ],
-      // Held still by default — a single frame, looped trivially below the
-      // same way the animated char_2 examine set is, so both share one
-      // render code path (see EXAMINE_FPS in _renderCharacters).
-      examine: [makeImage('game/assets/characters/char_examine.png')],
-      run: [
-        makeImage('game/assets/characters/char_run_0.png'),
-        makeImage('game/assets/characters/char_run_1.png'),
-        makeImage('game/assets/characters/char_run_2.png'),
-        makeImage('game/assets/characters/char_run_3.png'),
-        makeImage('game/assets/characters/char_run_4.png'),
-        makeImage('game/assets/characters/char_run_5.png'),
-        makeImage('game/assets/characters/char_run_6.png'),
-        makeImage('game/assets/characters/char_run_7.png')
-      ],
-      // Look left → look right → sniff armpit → recoil "фуу" → return, 8
-      // frames — a one-shot fidget played by _updateCharacterAfk after a
-      // stretch of true idle, not a continuous loop like run/attack.
-      afk: [
-        makeImage('game/assets/characters/char_afk_0.png'),
-        makeImage('game/assets/characters/char_afk_1.png'),
-        makeImage('game/assets/characters/char_afk_2.png'),
-        makeImage('game/assets/characters/char_afk_3.png'),
-        makeImage('game/assets/characters/char_afk_4.png'),
-        makeImage('game/assets/characters/char_afk_5.png'),
-        makeImage('game/assets/characters/char_afk_6.png'),
-        makeImage('game/assets/characters/char_afk_7.png')
-      ],
-      // Draw → aim → fire ×6 → recover, 12 frames — cycled while
-      // character.combatState === 'attacking' (set by CombatSystem).
-      attack: [
-        makeImage('game/assets/characters/char_attack_0.png'),
-        makeImage('game/assets/characters/char_attack_1.png'),
-        makeImage('game/assets/characters/char_attack_2.png'),
-        makeImage('game/assets/characters/char_attack_3.png'),
-        makeImage('game/assets/characters/char_attack_4.png'),
-        makeImage('game/assets/characters/char_attack_5.png'),
-        makeImage('game/assets/characters/char_attack_6.png'),
-        makeImage('game/assets/characters/char_attack_7.png'),
-        makeImage('game/assets/characters/char_attack_8.png'),
-        makeImage('game/assets/characters/char_attack_9.png'),
-        makeImage('game/assets/characters/char_attack_10.png'),
-        makeImage('game/assets/characters/char_attack_11.png')
-      ]
-    };
+  /**
+   * Turns one character's "sprites" block from characters.json (arrays of
+   * image paths, keyed by pose: idle/run/afk/attack/examine, or
+   * runLeft/runRight instead of run for directional art — see
+   * _spriteSetFor/_renderCharacters, which auto-detects "directional" by
+   * the presence of runLeft) into the equivalent object of loaded Image
+   * arrays that the renderer expects.
+   */
+  _buildSpriteSet(spritesDef) {
+    const set = {};
+    for (const pose of ['idle', 'run', 'runLeft', 'runRight', 'afk', 'attack', 'examine']) {
+      if (spritesDef[pose]) set[pose] = spritesDef[pose].map((path) => makeImage(path));
+    }
+    return set;
+  }
 
-    // Per-character overrides, keyed by character id — only char_2 (Ольга,
-    // the settler found later on level -2) has one so far. Its presence is
-    // what marks a sprite set as "directional": real art exists for running
-    // both left (runLeft) and right (runRight), and a full 10-frame
-    // "изучить" animation (examine, below) — every other pose — idle, afk,
-    // attack — is temporarily the same single frame from the left-run set,
-    // until the rest of this character's animations are delivered. See
-    // _spriteSetFor / _renderCharacters for how the runLeft/runRight split
-    // replaces the default set's flip-to-face-left trick (that trick
-    // assumes one direction of source art; this character's run/examine art
-    // is already directional, so it isn't flipped).
-    const char2Placeholder = makeImage('game/assets/characters/char_2/placeholder.png');
-    this.characterSpriteSets = new Map([
-      ['char_2', {
-        // 12 unique poses each (the source exports had every pose
-        // duplicated back-to-back to pad out to 24 frames — deduping down
-        // to the unique ones here keeps the per-second pose-change rate the
-        // same as the default set's run cycle at the same RUN_FPS, instead
-        // of updating at half the rate and reading as choppy).
-        runLeft: [
-          makeImage('game/assets/characters/char_2/run_left_00.png'),
-          makeImage('game/assets/characters/char_2/run_left_01.png'),
-          makeImage('game/assets/characters/char_2/run_left_02.png'),
-          makeImage('game/assets/characters/char_2/run_left_03.png'),
-          makeImage('game/assets/characters/char_2/run_left_04.png'),
-          makeImage('game/assets/characters/char_2/run_left_05.png'),
-          makeImage('game/assets/characters/char_2/run_left_06.png'),
-          makeImage('game/assets/characters/char_2/run_left_07.png'),
-          makeImage('game/assets/characters/char_2/run_left_08.png'),
-          makeImage('game/assets/characters/char_2/run_left_09.png'),
-          makeImage('game/assets/characters/char_2/run_left_10.png'),
-          makeImage('game/assets/characters/char_2/run_left_11.png')
-        ],
-        runRight: [
-          makeImage('game/assets/characters/char_2/run_right_00.png'),
-          makeImage('game/assets/characters/char_2/run_right_01.png'),
-          makeImage('game/assets/characters/char_2/run_right_02.png'),
-          makeImage('game/assets/characters/char_2/run_right_03.png'),
-          makeImage('game/assets/characters/char_2/run_right_04.png'),
-          makeImage('game/assets/characters/char_2/run_right_05.png'),
-          makeImage('game/assets/characters/char_2/run_right_06.png'),
-          makeImage('game/assets/characters/char_2/run_right_07.png'),
-          makeImage('game/assets/characters/char_2/run_right_08.png'),
-          makeImage('game/assets/characters/char_2/run_right_09.png'),
-          makeImage('game/assets/characters/char_2/run_right_10.png'),
-          makeImage('game/assets/characters/char_2/run_right_11.png')
-        ],
-        idle: [char2Placeholder],
-        // Raises a hand, summons a holographic analysis panel, holds it
-        // open, then closes it and turns away — 10 frames, deduped down
-        // from a 24-frame export that repeated every pose 1-4x in a row
-        // (see the source zip's frame_NN.png — 000/001 identical,
-        // 002-005 identical, etc.). Keeping the unique poses only (rather
-        // than dropping to fewer still) and cycling them at EXAMINE_FPS in
-        // _renderCharacters is what keeps the loop reading as smooth
-        // motion instead of choppy or held-frame stutter.
-        examine: [
-          makeImage('game/assets/characters/char_2/examine_00.png'),
-          makeImage('game/assets/characters/char_2/examine_01.png'),
-          makeImage('game/assets/characters/char_2/examine_02.png'),
-          makeImage('game/assets/characters/char_2/examine_03.png'),
-          makeImage('game/assets/characters/char_2/examine_04.png'),
-          makeImage('game/assets/characters/char_2/examine_05.png'),
-          makeImage('game/assets/characters/char_2/examine_06.png'),
-          makeImage('game/assets/characters/char_2/examine_07.png'),
-          makeImage('game/assets/characters/char_2/examine_08.png'),
-          makeImage('game/assets/characters/char_2/examine_09.png')
-        ],
-        afk: [char2Placeholder],
-        attack: [char2Placeholder]
-      }]
-    ]);
+  /**
+   * Builds one sprite set per character straight from each entry's
+   * "sprites" block in characters.json — see game/data/characters.json and
+   * _buildSpriteSet. To add a new hero: copy an existing character block in
+   * that file, give it a new id/name/stats, and either point "sprites" at
+   * its own art folder or reuse an existing character's paths (e.g.
+   * char_1's shared default set) until dedicated art exists — no code
+   * changes needed here. this.sprites (the char_1 set) stays as a fallback
+   * for any entity whose id isn't found, matching prior behaviour.
+   */
+  _loadCharacterSprites() {
+    this.characterSpriteSets = new Map(
+      this.charactersData.characters.map((c) => [c.id, this._buildSpriteSet(c.sprites)])
+    );
+    this.sprites = this.characterSpriteSets.get('char_1');
   }
 
   /**

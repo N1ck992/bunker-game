@@ -16,7 +16,55 @@
       "vehicle": null,
       "position": { "col": 18, "row": 28 },
       "assignedRoom": null,
-      "state": "active"
+      "state": "active",
+      "sprites": {
+        "idle": [
+          "game/assets/characters/char_idle_0.png",
+          "game/assets/characters/char_idle_1.png",
+          "game/assets/characters/char_idle_2.png",
+          "game/assets/characters/char_idle_3.png",
+          "game/assets/characters/char_idle_4.png",
+          "game/assets/characters/char_idle_5.png",
+          "game/assets/characters/char_idle_6.png",
+          "game/assets/characters/char_idle_7.png",
+          "game/assets/characters/char_idle_8.png"
+        ],
+        "examine": ["game/assets/characters/char_examine.png"],
+        "run": [
+          "game/assets/characters/char_run_0.png",
+          "game/assets/characters/char_run_1.png",
+          "game/assets/characters/char_run_2.png",
+          "game/assets/characters/char_run_3.png",
+          "game/assets/characters/char_run_4.png",
+          "game/assets/characters/char_run_5.png",
+          "game/assets/characters/char_run_6.png",
+          "game/assets/characters/char_run_7.png"
+        ],
+        "afk": [
+          "game/assets/characters/char_afk_0.png",
+          "game/assets/characters/char_afk_1.png",
+          "game/assets/characters/char_afk_2.png",
+          "game/assets/characters/char_afk_3.png",
+          "game/assets/characters/char_afk_4.png",
+          "game/assets/characters/char_afk_5.png",
+          "game/assets/characters/char_afk_6.png",
+          "game/assets/characters/char_afk_7.png"
+        ],
+        "attack": [
+          "game/assets/characters/char_attack_0.png",
+          "game/assets/characters/char_attack_1.png",
+          "game/assets/characters/char_attack_2.png",
+          "game/assets/characters/char_attack_3.png",
+          "game/assets/characters/char_attack_4.png",
+          "game/assets/characters/char_attack_5.png",
+          "game/assets/characters/char_attack_6.png",
+          "game/assets/characters/char_attack_7.png",
+          "game/assets/characters/char_attack_8.png",
+          "game/assets/characters/char_attack_9.png",
+          "game/assets/characters/char_attack_10.png",
+          "game/assets/characters/char_attack_11.png"
+        ]
+      }
     },
     {
       "id": "char_2",
@@ -35,7 +83,52 @@
       "assignedRoom": null,
       "state": "active",
       "recruited": false,
-      "levelId": "bunker_level_-2"
+      "levelId": "bunker_level_-2",
+      "sprites": {
+        "runLeft": [
+          "game/assets/characters/char_2/run_left_00.png",
+          "game/assets/characters/char_2/run_left_01.png",
+          "game/assets/characters/char_2/run_left_02.png",
+          "game/assets/characters/char_2/run_left_03.png",
+          "game/assets/characters/char_2/run_left_04.png",
+          "game/assets/characters/char_2/run_left_05.png",
+          "game/assets/characters/char_2/run_left_06.png",
+          "game/assets/characters/char_2/run_left_07.png",
+          "game/assets/characters/char_2/run_left_08.png",
+          "game/assets/characters/char_2/run_left_09.png",
+          "game/assets/characters/char_2/run_left_10.png",
+          "game/assets/characters/char_2/run_left_11.png"
+        ],
+        "runRight": [
+          "game/assets/characters/char_2/run_right_00.png",
+          "game/assets/characters/char_2/run_right_01.png",
+          "game/assets/characters/char_2/run_right_02.png",
+          "game/assets/characters/char_2/run_right_03.png",
+          "game/assets/characters/char_2/run_right_04.png",
+          "game/assets/characters/char_2/run_right_05.png",
+          "game/assets/characters/char_2/run_right_06.png",
+          "game/assets/characters/char_2/run_right_07.png",
+          "game/assets/characters/char_2/run_right_08.png",
+          "game/assets/characters/char_2/run_right_09.png",
+          "game/assets/characters/char_2/run_right_10.png",
+          "game/assets/characters/char_2/run_right_11.png"
+        ],
+        "idle": ["game/assets/characters/char_2/placeholder.png"],
+        "examine": [
+          "game/assets/characters/char_2/examine_00.png",
+          "game/assets/characters/char_2/examine_01.png",
+          "game/assets/characters/char_2/examine_02.png",
+          "game/assets/characters/char_2/examine_03.png",
+          "game/assets/characters/char_2/examine_04.png",
+          "game/assets/characters/char_2/examine_05.png",
+          "game/assets/characters/char_2/examine_06.png",
+          "game/assets/characters/char_2/examine_07.png",
+          "game/assets/characters/char_2/examine_08.png",
+          "game/assets/characters/char_2/examine_09.png"
+        ],
+        "afk": ["game/assets/characters/char_2/placeholder.png"],
+        "attack": ["game/assets/characters/char_2/placeholder.png"]
+      }
     }
   ]
 }
