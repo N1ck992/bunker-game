@@ -441,7 +441,7 @@
   "row": 7
  },
  "enemies": [
-    { "id": "mutant_stalker_02", "raceId": "mutants", "unitId": "mutant_stalker", "col": 14, "row": 7 },
-    { "id": "mutant_stalker_03", "raceId": "mutants", "unitId": "mutant_stalker", "col": 34, "row": 7 }
+    { "id": "mutant_stalker_02", "raceId": "mutants", "unitId": "mutant_stalker", "col": 42, "row": 7 },
+    { "id": "mutant_stalker_03", "raceId": "mutants", "unitId": "mutant_stalker", "col": 45, "row": 7 }
   ]
 }

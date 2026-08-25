@@ -61,6 +61,16 @@ export class CharacterRosterUI {
     });
     this.wrap.appendChild(this.panel);
 
+    // Small per-character avatars for the whole in-party squad, stacked
+    // between the portrait panel (bottom) and the Отряд/Выбрать всех
+    // buttons (top) — appended here, second, so column-reverse renders it
+    // in the middle of the three. Tapping one selects that character, same
+    // as tapping their portrait on the canvas. Populated in update() (see
+    // _updatePartyAvatars) since the squad list can change at any time.
+    this.partyAvatars = document.createElement('div');
+    this.partyAvatars.className = 'roster-party-avatars';
+    this.wrap.appendChild(this.partyAvatars);
+
     // Appended second so it renders directly above the portrait panel —
     // "сверху над ним" (above it).
     this.controls = document.createElement('div');
@@ -110,10 +120,39 @@ export class CharacterRosterUI {
     this._displayedId = displayChar?.id ?? null;
     if (!displayChar) {
       this.panel.classList.add('hidden');
-      return;
+    } else {
+      this.panel.classList.remove('hidden');
+      this._updatePanel(displayChar);
     }
-    this.panel.classList.remove('hidden');
-    this._updatePanel(displayChar);
+
+    this._updatePartyAvatars(characters, this._displayedId);
+  }
+
+  /**
+   * The small avatar column between the portrait panel and the Отряд/
+   * Выбрать всех buttons — one per in-party settler (inParty !== false),
+   * in roster order. Rebuilt each call rather than diffed: the squad is at
+   * most a handful of settlers (see PartyUI.SLOT_LIMIT), so this is cheap.
+   */
+  _updatePartyAvatars(characters, currentId) {
+    const squad = characters.filter((c) => c.inParty !== false);
+    this.partyAvatars.innerHTML = squad
+      .map((c) => {
+        const img = c.avatar
+          ? `<img src="${c.avatar}" alt="">`
+          : `<span class="roster-mini-avatar-fallback">${c.name.charAt(0).toUpperCase()}</span>`;
+        const classes = [
+          'roster-mini-avatar',
+          c.id === currentId ? 'active' : '',
+          !c.isActive ? 'inactive' : ''
+        ].filter(Boolean).join(' ');
+        return `<button class="${classes}" data-id="${c.id}" aria-label="${c.name}">${img}</button>`;
+      })
+      .join('');
+
+    this.partyAvatars.querySelectorAll('button[data-id]').forEach((btn) => {
+      btn.addEventListener('click', (e) => this.callbacks.onSelect?.(btn.dataset.id, e));
+    });
   }
 
   _updatePanel(character) {

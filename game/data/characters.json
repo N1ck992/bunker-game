@@ -129,6 +129,73 @@
         "afk": ["game/assets/characters/char_2/placeholder.png"],
         "attack": ["game/assets/characters/char_2/placeholder.png"]
       }
+    },
+    {
+      "id": "char_3",
+      "name": "Вероника",
+      "avatar": "game/assets/characters/avatars/char_3.png",
+      "health": 100,
+      "strength": 5,
+      "endurance": 5,
+      "agility": 5,
+      "intelligence": 5,
+      "temperature": 20,
+      "clothing": null,
+      "weapon": null,
+      "vehicle": null,
+      "position": { "col": 10, "row": 7 },
+      "assignedRoom": null,
+      "state": "active",
+      "recruited": false,
+      "levelId": "technical_bay_01",
+      "sprites": {
+        "idle": [
+          "game/assets/characters/char_idle_0.png",
+          "game/assets/characters/char_idle_1.png",
+          "game/assets/characters/char_idle_2.png",
+          "game/assets/characters/char_idle_3.png",
+          "game/assets/characters/char_idle_4.png",
+          "game/assets/characters/char_idle_5.png",
+          "game/assets/characters/char_idle_6.png",
+          "game/assets/characters/char_idle_7.png",
+          "game/assets/characters/char_idle_8.png"
+        ],
+        "examine": ["game/assets/characters/char_examine.png"],
+        "run": [
+          "game/assets/characters/char_run_0.png",
+          "game/assets/characters/char_run_1.png",
+          "game/assets/characters/char_run_2.png",
+          "game/assets/characters/char_run_3.png",
+          "game/assets/characters/char_run_4.png",
+          "game/assets/characters/char_run_5.png",
+          "game/assets/characters/char_run_6.png",
+          "game/assets/characters/char_run_7.png"
+        ],
+        "afk": [
+          "game/assets/characters/char_afk_0.png",
+          "game/assets/characters/char_afk_1.png",
+          "game/assets/characters/char_afk_2.png",
+          "game/assets/characters/char_afk_3.png",
+          "game/assets/characters/char_afk_4.png",
+          "game/assets/characters/char_afk_5.png",
+          "game/assets/characters/char_afk_6.png",
+          "game/assets/characters/char_afk_7.png"
+        ],
+        "attack": [
+          "game/assets/characters/char_attack_0.png",
+          "game/assets/characters/char_attack_1.png",
+          "game/assets/characters/char_attack_2.png",
+          "game/assets/characters/char_attack_3.png",
+          "game/assets/characters/char_attack_4.png",
+          "game/assets/characters/char_attack_5.png",
+          "game/assets/characters/char_attack_6.png",
+          "game/assets/characters/char_attack_7.png",
+          "game/assets/characters/char_attack_8.png",
+          "game/assets/characters/char_attack_9.png",
+          "game/assets/characters/char_attack_10.png",
+          "game/assets/characters/char_attack_11.png"
+        ]
+      }
     }
   ]
 }

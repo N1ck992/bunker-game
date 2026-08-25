@@ -584,6 +584,46 @@ canvas {
   gap: 8px;
 }
 
+/* Small avatar column for the whole in-party squad, between the buttons
+ * (above) and the main portrait panel (below) — see
+ * CharacterRosterUI._updatePartyAvatars. */
+.roster-party-avatars {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.roster-mini-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  padding: 0;
+  background: var(--steel-800);
+  border: 2px solid var(--amber-dim);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.roster-mini-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+.roster-mini-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-dim);
+  font-weight: bold;
+  font-size: 14px;
+}
+.roster-mini-avatar.active { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(232,176,75,0.4); }
+.roster-mini-avatar.inactive { opacity: 0.45; }
+
 /* Single portrait readout — the right end of the pipe-and-panel HUD bar
  * (see .hud-left/.hud-pipe above). Shows whichever character
  * CharacterRosterUI resolves as "current" (selected, else tank, else the
