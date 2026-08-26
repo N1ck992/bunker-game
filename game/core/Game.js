@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=27';
-import { MovementSystem } from '../systems/MovementSystem.js?v=27';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=27';
-import { RoomSystem } from '../systems/RoomSystem.js?v=27';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=27';
-import { WorldSystem } from '../systems/WorldSystem.js?v=27';
-import { InventorySystem } from '../systems/InventorySystem.js?v=27';
-import { CombatSystem } from '../systems/CombatSystem.js?v=27';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=27';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=28';
+import { MovementSystem } from '../systems/MovementSystem.js?v=28';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=28';
+import { RoomSystem } from '../systems/RoomSystem.js?v=28';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=28';
+import { WorldSystem } from '../systems/WorldSystem.js?v=28';
+import { InventorySystem } from '../systems/InventorySystem.js?v=28';
+import { CombatSystem } from '../systems/CombatSystem.js?v=28';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=28';
 
-import { GameTime } from './GameTime.js?v=27';
-import { ResourceSystem } from './ResourceSystem.js?v=27';
-import { TemperatureSystem } from './TemperatureSystem.js?v=27';
-import { SaveSystem } from './SaveSystem.js?v=27';
+import { GameTime } from './GameTime.js?v=28';
+import { ResourceSystem } from './ResourceSystem.js?v=28';
+import { TemperatureSystem } from './TemperatureSystem.js?v=28';
+import { SaveSystem } from './SaveSystem.js?v=28';
 
-import { Character } from '../entities/Character.js?v=27';
-import { Room } from '../entities/Room.js?v=27';
-import { Enemy } from '../entities/Enemy.js?v=27';
-import { Item } from '../entities/Item.js?v=27';
-import { EnemySystem } from '../systems/EnemySystem.js?v=27';
-import { SkillSystem } from '../systems/SkillSystem.js?v=27';
+import { Character } from '../entities/Character.js?v=28';
+import { Room } from '../entities/Room.js?v=28';
+import { Enemy } from '../entities/Enemy.js?v=28';
+import { Item } from '../entities/Item.js?v=28';
+import { EnemySystem } from '../systems/EnemySystem.js?v=28';
+import { SkillSystem } from '../systems/SkillSystem.js?v=28';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=27';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=27';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=27';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=27';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=27';
-import { PartyUI } from '../ui/PartyUI.js?v=27';
-import { InventoryUI } from '../ui/InventoryUI.js?v=27';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=27';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=27';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=27';
-import { showStartMenu } from '../ui/StartMenu.js?v=27';
-import { installOrientationLockRetry } from './OrientationLock.js?v=27';
+import { ShelterUI } from '../ui/ShelterUI.js?v=28';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=28';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=28';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=28';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=28';
+import { PartyUI } from '../ui/PartyUI.js?v=28';
+import { InventoryUI } from '../ui/InventoryUI.js?v=28';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=28';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=28';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=28';
+import { showStartMenu } from '../ui/StartMenu.js?v=28';
+import { installOrientationLockRetry } from './OrientationLock.js?v=28';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -490,15 +490,17 @@ class Game {
 
   /**
    * Turns one character's "sprites" block from characters.json (arrays of
-   * image paths, keyed by pose: idle/run/afk/attack/examine, or
+   * image paths, keyed by pose: idle/run/afk/attack/examine/death, or
    * runLeft/runRight instead of run for directional art — see
    * _spriteSetFor/_renderCharacters, which auto-detects "directional" by
    * the presence of runLeft) into the equivalent object of loaded Image
-   * arrays that the renderer expects.
+   * arrays that the renderer expects. death (see _renderCharacters) is
+   * optional — a character without one just keeps their last pose,
+   * tinted grey, when they die, same as before this existed.
    */
   _buildSpriteSet(spritesDef) {
     const set = {};
-    for (const pose of ['idle', 'run', 'runLeft', 'runRight', 'afk', 'attack', 'examine']) {
+    for (const pose of ['idle', 'run', 'runLeft', 'runRight', 'afk', 'attack', 'examine', 'death']) {
       if (spritesDef[pose]) set[pose] = spritesDef[pose].map((path) => makeImage(path));
     }
     return set;
@@ -2952,7 +2954,29 @@ class Game {
 
       const isMoving = character.path && character.path.length > 0;
       let sprite;
-      if (isMoving) {
+      if (!character.isActive) {
+        // Dead — plays through the death sprite set once (see
+        // Character.setInactive's death is permanent for this character,
+        // so there's no "loop"/"return to idle" case to handle) and holds
+        // the last frame afterward, right where they fell. _deathAnimStart
+        // is stamped here, the first render call that notices them dead,
+        // rather than in Character itself, so the clock starts from
+        // "first drawn dead" not from whatever tick health hit 0 on.
+        // Characters without a dedicated set (see _buildSpriteSet) just
+        // keep cycling their last idle pose instead — the grey tint drawn
+        // further down is what actually reads as "down" for them.
+        const deathFrames = spriteSet.death;
+        if (deathFrames?.length) {
+          if (character._deathAnimStart == null) character._deathAnimStart = this._now;
+          const DEATH_FPS = 8;
+          const elapsed = (this._now - character._deathAnimStart) / 1000;
+          const frameIndex = Math.min(deathFrames.length - 1, Math.floor(elapsed * DEATH_FPS));
+          sprite = deathFrames[frameIndex];
+        } else {
+          const frameIndex = Math.floor((this._now / 1000) * IDLE_FPS) % spriteSet.idle.length;
+          sprite = spriteSet.idle[frameIndex];
+        }
+      } else if (isMoving) {
         // Moving always wins — a character walking into range cancels any
         // stale "attacking" pose from the previous target, same as examine.
         const RUN_FPS = 7; // slowed down per feedback — 11 cycled the 8 frames too fast/close together

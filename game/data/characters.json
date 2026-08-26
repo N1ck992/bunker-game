@@ -65,6 +65,20 @@
           "game/assets/characters/char_attack_9.png",
           "game/assets/characters/char_attack_10.png",
           "game/assets/characters/char_attack_11.png"
+        ],
+        "death": [
+          "game/assets/characters/char_1/death_00.png",
+          "game/assets/characters/char_1/death_01.png",
+          "game/assets/characters/char_1/death_02.png",
+          "game/assets/characters/char_1/death_03.png",
+          "game/assets/characters/char_1/death_04.png",
+          "game/assets/characters/char_1/death_05.png",
+          "game/assets/characters/char_1/death_06.png",
+          "game/assets/characters/char_1/death_07.png",
+          "game/assets/characters/char_1/death_08.png",
+          "game/assets/characters/char_1/death_09.png",
+          "game/assets/characters/char_1/death_10.png",
+          "game/assets/characters/char_1/death_11.png"
         ]
       }
     },
