@@ -5,38 +5,38 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=33';
-import { MovementSystem } from '../systems/MovementSystem.js?v=33';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=33';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=33';
-import { WorldSystem } from '../systems/WorldSystem.js?v=33';
-import { InventorySystem } from '../systems/InventorySystem.js?v=33';
-import { CombatSystem } from '../systems/CombatSystem.js?v=33';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=33';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=34';
+import { MovementSystem } from '../systems/MovementSystem.js?v=34';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=34';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=34';
+import { WorldSystem } from '../systems/WorldSystem.js?v=34';
+import { InventorySystem } from '../systems/InventorySystem.js?v=34';
+import { CombatSystem } from '../systems/CombatSystem.js?v=34';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=34';
 
-import { GameTime } from './GameTime.js?v=33';
-import { ResourceSystem } from './ResourceSystem.js?v=33';
-import { TemperatureSystem } from './TemperatureSystem.js?v=33';
-import { SaveSystem } from './SaveSystem.js?v=33';
+import { GameTime } from './GameTime.js?v=34';
+import { ResourceSystem } from './ResourceSystem.js?v=34';
+import { TemperatureSystem } from './TemperatureSystem.js?v=34';
+import { SaveSystem } from './SaveSystem.js?v=34';
 
-import { Character } from '../entities/Character.js?v=33';
-import { Enemy } from '../entities/Enemy.js?v=33';
-import { Item } from '../entities/Item.js?v=33';
-import { EnemySystem } from '../systems/EnemySystem.js?v=33';
-import { SkillSystem } from '../systems/SkillSystem.js?v=33';
+import { Character } from '../entities/Character.js?v=34';
+import { Enemy } from '../entities/Enemy.js?v=34';
+import { Item } from '../entities/Item.js?v=34';
+import { EnemySystem } from '../systems/EnemySystem.js?v=34';
+import { SkillSystem } from '../systems/SkillSystem.js?v=34';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=33';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=33';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=33';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=33';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=33';
-import { PartyUI } from '../ui/PartyUI.js?v=33';
-import { InventoryUI } from '../ui/InventoryUI.js?v=33';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=33';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=33';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=33';
-import { showStartMenu } from '../ui/StartMenu.js?v=33';
-import { installOrientationLockRetry } from './OrientationLock.js?v=33';
+import { ShelterUI } from '../ui/ShelterUI.js?v=34';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=34';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=34';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=34';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=34';
+import { PartyUI } from '../ui/PartyUI.js?v=34';
+import { InventoryUI } from '../ui/InventoryUI.js?v=34';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=34';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=34';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=34';
+import { showStartMenu } from '../ui/StartMenu.js?v=34';
+import { installOrientationLockRetry } from './OrientationLock.js?v=34';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -1752,19 +1752,16 @@ class Game {
    * exactly like a normal door tap would, not an instant jump — see
    * _travelToRoom. Figures out which room was tapped from its vertical
    * slot in the (already fully-visible, unscrolled) overview layout.
-   * Tapping the room the party is already in just zooms back to the
-   * normal follow view on it, same as "Приблизить".
+   * Tapping the room the party is already in does nothing — it does NOT
+   * zoom back in on its own; only "Приблизить" is allowed to change the
+   * zoom, per explicit request that nothing else ever should.
    */
   _onOverviewTap(e) {
     const rect = this.canvas.getBoundingClientRect();
     const tapY = e.clientY - rect.top;
     for (const [roomId, layout] of this.roomStackLayout ?? []) {
       if (tapY < layout.cumulativeY || tapY >= layout.cumulativeY + layout.heightPx) continue;
-      if (roomId === this.mapData.id) {
-        this._setOverview(false);
-      } else {
-        this._travelToRoom(roomId);
-      }
+      if (roomId !== this.mapData.id) this._travelToRoom(roomId);
       return;
     }
   }
