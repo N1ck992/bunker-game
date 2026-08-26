@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=28';
-import { MovementSystem } from '../systems/MovementSystem.js?v=28';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=28';
-import { RoomSystem } from '../systems/RoomSystem.js?v=28';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=28';
-import { WorldSystem } from '../systems/WorldSystem.js?v=28';
-import { InventorySystem } from '../systems/InventorySystem.js?v=28';
-import { CombatSystem } from '../systems/CombatSystem.js?v=28';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=28';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=29';
+import { MovementSystem } from '../systems/MovementSystem.js?v=29';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=29';
+import { RoomSystem } from '../systems/RoomSystem.js?v=29';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=29';
+import { WorldSystem } from '../systems/WorldSystem.js?v=29';
+import { InventorySystem } from '../systems/InventorySystem.js?v=29';
+import { CombatSystem } from '../systems/CombatSystem.js?v=29';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=29';
 
-import { GameTime } from './GameTime.js?v=28';
-import { ResourceSystem } from './ResourceSystem.js?v=28';
-import { TemperatureSystem } from './TemperatureSystem.js?v=28';
-import { SaveSystem } from './SaveSystem.js?v=28';
+import { GameTime } from './GameTime.js?v=29';
+import { ResourceSystem } from './ResourceSystem.js?v=29';
+import { TemperatureSystem } from './TemperatureSystem.js?v=29';
+import { SaveSystem } from './SaveSystem.js?v=29';
 
-import { Character } from '../entities/Character.js?v=28';
-import { Room } from '../entities/Room.js?v=28';
-import { Enemy } from '../entities/Enemy.js?v=28';
-import { Item } from '../entities/Item.js?v=28';
-import { EnemySystem } from '../systems/EnemySystem.js?v=28';
-import { SkillSystem } from '../systems/SkillSystem.js?v=28';
+import { Character } from '../entities/Character.js?v=29';
+import { Room } from '../entities/Room.js?v=29';
+import { Enemy } from '../entities/Enemy.js?v=29';
+import { Item } from '../entities/Item.js?v=29';
+import { EnemySystem } from '../systems/EnemySystem.js?v=29';
+import { SkillSystem } from '../systems/SkillSystem.js?v=29';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=28';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=28';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=28';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=28';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=28';
-import { PartyUI } from '../ui/PartyUI.js?v=28';
-import { InventoryUI } from '../ui/InventoryUI.js?v=28';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=28';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=28';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=28';
-import { showStartMenu } from '../ui/StartMenu.js?v=28';
-import { installOrientationLockRetry } from './OrientationLock.js?v=28';
+import { ShelterUI } from '../ui/ShelterUI.js?v=29';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=29';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=29';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=29';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=29';
+import { PartyUI } from '../ui/PartyUI.js?v=29';
+import { InventoryUI } from '../ui/InventoryUI.js?v=29';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=29';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=29';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=29';
+import { showStartMenu } from '../ui/StartMenu.js?v=29';
+import { installOrientationLockRetry } from './OrientationLock.js?v=29';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -804,19 +804,10 @@ class Game {
   _updateCamera(dt) {
     if (!this._roomMode || this._overview) return;
     const cellSize = this.mapData.cellSize;
-    // A selected-but-now-dead character (or nobody selected and the first
-    // roster slot happens to be dead — e.g. Mark) never anchors the
-    // camera: every settler has equal standing here, so this falls
-    // through to whichever active one is actually available instead of
-    // staying locked onto a corpse and stranding the rest of the party
-    // off-screen. See also _update's auto-deselect-on-death, which keeps
-    // getSelected() from returning a dead character in the first place
-    // once the player taps elsewhere.
-    const rawSelected = this.characterSystem.getSelected(this.characters);
-    const leader =
-      (rawSelected?.isActive ? rawSelected : null) ??
-      this.characters.find((c) => c.isActive) ??
-      this.characters[0];
+    // See _activeSelectedCharacter — a dead selected/first character never
+    // anchors the camera, so it can't strand the rest of the party
+    // off-screen the way it used to.
+    const leader = this._activeSelectedCharacter();
     const focusCol = leader ? leader.position.col : this.mapData.spawnPoint.col;
     const targetWorldX = (focusCol + 0.5) * cellSize * this.scale;
     const maxCamX = Math.max(0, this.roomWidthPx - this.canvas.width);
@@ -1328,7 +1319,7 @@ class Game {
 
   /** "Изучить" — a look-don't-touch inspection, so the hero never moves for this. */
   _examineEnemy(enemy) {
-    const character = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
+    const character = this._activeSelectedCharacter();
     if (character) {
       character.animState = 'examine';
       character.facingDir = enemy.position.col >= character.position.col ? 1 : -1;
@@ -1348,7 +1339,7 @@ class Game {
    * _lootCorpse once they arrive.
    */
   _onCorpseTapped(enemy) {
-    const character = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
+    const character = this._activeSelectedCharacter();
     if (!character) return;
 
     if (character.combatState === 'attacking') {
@@ -1418,7 +1409,7 @@ class Game {
    * fire back.
    */
   _commandAttack(enemy) {
-    const character = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
+    const character = this._activeSelectedCharacter();
     if (!character || !character.isActive) return;
 
     const weapon = CombatSystem.effectiveWeapon(character, this.itemsById);
@@ -1467,7 +1458,7 @@ class Game {
    * level-switch logic lives.
    */
   _onInteractableTapped(interactable, e) {
-    const character = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
+    const character = this._activeSelectedCharacter();
     if (!character) return;
 
     if (character.combatState === 'attacking') {
@@ -1944,7 +1935,7 @@ class Game {
     }
     if (this.activeFurnitureInteractions.has(interactable.id)) return;
 
-    const character = this.characterSystem.getSelected(this.characters) ?? this.characters[0];
+    const character = this._activeSelectedCharacter();
     if (!character) return;
 
     const alreadyBusy = [...this.activeFurnitureInteractions.values()].some(
@@ -2215,6 +2206,26 @@ class Game {
       this.saveSystem.clear();
       window.location.href = window.location.pathname + '?restart=1';
     }, 2500);
+  }
+
+  /**
+   * "The selected character" for any action that needs exactly one —
+   * door/corpse/furniture taps, examine, attack commands, camera focus.
+   * Every settler has equal standing, so a dead one never quietly becomes
+   * "the" character just for being first in the roster or having been
+   * selected before they died: this prefers the actual selection only
+   * while it's still someone alive, then falls back to any other living
+   * settler, and only reaches for characters[0] if literally everyone is
+   * down (which triggers _checkPartyWipe anyway, so it barely matters what
+   * this returns at that point). Centralised here instead of repeating
+   * "getSelected() ?? characters[0]" at every call site, which is exactly
+   * what let a dead Mark silently keep blocking doors/attacks/examine for
+   * the rest of the party before this existed.
+   */
+  _activeSelectedCharacter() {
+    const selected = this.characterSystem.getSelected(this.characters);
+    if (selected?.isActive) return selected;
+    return this.characters.find((c) => c.isActive) ?? this.characters[0] ?? null;
   }
 
   /**
