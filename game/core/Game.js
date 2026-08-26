@@ -5,38 +5,38 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=32';
-import { MovementSystem } from '../systems/MovementSystem.js?v=32';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=32';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=32';
-import { WorldSystem } from '../systems/WorldSystem.js?v=32';
-import { InventorySystem } from '../systems/InventorySystem.js?v=32';
-import { CombatSystem } from '../systems/CombatSystem.js?v=32';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=32';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=33';
+import { MovementSystem } from '../systems/MovementSystem.js?v=33';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=33';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=33';
+import { WorldSystem } from '../systems/WorldSystem.js?v=33';
+import { InventorySystem } from '../systems/InventorySystem.js?v=33';
+import { CombatSystem } from '../systems/CombatSystem.js?v=33';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=33';
 
-import { GameTime } from './GameTime.js?v=32';
-import { ResourceSystem } from './ResourceSystem.js?v=32';
-import { TemperatureSystem } from './TemperatureSystem.js?v=32';
-import { SaveSystem } from './SaveSystem.js?v=32';
+import { GameTime } from './GameTime.js?v=33';
+import { ResourceSystem } from './ResourceSystem.js?v=33';
+import { TemperatureSystem } from './TemperatureSystem.js?v=33';
+import { SaveSystem } from './SaveSystem.js?v=33';
 
-import { Character } from '../entities/Character.js?v=32';
-import { Enemy } from '../entities/Enemy.js?v=32';
-import { Item } from '../entities/Item.js?v=32';
-import { EnemySystem } from '../systems/EnemySystem.js?v=32';
-import { SkillSystem } from '../systems/SkillSystem.js?v=32';
+import { Character } from '../entities/Character.js?v=33';
+import { Enemy } from '../entities/Enemy.js?v=33';
+import { Item } from '../entities/Item.js?v=33';
+import { EnemySystem } from '../systems/EnemySystem.js?v=33';
+import { SkillSystem } from '../systems/SkillSystem.js?v=33';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=32';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=32';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=32';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=32';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=32';
-import { PartyUI } from '../ui/PartyUI.js?v=32';
-import { InventoryUI } from '../ui/InventoryUI.js?v=32';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=32';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=32';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=32';
-import { showStartMenu } from '../ui/StartMenu.js?v=32';
-import { installOrientationLockRetry } from './OrientationLock.js?v=32';
+import { ShelterUI } from '../ui/ShelterUI.js?v=33';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=33';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=33';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=33';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=33';
+import { PartyUI } from '../ui/PartyUI.js?v=33';
+import { InventoryUI } from '../ui/InventoryUI.js?v=33';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=33';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=33';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=33';
+import { showStartMenu } from '../ui/StartMenu.js?v=33';
+import { installOrientationLockRetry } from './OrientationLock.js?v=33';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -2255,17 +2255,11 @@ class Game {
     this.combatSystem.update(this.characters, this.enemies, dt);
     this.skillSystem.update(this.characters, this.enemies, dt);
 
-    // While anyone in the active party is actually fighting — attacking or
-    // being attacked — the camera locks onto them: overview mode (if it
-    // was on) turns off and the normal follow view snaps back on, so a
-    // fight is never happening off-screen in a shrunk-down base overview.
-    // Only checked in room mode; the legacy floor stack never had this.
-    if (this._roomMode && this._overview) {
-      const inCombat = this.characters.some(
-        (c) => c.isActive && c.inParty !== false && (c.combatState === 'attacking' || c.isBeingAttacked)
-      );
-      if (inCombat) this._setOverview(false);
-    }
+    // Overview mode (see _setOverview) only ever changes because the
+    // player pressed "Приблизить"/"Отдалить" — nothing else touches it.
+    // Combat used to force it back off automatically; removed on request,
+    // since the whole point of pulling out is to look at the base on your
+    // own terms, not something the game should override for you.
     if (this._roomMode && !this._overview) this._updateCamera(dt);
     this._checkPartyWipe();
     this._deselectIfDead();
