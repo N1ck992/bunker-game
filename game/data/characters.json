@@ -17,7 +17,6 @@
       "weapon": null,
       "vehicle": null,
       "position": { "col": 18, "row": 28 },
-      "assignedRoom": null,
       "state": "active",
       "sprites": {
         "idle": [
@@ -96,7 +95,6 @@
       "weapon": null,
       "vehicle": null,
       "position": { "col": 30, "row": 28 },
-      "assignedRoom": null,
       "state": "active",
       "recruited": false,
       "levelId": "bunker_level_-2",
@@ -162,7 +160,6 @@
       "weapon": null,
       "vehicle": null,
       "position": { "col": 10, "row": 7 },
-      "assignedRoom": null,
       "state": "active",
       "recruited": false,
       "levelId": "technical_bay_01",

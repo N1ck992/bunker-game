@@ -299,10 +299,6 @@ canvas {
 }
 .unequip-btn { border-color: var(--rust); color: var(--rust); }
 
-.cost-row { display: flex; gap: 10px; margin: 10px 0; }
-.cost-item { font-size: 12px; }
-.cost-item.ok { color: var(--ok); }
-.cost-item.bad { color: var(--rust); }
 
 .unlock-btn {
   background: var(--amber-dim);

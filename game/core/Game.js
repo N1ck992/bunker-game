@@ -5,40 +5,38 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=29';
-import { MovementSystem } from '../systems/MovementSystem.js?v=29';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=29';
-import { RoomSystem } from '../systems/RoomSystem.js?v=29';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=29';
-import { WorldSystem } from '../systems/WorldSystem.js?v=29';
-import { InventorySystem } from '../systems/InventorySystem.js?v=29';
-import { CombatSystem } from '../systems/CombatSystem.js?v=29';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=29';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=30';
+import { MovementSystem } from '../systems/MovementSystem.js?v=30';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=30';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=30';
+import { WorldSystem } from '../systems/WorldSystem.js?v=30';
+import { InventorySystem } from '../systems/InventorySystem.js?v=30';
+import { CombatSystem } from '../systems/CombatSystem.js?v=30';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=30';
 
-import { GameTime } from './GameTime.js?v=29';
-import { ResourceSystem } from './ResourceSystem.js?v=29';
-import { TemperatureSystem } from './TemperatureSystem.js?v=29';
-import { SaveSystem } from './SaveSystem.js?v=29';
+import { GameTime } from './GameTime.js?v=30';
+import { ResourceSystem } from './ResourceSystem.js?v=30';
+import { TemperatureSystem } from './TemperatureSystem.js?v=30';
+import { SaveSystem } from './SaveSystem.js?v=30';
 
-import { Character } from '../entities/Character.js?v=29';
-import { Room } from '../entities/Room.js?v=29';
-import { Enemy } from '../entities/Enemy.js?v=29';
-import { Item } from '../entities/Item.js?v=29';
-import { EnemySystem } from '../systems/EnemySystem.js?v=29';
-import { SkillSystem } from '../systems/SkillSystem.js?v=29';
+import { Character } from '../entities/Character.js?v=30';
+import { Enemy } from '../entities/Enemy.js?v=30';
+import { Item } from '../entities/Item.js?v=30';
+import { EnemySystem } from '../systems/EnemySystem.js?v=30';
+import { SkillSystem } from '../systems/SkillSystem.js?v=30';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=29';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=29';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=29';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=29';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=29';
-import { PartyUI } from '../ui/PartyUI.js?v=29';
-import { InventoryUI } from '../ui/InventoryUI.js?v=29';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=29';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=29';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=29';
-import { showStartMenu } from '../ui/StartMenu.js?v=29';
-import { installOrientationLockRetry } from './OrientationLock.js?v=29';
+import { ShelterUI } from '../ui/ShelterUI.js?v=30';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=30';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=30';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=30';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=30';
+import { PartyUI } from '../ui/PartyUI.js?v=30';
+import { InventoryUI } from '../ui/InventoryUI.js?v=30';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=30';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=30';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=30';
+import { showStartMenu } from '../ui/StartMenu.js?v=30';
+import { installOrientationLockRetry } from './OrientationLock.js?v=30';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -89,10 +87,9 @@ const FOLLOW_DISTANCE_TILES = 3; // how far "Выбрать всех" followers 
 
 class Game {
   async init() {
-    const [balance, mapData, roomsData, charactersData, itemsData, skillsData] = await Promise.all([
+    const [balance, mapData, charactersData, itemsData, skillsData] = await Promise.all([
       fetchJson('game/data/balance.json'),
       fetchJson(INITIAL_ROOM_FILE),
-      fetchJson('game/data/rooms.json'),
       fetchJson('game/data/characters.json'),
       fetchJson('game/data/items.json'),
       fetchJson('game/data/skills.json')
@@ -106,7 +103,6 @@ class Game {
     const save = new SaveSystem().load();
     this.saveSystem = new SaveSystem();
 
-    this.rooms = roomsData.rooms.map((r) => new Room(r));
     // Built from every entry in characters.json, recruited or not, so a
     // save's data (which may include a since-recruited char_2) merges
     // against the right defaults before the recruited/unrecruited split
@@ -174,10 +170,9 @@ class Game {
 
     this.movementSystem = new MovementSystem(balance);
     this.characterSystem = new CharacterSystem(balance);
-    this.roomSystem = new RoomSystem(this.rooms);
     this.resourceSystem = new ResourceSystem(balance, save?.resources);
     this.temperatureSystem = new TemperatureSystem(balance);
-    this.constructionSystem = new ConstructionSystem(this.resourceSystem, this.roomSystem);
+    this.constructionSystem = new ConstructionSystem();
     this.worldSystem = new WorldSystem();
     this.gameTime = new GameTime(balance, save?.gameTime);
     this.enemySystem = new EnemySystem(
@@ -251,9 +246,6 @@ class Game {
         const saved = savedById.get(defaultChar.id);
         return saved ? new Character(saved) : defaultChar;
       });
-    }
-    if (save.rooms) {
-      this.rooms = save.rooms.map((r) => new Room(r));
     }
     if (save.partyInventory) {
       this.partyInventory = [...save.partyInventory];
@@ -1661,19 +1653,12 @@ class Game {
         interactable.hackProgressMs = 0;
         character.animState = 'idle';
 
-        const linkedRoom =
-          interactable.leadsTo && interactable.leadsTo !== 'surface' && !interactable.leadsToFile
-            ? this.rooms.find((r) => r.id === interactable.leadsTo)
-            : null;
-        if (linkedRoom) linkedRoom.open();
-
         this._toast(`${character.name} взломала дверь: ${interactable.label}`);
 
-        // Same "ask before actually switching floors" gate as the resource/
-        // item unlock path in _performInteractableInteraction — a hacked
-        // door leading to another level's file shouldn't behave any
-        // differently just because it was opened by Ольга instead of spent
-        // materials.
+        // Same "ask before actually switching floors" gate as the item
+        // unlock path in _performInteractableInteraction — a hacked door
+        // leading to another level's file shouldn't behave any differently
+        // just because it was opened by Ольга instead of a key card.
         if (interactable.leadsToFile) this._confirmLevelTransition(interactable);
       }
     }
@@ -1709,23 +1694,14 @@ class Game {
       }, 1800);
     }
 
-    const linkedRoom =
-      interactable.leadsTo && interactable.leadsTo !== 'surface' && !interactable.leadsToFile
-        ? this.rooms.find((r) => r.id === interactable.leadsTo)
-        : null;
-
     this.constructionUI.showLockedInfo(
       interactable,
-      linkedRoom,
-      this.resourceSystem,
       () => {
-        const result = this.constructionSystem.tryUnlock(interactable, linkedRoom, this.partyInventory);
+        const result = this.constructionSystem.tryUnlock(interactable, this.partyInventory);
         if (result.ok) {
           this._toast(`Открыто: ${interactable.label}`);
           this.constructionUI.hide();
           if (interactable.leadsToFile) this._confirmLevelTransition(interactable);
-        } else if (result.reason === 'insufficient_resources') {
-          this._toast('Недостаточно материалов.');
         } else if (result.reason === 'not_available_yet') {
           this._toast('Пока недоступно.');
         } else if (result.reason === 'missing_item') {
@@ -2308,8 +2284,6 @@ class Game {
     this._resourceTickAccumulator += dt * 1000;
     if (this._resourceTickAccumulator >= this.balance.resources.tickIntervalMs) {
       this._resourceTickAccumulator = 0;
-      const production = this.roomSystem.totalProduction();
-      this.resourceSystem.applyTick(production);
       if (this.resourceSystem.provisions <= 5) this.shelterUI.flashLowResource('provisions');
     }
 
@@ -3256,7 +3230,6 @@ class Game {
     this.saveSystem.save({
       characters: this.characters.map((c) => c.toSaveData()),
       partyInventory: [...this.partyInventory],
-      rooms: this.rooms.map((r) => r.toSaveData()),
       enemies: this.enemies.map((e) => e.toSaveData()),
       resources: this.resourceSystem.toSaveData(),
       gameTime: this.gameTime.toSaveData(),

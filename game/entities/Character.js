@@ -94,8 +94,6 @@ export class Character {
     // grid position (col,row)
     this.position = { ...(data.position ?? { col: 0, row: 0 }) };
 
-    this.assignedRoom = data.assignedRoom ?? null;
-
     // 'active' | 'inactive'
     this.state = data.state ?? 'active';
 
@@ -185,7 +183,6 @@ export class Character {
       vehicle: this.vehicle,
       gadget: this.gadget,
       position: { ...this.position },
-      assignedRoom: this.assignedRoom,
       state: this.state,
       recruited: this.recruited,
       levelId: this.levelId,

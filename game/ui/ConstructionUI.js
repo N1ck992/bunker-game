@@ -9,7 +9,13 @@ export class ConstructionUI {
     this.root.appendChild(this.panel);
   }
 
-  showLockedInfo(interactable, linkedRoom, resources, onUnlock, onClose, itemsById = new Map()) {
+  /**
+   * @param {object} interactable
+   * @param {(id:string)=>Item} onUnlock
+   * @param {() => void} onClose
+   * @param {Map<string,Item>} itemsById
+   */
+  showLockedInfo(interactable, onUnlock, onClose, itemsById = new Map()) {
     let bodyHtml;
 
     if (interactable.unlockCondition && interactable.unlockCondition.startsWith('story:')) {
@@ -23,16 +29,7 @@ export class ConstructionUI {
         <button class="unlock-btn">Открыть</button>
       `;
     } else {
-      const cost = linkedRoom?.unlockCost ?? {};
-      const costHtml = Object.entries(cost)
-        .map(([k, v]) => `<span class="cost-item ${resources[k] >= v ? 'ok' : 'bad'}">${labelFor(k)}: ${v}</span>`)
-        .join(' ');
-      bodyHtml = `
-        <p>${interactable.label}</p>
-        <p>${linkedRoom?.description ?? ''}</p>
-        <div class="cost-row">${costHtml}</div>
-        <button class="unlock-btn">Открыть</button>
-      `;
+      bodyHtml = `<p>${interactable.label}</p><p>Пока недоступно.</p>`;
     }
 
     this.panel.innerHTML = `
@@ -90,8 +87,4 @@ export class ConstructionUI {
   hide() {
     this.panel.classList.add('hidden');
   }
-}
-
-function labelFor(key) {
-  return { provisions: 'Провизия', heat: 'Тепло', materials: 'Материалы' }[key] ?? key;
 }
