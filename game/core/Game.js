@@ -5,38 +5,38 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=34';
-import { MovementSystem } from '../systems/MovementSystem.js?v=34';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=34';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=34';
-import { WorldSystem } from '../systems/WorldSystem.js?v=34';
-import { InventorySystem } from '../systems/InventorySystem.js?v=34';
-import { CombatSystem } from '../systems/CombatSystem.js?v=34';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=34';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=35';
+import { MovementSystem } from '../systems/MovementSystem.js?v=35';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=35';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=35';
+import { WorldSystem } from '../systems/WorldSystem.js?v=35';
+import { InventorySystem } from '../systems/InventorySystem.js?v=35';
+import { CombatSystem } from '../systems/CombatSystem.js?v=35';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=35';
 
-import { GameTime } from './GameTime.js?v=34';
-import { ResourceSystem } from './ResourceSystem.js?v=34';
-import { TemperatureSystem } from './TemperatureSystem.js?v=34';
-import { SaveSystem } from './SaveSystem.js?v=34';
+import { GameTime } from './GameTime.js?v=35';
+import { ResourceSystem } from './ResourceSystem.js?v=35';
+import { TemperatureSystem } from './TemperatureSystem.js?v=35';
+import { SaveSystem } from './SaveSystem.js?v=35';
 
-import { Character } from '../entities/Character.js?v=34';
-import { Enemy } from '../entities/Enemy.js?v=34';
-import { Item } from '../entities/Item.js?v=34';
-import { EnemySystem } from '../systems/EnemySystem.js?v=34';
-import { SkillSystem } from '../systems/SkillSystem.js?v=34';
+import { Character } from '../entities/Character.js?v=35';
+import { Enemy } from '../entities/Enemy.js?v=35';
+import { Item } from '../entities/Item.js?v=35';
+import { EnemySystem } from '../systems/EnemySystem.js?v=35';
+import { SkillSystem } from '../systems/SkillSystem.js?v=35';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=34';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=34';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=34';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=34';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=34';
-import { PartyUI } from '../ui/PartyUI.js?v=34';
-import { InventoryUI } from '../ui/InventoryUI.js?v=34';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=34';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=34';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=34';
-import { showStartMenu } from '../ui/StartMenu.js?v=34';
-import { installOrientationLockRetry } from './OrientationLock.js?v=34';
+import { ShelterUI } from '../ui/ShelterUI.js?v=35';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=35';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=35';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=35';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=35';
+import { PartyUI } from '../ui/PartyUI.js?v=35';
+import { InventoryUI } from '../ui/InventoryUI.js?v=35';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=35';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=35';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=35';
+import { showStartMenu } from '../ui/StartMenu.js?v=35';
+import { installOrientationLockRetry } from './OrientationLock.js?v=35';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -2247,7 +2247,17 @@ class Game {
     // this.gameTime.update(dt);
     this.movementSystem.update(this.characters, dt);
     this.enemySystem.update(this.enemies, this.characters, dt);
-    this.squadCombatSystem.update(this.characters, this.enemies, this.pathfinder);
+    // The auto-formup below (walking the rest of the squad into a firing
+    // line the moment one of them is engaged) only makes sense once the
+    // player has actually asked for group control — otherwise it silently
+    // overrides "each settler moves independently" the instant a fight
+    // starts, which is exactly the bug this guard exists to prevent.
+    // Whoever's actually being shot at still fights back on their own —
+    // that's plain CombatSystem auto-fire, untouched by this — the only
+    // thing skipped here is walking everyone ELSE in to help.
+    if (this.followAllParty) {
+      this.squadCombatSystem.update(this.characters, this.enemies, this.pathfinder);
+    }
     this.movementSystem.update(this.enemies, dt);
     this.combatSystem.update(this.characters, this.enemies, dt);
     this.skillSystem.update(this.characters, this.enemies, dt);
