@@ -1,6 +1,6 @@
 {
- "id": "technical_bay_01",
- "name": "Технический отсек",
+ "id": "reactor_room_01",
+ "name": "Реакторный отсек",
  "cellSize": 32,
  "cols": 48,
  "rows": 8,
@@ -8,7 +8,7 @@
   "0": "недоступно / стена",
   "1": "проход (пол комнаты)"
  },
- "comment": "Вторая комната 2.5D parallax-системы окружения, справа от cryo_room_01 (реактор и генераторы технического отсека). Та же схема, что и у первой комнаты: один проходимый floor_row, визуал из parallax.background/midground/foreground/floor.",
+ "comment": "Третья комната 2.5D parallax-системы окружения, справа от technical_bay_01 (реактор, генераторы и старый боевой экзоскелет в центре зала). Та же схема, что и у первых двух комнат: один проходимый floor_row, визуал из parallax.background/midground/foreground (без отдельного floor.png — пол уже виден в midground).",
  "grid": [
   [
    0,
@@ -412,46 +412,26 @@
   ]
  ],
  "parallax": {
-  "background": "game/assets/scenes/technical_bay_01/background.png",
-  "midground": "game/assets/scenes/technical_bay_01/midground.png",
-  "foreground": "game/assets/scenes/technical_bay_01/foreground.png",
-  "floor": "game/assets/scenes/technical_bay_01/floor.png",
-  "factors": {
-   "background": 0.9,
-   "midground": 1.0,
-   "foreground": 1.15
-  }
+  "background": "game/assets/scenes/reactor_room_01/background.png",
+  "midground": "game/assets/scenes/reactor_room_01/midground.png",
+  "foreground": "game/assets/scenes/reactor_room_01/foreground.png"
  },
  "interactables": [
   {
-   "id": "door_technical_bay_01_left",
+   "id": "door_reactor_room_01_left",
    "type": "door",
    "col": 1,
    "row": 7,
    "state": "open",
    "locked": false,
-   "leadsTo": "cryo_room_01",
-   "label": "Дверь — обратно в криоотсек",
-   "leadsToFile": "game/map/scenes/cryo_room_01.json"
-  },
-  {
-   "id": "door_technical_bay_01_right",
-   "type": "door",
-   "col": 47,
-   "row": 7,
-   "state": "open",
-   "locked": false,
-   "leadsTo": "reactor_room_01",
-   "label": "Дверь — в реакторный отсек",
-   "leadsToFile": "game/map/scenes/reactor_room_01.json"
+   "leadsTo": "technical_bay_01",
+   "label": "Дверь — обратно в технический отсек",
+   "leadsToFile": "game/map/scenes/technical_bay_01.json"
   }
  ],
  "spawnPoint": {
   "col": 24,
   "row": 7
  },
- "enemies": [
-    { "id": "mutant_stalker_02", "raceId": "mutants", "unitId": "mutant_stalker", "col": 42, "row": 7 },
-    { "id": "mutant_stalker_03", "raceId": "mutants", "unitId": "mutant_stalker", "col": 45, "row": 7 }
-  ]
+ "enemies": []
 }
