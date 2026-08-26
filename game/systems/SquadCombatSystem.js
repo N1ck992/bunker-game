@@ -18,8 +18,13 @@
 // range, CombatSystem's own auto-fire takes over — this system only
 // handles getting them there, once, per fight (see _engagedEnemyId).
 
-const FRONT_STANDOFF_TILES = 1; // how close line 1 (the tank) stands to the enemy — melee range
-const LINE_SPACING_TILES = 1; // gap between each subsequent line and the one in front of it
+const FRONT_STANDOFF_TILES = 1; // how close line 1 (the tank) stands to the enemy — melee range, tied to
+                                 // the party's own attack range, not a visual choice — leave this one alone
+const LINE_SPACING_TILES = 3; // gap between each subsequent line and the one in front of it — purely
+                               // visual breathing room between squadmates queued up behind the tank (their
+                               // own attack range doesn't depend on this, only the tank's melee standoff
+                               // above does); was 1, which barely cleared a single sprite-width and read as
+                               // everyone standing on top of each other
 
 export class SquadCombatSystem {
   /** @param {MovementSystem} movementSystem */
