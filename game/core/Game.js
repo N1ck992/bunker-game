@@ -5,38 +5,38 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=30';
-import { MovementSystem } from '../systems/MovementSystem.js?v=30';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=30';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=30';
-import { WorldSystem } from '../systems/WorldSystem.js?v=30';
-import { InventorySystem } from '../systems/InventorySystem.js?v=30';
-import { CombatSystem } from '../systems/CombatSystem.js?v=30';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=30';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=31';
+import { MovementSystem } from '../systems/MovementSystem.js?v=31';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=31';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=31';
+import { WorldSystem } from '../systems/WorldSystem.js?v=31';
+import { InventorySystem } from '../systems/InventorySystem.js?v=31';
+import { CombatSystem } from '../systems/CombatSystem.js?v=31';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=31';
 
-import { GameTime } from './GameTime.js?v=30';
-import { ResourceSystem } from './ResourceSystem.js?v=30';
-import { TemperatureSystem } from './TemperatureSystem.js?v=30';
-import { SaveSystem } from './SaveSystem.js?v=30';
+import { GameTime } from './GameTime.js?v=31';
+import { ResourceSystem } from './ResourceSystem.js?v=31';
+import { TemperatureSystem } from './TemperatureSystem.js?v=31';
+import { SaveSystem } from './SaveSystem.js?v=31';
 
-import { Character } from '../entities/Character.js?v=30';
-import { Enemy } from '../entities/Enemy.js?v=30';
-import { Item } from '../entities/Item.js?v=30';
-import { EnemySystem } from '../systems/EnemySystem.js?v=30';
-import { SkillSystem } from '../systems/SkillSystem.js?v=30';
+import { Character } from '../entities/Character.js?v=31';
+import { Enemy } from '../entities/Enemy.js?v=31';
+import { Item } from '../entities/Item.js?v=31';
+import { EnemySystem } from '../systems/EnemySystem.js?v=31';
+import { SkillSystem } from '../systems/SkillSystem.js?v=31';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=30';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=30';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=30';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=30';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=30';
-import { PartyUI } from '../ui/PartyUI.js?v=30';
-import { InventoryUI } from '../ui/InventoryUI.js?v=30';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=30';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=30';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=30';
-import { showStartMenu } from '../ui/StartMenu.js?v=30';
-import { installOrientationLockRetry } from './OrientationLock.js?v=30';
+import { ShelterUI } from '../ui/ShelterUI.js?v=31';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=31';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=31';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=31';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=31';
+import { PartyUI } from '../ui/PartyUI.js?v=31';
+import { InventoryUI } from '../ui/InventoryUI.js?v=31';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=31';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=31';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=31';
+import { showStartMenu } from '../ui/StartMenu.js?v=31';
+import { installOrientationLockRetry } from './OrientationLock.js?v=31';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -1780,9 +1780,13 @@ class Game {
    * exists in the current room (rooms discovered without ever having
    * walked there via a normal connection, if that ever happens) — better
    * than the tap doing nothing.
+   *
+   * Deliberately does NOT turn overview off — the party walks to the door
+   * and switches rooms while the player can still see the whole base; only
+   * "Приблизить" (see _setOverview) is allowed to zoom back in, never a
+   * side effect of giving an order.
    */
   _travelToRoom(roomId) {
-    this._setOverview(false); // back to the normal follow view of the CURRENT room, camera on the party
     const door = this.mapData.interactables.find(
       (it) => it.type === 'door' && it.leadsTo === roomId && it.leadsToFile
     );
