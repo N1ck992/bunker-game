@@ -5,39 +5,39 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=48';
-import { MovementSystem } from '../systems/MovementSystem.js?v=48';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=48';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=48';
-import { WorldSystem } from '../systems/WorldSystem.js?v=48';
-import { InventorySystem } from '../systems/InventorySystem.js?v=48';
-import { CombatSystem } from '../systems/CombatSystem.js?v=48';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=48';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=49';
+import { MovementSystem } from '../systems/MovementSystem.js?v=49';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=49';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=49';
+import { WorldSystem } from '../systems/WorldSystem.js?v=49';
+import { InventorySystem } from '../systems/InventorySystem.js?v=49';
+import { CombatSystem } from '../systems/CombatSystem.js?v=49';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=49';
 
-import { GameTime } from './GameTime.js?v=48';
-import { ResourceSystem } from './ResourceSystem.js?v=48';
-import { TemperatureSystem } from './TemperatureSystem.js?v=48';
-import { SaveSystem } from './SaveSystem.js?v=48';
+import { GameTime } from './GameTime.js?v=49';
+import { ResourceSystem } from './ResourceSystem.js?v=49';
+import { TemperatureSystem } from './TemperatureSystem.js?v=49';
+import { SaveSystem } from './SaveSystem.js?v=49';
 
-import { Character } from '../entities/Character.js?v=48';
-import { Enemy } from '../entities/Enemy.js?v=48';
-import { Item } from '../entities/Item.js?v=48';
-import { EnemySystem } from '../systems/EnemySystem.js?v=48';
-import { SkillSystem } from '../systems/SkillSystem.js?v=48';
-import { InteractionSystem } from '../systems/InteractionSystem.js?v=48';
+import { Character } from '../entities/Character.js?v=49';
+import { Enemy } from '../entities/Enemy.js?v=49';
+import { Item } from '../entities/Item.js?v=49';
+import { EnemySystem } from '../systems/EnemySystem.js?v=49';
+import { SkillSystem } from '../systems/SkillSystem.js?v=49';
+import { InteractionSystem } from '../systems/InteractionSystem.js?v=49';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=48';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=48';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=48';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=48';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=48';
-import { PartyUI } from '../ui/PartyUI.js?v=48';
-import { InventoryUI } from '../ui/InventoryUI.js?v=48';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=48';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=48';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=48';
-import { showStartMenu } from '../ui/StartMenu.js?v=48';
-import { installOrientationLockRetry } from './OrientationLock.js?v=48';
+import { ShelterUI } from '../ui/ShelterUI.js?v=49';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=49';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=49';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=49';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=49';
+import { PartyUI } from '../ui/PartyUI.js?v=49';
+import { InventoryUI } from '../ui/InventoryUI.js?v=49';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=49';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=49';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=49';
+import { showStartMenu } from '../ui/StartMenu.js?v=49';
+import { installOrientationLockRetry } from './OrientationLock.js?v=49';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -183,6 +183,10 @@ class Game {
     this.temperatureSystem = new TemperatureSystem(balance);
     this.constructionSystem = new ConstructionSystem();
     this.worldSystem = new WorldSystem();
+    // World-map hex ground texture (see _renderHex) — a single wide tile
+    // image, sampled at a different offset per hex (based on its own q,r)
+    // so neighbouring hexes don't look like an obvious identical repeat.
+    this.worldHexTexture = makeImage('game/assets/world/wasteland_tile.png');
     this.gameTime = new GameTime(balance, save?.gameTime);
     this.enemySystem = new EnemySystem(
       this.pathfinder,
@@ -2626,18 +2630,50 @@ class Game {
     }
     ctx.closePath();
 
+    const texture = this.worldHexTexture;
+    const textureReady = texture && texture.complete && texture.naturalWidth > 0;
+
     if (!discovered) {
       ctx.fillStyle = '#111319';
       ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-    } else if (isHome) {
-      ctx.fillStyle = 'rgba(232,176,75,0.18)';
-      ctx.strokeStyle = 'rgba(232,176,75,0.7)';
+      ctx.fill();
+    } else if (textureReady) {
+      // Ground texture (see game/assets/world/wasteland_tile.png) clipped
+      // to the hex — sampled at an offset derived from the hex's own q,r
+      // so it reads as one continuous wasteland instead of every hex
+      // obviously repeating the exact same crop. Scaled down well below
+      // its native size (a single hex is only ~size*2 px wide) and tiled
+      // 2x2 around the sampled offset so the hex is fully covered
+      // regardless of where that offset falls. The home hex still gets
+      // its amber tint on top, same as before, just over the texture
+      // instead of a flat fill.
+      ctx.save();
+      ctx.clip();
+      const TEXTURE_SCALE = 0.16;
+      const drawW = texture.naturalWidth * TEXTURE_SCALE;
+      const drawH = texture.naturalHeight * TEXTURE_SCALE;
+      const offsetX = (((hex.q * 137) % drawW) + drawW) % drawW;
+      const offsetY = (((hex.r * 191) % drawH) + drawH) % drawH;
+      for (let dx = -1; dx <= 0; dx++) {
+        for (let dy = -1; dy <= 0; dy++) {
+          ctx.drawImage(texture, -offsetX + dx * drawW, -offsetY + dy * drawH, drawW, drawH);
+        }
+      }
+      ctx.restore();
+      if (isHome) {
+        ctx.fillStyle = 'rgba(232,176,75,0.28)';
+        ctx.fill();
+      } else {
+        ctx.fillStyle = 'rgba(0,0,0,0.15)'; // slight darken so the amber/white UI text on top stays legible
+        ctx.fill();
+      }
+      ctx.strokeStyle = isHome ? 'rgba(232,176,75,0.7)' : 'rgba(255,255,255,0.14)';
     } else {
-      ctx.fillStyle = '#1b1e28';
-      ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+      ctx.fillStyle = isHome ? 'rgba(232,176,75,0.18)' : '#1b1e28';
+      ctx.strokeStyle = isHome ? 'rgba(232,176,75,0.7)' : 'rgba(255,255,255,0.14)';
+      ctx.fill();
     }
     ctx.lineWidth = 1.5;
-    ctx.fill();
     ctx.stroke();
 
     if (isHome && discovered) {
