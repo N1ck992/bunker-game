@@ -5,38 +5,38 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=40';
-import { MovementSystem } from '../systems/MovementSystem.js?v=40';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=40';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=40';
-import { WorldSystem } from '../systems/WorldSystem.js?v=40';
-import { InventorySystem } from '../systems/InventorySystem.js?v=40';
-import { CombatSystem } from '../systems/CombatSystem.js?v=40';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=40';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=41';
+import { MovementSystem } from '../systems/MovementSystem.js?v=41';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=41';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=41';
+import { WorldSystem } from '../systems/WorldSystem.js?v=41';
+import { InventorySystem } from '../systems/InventorySystem.js?v=41';
+import { CombatSystem } from '../systems/CombatSystem.js?v=41';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=41';
 
-import { GameTime } from './GameTime.js?v=40';
-import { ResourceSystem } from './ResourceSystem.js?v=40';
-import { TemperatureSystem } from './TemperatureSystem.js?v=40';
-import { SaveSystem } from './SaveSystem.js?v=40';
+import { GameTime } from './GameTime.js?v=41';
+import { ResourceSystem } from './ResourceSystem.js?v=41';
+import { TemperatureSystem } from './TemperatureSystem.js?v=41';
+import { SaveSystem } from './SaveSystem.js?v=41';
 
-import { Character } from '../entities/Character.js?v=40';
-import { Enemy } from '../entities/Enemy.js?v=40';
-import { Item } from '../entities/Item.js?v=40';
-import { EnemySystem } from '../systems/EnemySystem.js?v=40';
-import { SkillSystem } from '../systems/SkillSystem.js?v=40';
+import { Character } from '../entities/Character.js?v=41';
+import { Enemy } from '../entities/Enemy.js?v=41';
+import { Item } from '../entities/Item.js?v=41';
+import { EnemySystem } from '../systems/EnemySystem.js?v=41';
+import { SkillSystem } from '../systems/SkillSystem.js?v=41';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=40';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=40';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=40';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=40';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=40';
-import { PartyUI } from '../ui/PartyUI.js?v=40';
-import { InventoryUI } from '../ui/InventoryUI.js?v=40';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=40';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=40';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=40';
-import { showStartMenu } from '../ui/StartMenu.js?v=40';
-import { installOrientationLockRetry } from './OrientationLock.js?v=40';
+import { ShelterUI } from '../ui/ShelterUI.js?v=41';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=41';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=41';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=41';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=41';
+import { PartyUI } from '../ui/PartyUI.js?v=41';
+import { InventoryUI } from '../ui/InventoryUI.js?v=41';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=41';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=41';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=41';
+import { showStartMenu } from '../ui/StartMenu.js?v=41';
+import { installOrientationLockRetry } from './OrientationLock.js?v=41';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -931,7 +931,13 @@ class Game {
       for (const name of ['background', 'midground']) {
         const img = entry.layers[name];
         if (img && img.complete && img.naturalWidth > 0) {
-          ctx.drawImage(img, layout.xOffset, layout.cumulativeY, layout.widthPx, layout.heightPx);
+          // Same aspect-preserving, bottom-anchored fit as the active
+          // room's own layers (see _renderParallaxLayers) — this used to
+          // force-stretch to layout.heightPx (the grid's own row count)
+          // regardless of the art's real proportions.
+          const drawH = layout.widthPx * (img.naturalHeight / img.naturalWidth);
+          const drawY = layout.cumulativeY + layout.heightPx - drawH;
+          ctx.drawImage(img, layout.xOffset, drawY, layout.widthPx, drawH);
         }
       }
       const floorImg = entry.layers.floor;
@@ -963,6 +969,20 @@ class Game {
       const img = layers[name];
       if (!img || !(img.complete && img.naturalWidth > 0)) continue;
 
+      // Height comes from the image's OWN aspect ratio at the room's full
+      // width, not forced to fill roomHeightPx (= the grid's own row
+      // count) regardless of what the source art actually looks like —
+      // every room's art has different real proportions (a wide, short
+      // foreground strip vs a taller background), and force-stretching to
+      // whatever aspect the grid happens to be (cols/rows) distorted
+      // anything that didn't already happen to match it, worst on the
+      // layer furthest from that ratio. Bottom-anchored within the room's
+      // vertical slot — matches how every layer was authored, floor at
+      // the bottom — so any leftover gap (a shorter-than-the-row-count
+      // image) falls at the ceiling end, never at the floor.
+      const drawH = this.roomWidthPx * (img.naturalHeight / img.naturalWidth);
+      const drawY = this.offsetY + this.roomHeightPx - drawH;
+
       if (name === 'foreground') {
         // The foreground art (pipe/cable clusters, see
         // game/assets/scenes/*/foreground.png) is heaviest right at its own
@@ -971,17 +991,11 @@ class Game {
         // they'd otherwise block a big chunk of the view. Faded out here in
         // screen space so it eases off toward both edges of the viewport,
         // without touching the source art.
-        this._renderForegroundFaded(img, this.offsetX, this.roomWidthPx, this.canvas.width);
+        this._renderForegroundFaded(img, this.offsetX, this.roomWidthPx, this.canvas.width, drawY, drawH);
         continue;
       }
 
-      // Every layer is stretched across the *same* room height and drawn
-      // at the same y — the foreground's own art (hanging cables against a
-      // transparent lower half, see game/assets/scenes/*/foreground.png)
-      // is what keeps the floor clear, not a hard crop here. An earlier
-      // version clipped this layer's height to fake that, which left a
-      // faint seam baked right across the room at the clip line.
-      ctx.drawImage(img, this.offsetX, this.offsetY, this.roomWidthPx, this.roomHeightPx);
+      ctx.drawImage(img, this.offsetX, drawY, this.roomWidthPx, drawH);
     }
   }
 
@@ -993,7 +1007,7 @@ class Game {
    * destination-in) only erases this layer's own pixels, not whatever's
    * already drawn on the main canvas underneath it.
    */
-  _renderForegroundFaded(img, drawX, drawW, canvasW) {
+  _renderForegroundFaded(img, drawX, drawW, canvasW, drawY, drawH) {
     const canvasH = this.canvas.height;
     if (!this._fgFadeCanvas) {
       this._fgFadeCanvas = document.createElement('canvas');
@@ -1006,7 +1020,7 @@ class Game {
     const fctx = this._fgFadeCtx;
     fctx.globalCompositeOperation = 'source-over';
     fctx.clearRect(0, 0, canvasW, canvasH);
-    fctx.drawImage(img, drawX, this.offsetY, drawW, this.roomHeightPx);
+    fctx.drawImage(img, drawX, drawY, drawW, drawH);
 
     // Fully transparent right at each screen edge, back to fully opaque by
     // FOREGROUND_FADE_FRACTION of the viewport width in — tweak that one
