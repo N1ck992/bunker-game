@@ -5,39 +5,39 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=51';
-import { MovementSystem } from '../systems/MovementSystem.js?v=51';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=51';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=51';
-import { WorldSystem } from '../systems/WorldSystem.js?v=51';
-import { InventorySystem } from '../systems/InventorySystem.js?v=51';
-import { CombatSystem } from '../systems/CombatSystem.js?v=51';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=51';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=52';
+import { MovementSystem } from '../systems/MovementSystem.js?v=52';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=52';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=52';
+import { WorldSystem } from '../systems/WorldSystem.js?v=52';
+import { InventorySystem } from '../systems/InventorySystem.js?v=52';
+import { CombatSystem } from '../systems/CombatSystem.js?v=52';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=52';
 
-import { GameTime } from './GameTime.js?v=51';
-import { ResourceSystem } from './ResourceSystem.js?v=51';
-import { TemperatureSystem } from './TemperatureSystem.js?v=51';
-import { SaveSystem } from './SaveSystem.js?v=51';
+import { GameTime } from './GameTime.js?v=52';
+import { ResourceSystem } from './ResourceSystem.js?v=52';
+import { TemperatureSystem } from './TemperatureSystem.js?v=52';
+import { SaveSystem } from './SaveSystem.js?v=52';
 
-import { Character } from '../entities/Character.js?v=51';
-import { Enemy } from '../entities/Enemy.js?v=51';
-import { Item } from '../entities/Item.js?v=51';
-import { EnemySystem } from '../systems/EnemySystem.js?v=51';
-import { SkillSystem } from '../systems/SkillSystem.js?v=51';
-import { InteractionSystem } from '../systems/InteractionSystem.js?v=51';
+import { Character } from '../entities/Character.js?v=52';
+import { Enemy } from '../entities/Enemy.js?v=52';
+import { Item } from '../entities/Item.js?v=52';
+import { EnemySystem } from '../systems/EnemySystem.js?v=52';
+import { SkillSystem } from '../systems/SkillSystem.js?v=52';
+import { InteractionSystem } from '../systems/InteractionSystem.js?v=52';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=51';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=51';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=51';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=51';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=51';
-import { PartyUI } from '../ui/PartyUI.js?v=51';
-import { InventoryUI } from '../ui/InventoryUI.js?v=51';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=51';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=51';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=51';
-import { showStartMenu } from '../ui/StartMenu.js?v=51';
-import { installOrientationLockRetry } from './OrientationLock.js?v=51';
+import { ShelterUI } from '../ui/ShelterUI.js?v=52';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=52';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=52';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=52';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=52';
+import { PartyUI } from '../ui/PartyUI.js?v=52';
+import { InventoryUI } from '../ui/InventoryUI.js?v=52';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=52';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=52';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=52';
+import { showStartMenu } from '../ui/StartMenu.js?v=52';
+import { installOrientationLockRetry } from './OrientationLock.js?v=52';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -1584,7 +1584,8 @@ class Game {
     this.pendingFurnitureInteractions.delete(character.id);
 
     const standoffDistance = Math.max(1, weapon.range - 1);
-    const desiredCol = enemy.position.col - dirToEnemy * standoffDistance;
+    const rawDesiredCol = enemy.position.col - dirToEnemy * standoffDistance;
+    const desiredCol = this._findFreeStandoffCol(rawDesiredCol, character.position.row, character);
     const target = { col: desiredCol, row: character.position.row };
 
     let moved = this.movementSystem.moveTo(character, target, this.pathfinder);
@@ -1596,6 +1597,37 @@ class Game {
       moved = this.movementSystem.moveTo(character, { col: fallbackCol, row: character.position.row }, this.pathfinder);
     }
     if (!moved) this._toast('Туда пройти нельзя.');
+  }
+
+  /**
+   * Nudges an attack standoff column sideways if another active character
+   * is already standing there (or already walking there) — otherwise two
+   * settlers commanded to attack the same enemy independently (not via
+   * "Выбрать всех", which already spaces its own line — see
+   * SquadCombatSystem/LINE_SPACING_TILES) both compute the exact same
+   * standoff tile and end up drawn stacked on top of each other. Checks
+   * each other active character's own FINAL destination (path's last
+   * step, or current position if they're not moving) rather than their
+   * live in-between position, since that's the tile that actually matters
+   * once everyone's finished walking. Gives up and returns the original
+   * column if nothing within a few tiles is free — overlapping once in a
+   * rare crowded fight is a smaller problem than refusing the order.
+   */
+  _findFreeStandoffCol(desiredCol, row, excluding) {
+    const isFree = (col) => {
+      for (const other of this.characters) {
+        if (other === excluding || !other.isActive) continue;
+        const dest = other.path?.length ? other.path[other.path.length - 1] : other.position;
+        if (dest.col === col && dest.row === row) return false;
+      }
+      return true;
+    };
+    if (isFree(desiredCol)) return desiredCol;
+    for (let offset = 1; offset <= 4; offset++) {
+      if (isFree(desiredCol + offset)) return desiredCol + offset;
+      if (isFree(desiredCol - offset)) return desiredCol - offset;
+    }
+    return desiredCol;
   }
 
   /**
