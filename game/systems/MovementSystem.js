@@ -2,6 +2,22 @@
 // Advances each character along its `path` (array of {col,row}) at a fixed speed.
 // Rendering reads character.position / character.moveProgress but this system
 // never touches canvas or images.
+//
+// Also owns runPhase — how far into the run-cycle each entity's animation
+// currently is, in "frames" (a float; the renderer just floors it). Kept
+// here rather than in Game.js's render step because it's derived directly
+// from how far the entity has actually travelled this frame
+// (tilesPerSecond * dt), not from wall-clock time — so a slower mover's
+// legs cycle slower and a faster one's cycle faster, they never carry on
+// mid-stride the instant a path empties (reset to 0 below), and two
+// entities that started moving at different moments don't end up
+// lockstepped just because they share the same walk cycle (the old
+// this._now-based formula gave everyone the exact same phase, since it
+// depended on absolute time; distance-based phase depends on each one's
+// own path/position instead).
+
+const RUN_FRAMES_PER_TILE = 0.7; // matches the old fixed RUN_FPS(7) / tilesPerSecond(10) —
+                                  // same visual cadence, just driven by distance now instead of time
 
 export class MovementSystem {
   constructor(balance) {
@@ -15,9 +31,16 @@ export class MovementSystem {
   update(characters, dtSeconds) {
     for (const character of characters) {
       if (!character.isActive) continue;
-      if (!character.path || character.path.length === 0) continue;
+      if (!character.path || character.path.length === 0) {
+        // Not moving (or never was) — hold at frame 0 so the next run
+        // cycle always starts clean instead of resuming wherever the last
+        // one left off.
+        character.runPhase = 0;
+        continue;
+      }
 
       character.moveProgress += this.tilesPerSecond * dtSeconds;
+      character.runPhase = (character.runPhase ?? 0) + this.tilesPerSecond * dtSeconds * RUN_FRAMES_PER_TILE;
 
       while (character.moveProgress >= 1 && character.path.length > 0) {
         character.moveProgress -= 1;

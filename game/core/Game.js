@@ -5,38 +5,38 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=38';
-import { MovementSystem } from '../systems/MovementSystem.js?v=38';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=38';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=38';
-import { WorldSystem } from '../systems/WorldSystem.js?v=38';
-import { InventorySystem } from '../systems/InventorySystem.js?v=38';
-import { CombatSystem } from '../systems/CombatSystem.js?v=38';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=38';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=39';
+import { MovementSystem } from '../systems/MovementSystem.js?v=39';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=39';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=39';
+import { WorldSystem } from '../systems/WorldSystem.js?v=39';
+import { InventorySystem } from '../systems/InventorySystem.js?v=39';
+import { CombatSystem } from '../systems/CombatSystem.js?v=39';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=39';
 
-import { GameTime } from './GameTime.js?v=38';
-import { ResourceSystem } from './ResourceSystem.js?v=38';
-import { TemperatureSystem } from './TemperatureSystem.js?v=38';
-import { SaveSystem } from './SaveSystem.js?v=38';
+import { GameTime } from './GameTime.js?v=39';
+import { ResourceSystem } from './ResourceSystem.js?v=39';
+import { TemperatureSystem } from './TemperatureSystem.js?v=39';
+import { SaveSystem } from './SaveSystem.js?v=39';
 
-import { Character } from '../entities/Character.js?v=38';
-import { Enemy } from '../entities/Enemy.js?v=38';
-import { Item } from '../entities/Item.js?v=38';
-import { EnemySystem } from '../systems/EnemySystem.js?v=38';
-import { SkillSystem } from '../systems/SkillSystem.js?v=38';
+import { Character } from '../entities/Character.js?v=39';
+import { Enemy } from '../entities/Enemy.js?v=39';
+import { Item } from '../entities/Item.js?v=39';
+import { EnemySystem } from '../systems/EnemySystem.js?v=39';
+import { SkillSystem } from '../systems/SkillSystem.js?v=39';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=38';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=38';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=38';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=38';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=38';
-import { PartyUI } from '../ui/PartyUI.js?v=38';
-import { InventoryUI } from '../ui/InventoryUI.js?v=38';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=38';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=38';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=38';
-import { showStartMenu } from '../ui/StartMenu.js?v=38';
-import { installOrientationLockRetry } from './OrientationLock.js?v=38';
+import { ShelterUI } from '../ui/ShelterUI.js?v=39';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=39';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=39';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=39';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=39';
+import { PartyUI } from '../ui/PartyUI.js?v=39';
+import { InventoryUI } from '../ui/InventoryUI.js?v=39';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=39';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=39';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=39';
+import { showStartMenu } from '../ui/StartMenu.js?v=39';
+import { installOrientationLockRetry } from './OrientationLock.js?v=39';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -3007,11 +3007,13 @@ class Game {
       } else if (isMoving) {
         // Moving always wins — a character walking into range cancels any
         // stale "attacking" pose from the previous target, same as examine.
-        const RUN_FPS = 7; // slowed down per feedback — 11 cycled the 8 frames too fast/close together
+        // runPhase (MovementSystem) is distance-based, not time-based — see
+        // its own header comment for why that's what keeps this synced to
+        // actual movement speed instead of just wall-clock time.
         const runFrames = directional
           ? (character.facingDir < 0 ? spriteSet.runLeft : spriteSet.runRight)
           : spriteSet.run;
-        const frameIndex = Math.floor((this._now / 1000) * RUN_FPS) % runFrames.length;
+        const frameIndex = Math.floor(character.runPhase ?? 0) % runFrames.length;
         sprite = runFrames[frameIndex];
       } else if (character.combatState === 'attacking' && character.attackAnimRemaining > 0) {
         // Only mid-swing/shot during the brief pulse set right when an
