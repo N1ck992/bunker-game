@@ -424,17 +424,6 @@
  },
  "interactables": [
   {
-   "id": "door_cryo01_left",
-   "type": "door",
-   "col": 1,
-   "row": 7,
-   "state": "open",
-   "locked": false,
-   "leadsTo": "corridor_stub_left",
-   "label": "Дверь — налево",
-   "leadsToFile": "game/map/scenes/corridor_stub_left.json"
-  },
-  {
    "id": "door_cryo01_right",
    "type": "door",
    "col": 46,

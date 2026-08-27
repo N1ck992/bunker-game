@@ -5,38 +5,38 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=41';
-import { MovementSystem } from '../systems/MovementSystem.js?v=41';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=41';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=41';
-import { WorldSystem } from '../systems/WorldSystem.js?v=41';
-import { InventorySystem } from '../systems/InventorySystem.js?v=41';
-import { CombatSystem } from '../systems/CombatSystem.js?v=41';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=41';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=42';
+import { MovementSystem } from '../systems/MovementSystem.js?v=42';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=42';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=42';
+import { WorldSystem } from '../systems/WorldSystem.js?v=42';
+import { InventorySystem } from '../systems/InventorySystem.js?v=42';
+import { CombatSystem } from '../systems/CombatSystem.js?v=42';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=42';
 
-import { GameTime } from './GameTime.js?v=41';
-import { ResourceSystem } from './ResourceSystem.js?v=41';
-import { TemperatureSystem } from './TemperatureSystem.js?v=41';
-import { SaveSystem } from './SaveSystem.js?v=41';
+import { GameTime } from './GameTime.js?v=42';
+import { ResourceSystem } from './ResourceSystem.js?v=42';
+import { TemperatureSystem } from './TemperatureSystem.js?v=42';
+import { SaveSystem } from './SaveSystem.js?v=42';
 
-import { Character } from '../entities/Character.js?v=41';
-import { Enemy } from '../entities/Enemy.js?v=41';
-import { Item } from '../entities/Item.js?v=41';
-import { EnemySystem } from '../systems/EnemySystem.js?v=41';
-import { SkillSystem } from '../systems/SkillSystem.js?v=41';
+import { Character } from '../entities/Character.js?v=42';
+import { Enemy } from '../entities/Enemy.js?v=42';
+import { Item } from '../entities/Item.js?v=42';
+import { EnemySystem } from '../systems/EnemySystem.js?v=42';
+import { SkillSystem } from '../systems/SkillSystem.js?v=42';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=41';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=41';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=41';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=41';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=41';
-import { PartyUI } from '../ui/PartyUI.js?v=41';
-import { InventoryUI } from '../ui/InventoryUI.js?v=41';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=41';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=41';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=41';
-import { showStartMenu } from '../ui/StartMenu.js?v=41';
-import { installOrientationLockRetry } from './OrientationLock.js?v=41';
+import { ShelterUI } from '../ui/ShelterUI.js?v=42';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=42';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=42';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=42';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=42';
+import { PartyUI } from '../ui/PartyUI.js?v=42';
+import { InventoryUI } from '../ui/InventoryUI.js?v=42';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=42';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=42';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=42';
+import { showStartMenu } from '../ui/StartMenu.js?v=42';
+import { installOrientationLockRetry } from './OrientationLock.js?v=42';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -922,19 +922,27 @@ class Game {
   _renderRoomStackBackdrop() {
     if (!this.discoveredRooms || this.discoveredRooms.size <= 1) return;
     const ctx = this.ctx;
+    const canvasW = this.canvas.width;
 
     for (const [roomId, entry] of this.discoveredRooms) {
       if (roomId === this.mapData.id) continue;
       const layout = this.roomStackLayout?.get(roomId);
       if (!layout) continue;
 
+      // Clipped to exactly this room's own slot — aspect-preserving art
+      // (see _renderParallaxLayers) can come out taller than the slot's
+      // own grid-row height when a layer's real proportions are far from
+      // the grid's own aspect ratio, and without this it would spill
+      // upward into whichever room is stacked above it instead of just
+      // being cropped at the ceiling.
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, layout.cumulativeY, canvasW, layout.heightPx);
+      ctx.clip();
+
       for (const name of ['background', 'midground']) {
         const img = entry.layers[name];
         if (img && img.complete && img.naturalWidth > 0) {
-          // Same aspect-preserving, bottom-anchored fit as the active
-          // room's own layers (see _renderParallaxLayers) — this used to
-          // force-stretch to layout.heightPx (the grid's own row count)
-          // regardless of the art's real proportions.
           const drawH = layout.widthPx * (img.naturalHeight / img.naturalWidth);
           const drawY = layout.cumulativeY + layout.heightPx - drawH;
           ctx.drawImage(img, layout.xOffset, drawY, layout.widthPx, drawH);
@@ -948,6 +956,7 @@ class Game {
         const y = layout.cumulativeY + (floorRow + 1) * cellSize * layout.scale - stripH * 0.55;
         ctx.drawImage(floorImg, layout.xOffset, y, layout.widthPx, stripH);
       }
+      ctx.restore();
     }
   }
 
@@ -964,6 +973,20 @@ class Game {
     const layers = this.roomLayers;
     if (!layers) return;
     const ctx = this.ctx;
+
+    // In overview mode the active room occupies a slot in the stack just
+    // like every other discovered room (see _renderRoomStackBackdrop) —
+    // clip to it so this room's own aspect-preserving art (below) can't
+    // spill into whichever room is stacked above it, same reasoning as
+    // there. Not applied in the normal follow view, where there's no
+    // stack to spill into and the room is free to extend past its own
+    // grid-row height if its art is naturally taller.
+    if (this._overview) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, this.offsetY, this.canvas.width, this.roomHeightPx);
+      ctx.clip();
+    }
 
     for (const name of names) {
       const img = layers[name];
@@ -997,6 +1020,8 @@ class Game {
 
       ctx.drawImage(img, this.offsetX, drawY, this.roomWidthPx, drawH);
     }
+
+    if (this._overview) ctx.restore();
   }
 
   /**
@@ -1822,31 +1847,75 @@ class Game {
 
   /**
    * Moves the party to a previously-discovered room from overview mode
-   * (see _onOverviewTap) — not an instant jump: finds the door in the
-   * CURRENT room that actually leads there and runs it through exactly
-   * the same walk-to-the-door-then-confirm flow a manual tap on that door
-   * would (_onInteractableTapped/_performInteractableInteraction), just
-   * triggered by tapping the room in the overview instead of finding the
-   * door by eye. Falls back to an instant switch only if no such door
-   * exists in the current room (rooms discovered without ever having
-   * walked there via a normal connection, if that ever happens) — better
-   * than the tap doing nothing.
+   * (see _onOverviewTap) — not an instant jump, and not limited to
+   * directly-connected rooms either: finds the shortest chain of doors
+   * connecting here to there (_findRoomPath) and walks it one hop at a
+   * time via the normal walk-to-the-door-then-confirm flow
+   * (_onInteractableTapped/_performInteractableInteraction) a manual door
+   * tap would use, continuing to the next door automatically each time a
+   * switch completes (see _continueTravelQueue, called from
+   * _switchLevel) until the party actually reaches the tapped room.
    *
-   * Deliberately does NOT turn overview off — the party walks to the door
-   * and switches rooms while the player can still see the whole base; only
-   * "Приблизить" (see _setOverview) is allowed to zoom back in, never a
-   * side effect of giving an order.
+   * Deliberately does NOT turn overview off — the party walks through
+   * every room along the way while the player can still see the whole
+   * base; only "Приблизить" (see _setOverview) is allowed to zoom back
+   * in, never a side effect of giving an order.
    */
   _travelToRoom(roomId) {
+    const path = this._findRoomPath(this.mapData.id, roomId);
+    if (!path || path.length < 2) return; // no known route through discovered rooms
+    this._travelQueue = path.slice(1); // every room still left to walk through, in order
+    this._continueTravelQueue();
+  }
+
+  /**
+   * Finds the shortest chain of rooms connecting `fromRoomId` to
+   * `toRoomId`, using only doors belonging to rooms already in
+   * this.discoveredRooms (exactly what's visible/tappable in the overview
+   * anyway) — a plain breadth-first search over each room's own door
+   * interactables. Returns an array of room ids from `fromRoomId` to
+   * `toRoomId` inclusive (e.g. ['reactor_room_01', 'technical_bay_01',
+   * 'cryo_room_01']), or null if no such chain exists yet.
+   */
+  _findRoomPath(fromRoomId, toRoomId) {
+    if (fromRoomId === toRoomId) return [fromRoomId];
+    const visited = new Set([fromRoomId]);
+    const queue = [[fromRoomId]];
+    while (queue.length > 0) {
+      const path = queue.shift();
+      const entry = this.discoveredRooms.get(path[path.length - 1]);
+      if (!entry) continue;
+      for (const it of entry.mapData.interactables) {
+        if (it.type !== 'door' || !it.leadsTo || visited.has(it.leadsTo)) continue;
+        const nextPath = [...path, it.leadsTo];
+        if (it.leadsTo === toRoomId) return nextPath;
+        visited.add(it.leadsTo);
+        queue.push(nextPath);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Walks toward the next room in this._travelQueue (set by
+   * _travelToRoom) — one door/hop per call. _switchLevel calls this again
+   * right after finishing each switch, so a multi-room trip keeps walking
+   * through every room along the chosen route until the queue is empty
+   * (the party has actually arrived), rather than skipping straight to
+   * the final destination. A no-op whenever there's no pending trip.
+   */
+  _continueTravelQueue() {
+    if (!this._travelQueue || this._travelQueue.length === 0) return;
+    const nextRoomId = this._travelQueue[0];
     const door = this.mapData.interactables.find(
-      (it) => it.type === 'door' && it.leadsTo === roomId && it.leadsToFile
+      (it) => it.type === 'door' && it.leadsTo === nextRoomId && it.leadsToFile
     );
-    if (door) {
-      this._onInteractableTapped(door, { clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 });
+    if (!door) {
+      this._travelQueue = null; // route broken somehow — stop rather than get stuck retrying
       return;
     }
-    const entry = this.discoveredRooms?.get(roomId);
-    if (entry?.fileUrl) this._switchLevel(entry.fileUrl, roomId);
+    this._travelQueue = this._travelQueue.slice(1);
+    this._onInteractableTapped(door, { clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 });
   }
 
   async _switchLevel(fileUrl, levelId) {
@@ -1905,6 +1974,10 @@ class Game {
 
       this._resizeCanvas(); // grows the world to fit the new floor and jumps the view to it
       this._toast(this.mapData.name ?? 'Уровень сменён.');
+      // Continues a multi-room overview trip (see _travelToRoom) toward its
+      // real destination, one door at a time — a no-op if this switch
+      // wasn't part of one.
+      this._continueTravelQueue();
     } finally {
       this._switchingLevel = false;
     }
