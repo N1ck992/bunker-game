@@ -30,7 +30,16 @@ html, body {
   width: 100%;
   max-width: 1100px; /* wide enough to use a phone's full landscape width, still capped on tablets/desktop */
   margin: 0 auto;
-  height: 100vh;
+  /* Was 100vh — that unit is always relative to the *real*, unrotated
+   * viewport, even while the "Landscape lock" block below has rotated
+   * <html> 90° with CSS (portrait phones without a real orientation-lock
+   * API). In that state 100vh no longer matches <html>'s own (rotated)
+   * height, so #app claimed far more height than was actually visible —
+   * everything inside it, including the canvas's own resize math, sized
+   * itself against that wrong number, pushing the room/characters mostly
+   * below the visible area. 100% correctly inherits from body/html's
+   * actual box instead, rotated or not. */
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--steel-900);
@@ -87,6 +96,7 @@ html, body {
 canvas {
   display: block;
   width: 100%;
+  height: 100%;
   touch-action: pan-y; /* let a vertical drag scroll between floors natively */
 }
 
