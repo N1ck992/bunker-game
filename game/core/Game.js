@@ -5,38 +5,38 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=39';
-import { MovementSystem } from '../systems/MovementSystem.js?v=39';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=39';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=39';
-import { WorldSystem } from '../systems/WorldSystem.js?v=39';
-import { InventorySystem } from '../systems/InventorySystem.js?v=39';
-import { CombatSystem } from '../systems/CombatSystem.js?v=39';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=39';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=40';
+import { MovementSystem } from '../systems/MovementSystem.js?v=40';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=40';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=40';
+import { WorldSystem } from '../systems/WorldSystem.js?v=40';
+import { InventorySystem } from '../systems/InventorySystem.js?v=40';
+import { CombatSystem } from '../systems/CombatSystem.js?v=40';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=40';
 
-import { GameTime } from './GameTime.js?v=39';
-import { ResourceSystem } from './ResourceSystem.js?v=39';
-import { TemperatureSystem } from './TemperatureSystem.js?v=39';
-import { SaveSystem } from './SaveSystem.js?v=39';
+import { GameTime } from './GameTime.js?v=40';
+import { ResourceSystem } from './ResourceSystem.js?v=40';
+import { TemperatureSystem } from './TemperatureSystem.js?v=40';
+import { SaveSystem } from './SaveSystem.js?v=40';
 
-import { Character } from '../entities/Character.js?v=39';
-import { Enemy } from '../entities/Enemy.js?v=39';
-import { Item } from '../entities/Item.js?v=39';
-import { EnemySystem } from '../systems/EnemySystem.js?v=39';
-import { SkillSystem } from '../systems/SkillSystem.js?v=39';
+import { Character } from '../entities/Character.js?v=40';
+import { Enemy } from '../entities/Enemy.js?v=40';
+import { Item } from '../entities/Item.js?v=40';
+import { EnemySystem } from '../systems/EnemySystem.js?v=40';
+import { SkillSystem } from '../systems/SkillSystem.js?v=40';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=39';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=39';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=39';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=39';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=39';
-import { PartyUI } from '../ui/PartyUI.js?v=39';
-import { InventoryUI } from '../ui/InventoryUI.js?v=39';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=39';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=39';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=39';
-import { showStartMenu } from '../ui/StartMenu.js?v=39';
-import { installOrientationLockRetry } from './OrientationLock.js?v=39';
+import { ShelterUI } from '../ui/ShelterUI.js?v=40';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=40';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=40';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=40';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=40';
+import { PartyUI } from '../ui/PartyUI.js?v=40';
+import { InventoryUI } from '../ui/InventoryUI.js?v=40';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=40';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=40';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=40';
+import { showStartMenu } from '../ui/StartMenu.js?v=40';
+import { installOrientationLockRetry } from './OrientationLock.js?v=40';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -768,19 +768,22 @@ class Game {
     const cellSize = this.mapData.cellSize;
 
     const visibleCols = this.mapData.visibleCols ?? ROOM_VISIBLE_COLS;
-    // Fitting purely to width (as before) can leave the room's own art
-    // shorter than the viewport on a tall/narrow screen — since nothing
-    // is drawn above/below the room itself, that showed up as a plain
-    // black gap above the background art (and pushed the floor row, and
-    // anyone standing on it, up away from a natural position). Taking
-    // whichever of the width-based or height-based scale is larger
-    // guarantees the room's own 8 rows always cover at least the full
-    // viewport height — this may show a couple fewer columns than
-    // visibleCols asks for on unusually tall viewports, but never leaves
-    // empty space above/below the room.
+    // MUST be the SMALLER of the two, not the larger — a previous version
+    // of this took the larger one specifically to guarantee the room's own
+    // 8 rows covered at least the full viewport height, but that's exactly
+    // backwards: a *bigger* scale makes the room *taller* in pixels, and
+    // since offsetY below anchors the floor row a fixed distance above the
+    // canvas's own bottom edge (not the room's total height), a taller
+    // room pushes row 0 — and a standing character's head, which reaches
+    // above row 0 — further up and off the top of the canvas, not less.
+    // Taking the smaller scale instead means the room (all 8 rows, top to
+    // bottom) is always guaranteed to fit within the viewport on both
+    // axes — the trade-off is a bit of empty space on whichever axis isn't
+    // the limiting one, instead of ever clipping the character or the room
+    // art itself.
     const widthScale = boxWidth / (visibleCols * cellSize);
     const heightScale = boxHeight / (this.mapData.rows * cellSize);
-    this.scale = Math.max(widthScale, heightScale);
+    this.scale = Math.min(widthScale, heightScale);
     this.roomWidthPx = this.mapData.cols * cellSize * this.scale;
     this.roomHeightPx = this.mapData.rows * cellSize * this.scale;
 
@@ -794,10 +797,9 @@ class Game {
     const floorRow = this.mapData.spawnPoint.row;
     const bottomMargin = boxHeight * 0.12;
     this.offsetY = boxHeight - (floorRow + 1) * cellSize * this.scale - bottomMargin;
-    // With scale now guaranteed to cover the full viewport height, offsetY
-    // could in principle still come out positive on a very short room —
-    // clamp it to 0 so the art's own top edge never pulls away from the
-    // canvas's top edge either.
+    // Belt-and-braces: never let the room's own top edge drop below the
+    // canvas's top edge (a gap above the art) — with the min-scale above
+    // this shouldn't trigger in practice, but costs nothing to guard.
     this.offsetY = Math.min(0, this.offsetY);
 
     this._updateCamera(0); // snap instantly on load/resize/mode-switch, no lerp
