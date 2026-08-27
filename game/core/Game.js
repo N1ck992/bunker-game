@@ -5,38 +5,38 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=35';
-import { MovementSystem } from '../systems/MovementSystem.js?v=35';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=35';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=35';
-import { WorldSystem } from '../systems/WorldSystem.js?v=35';
-import { InventorySystem } from '../systems/InventorySystem.js?v=35';
-import { CombatSystem } from '../systems/CombatSystem.js?v=35';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=35';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=36';
+import { MovementSystem } from '../systems/MovementSystem.js?v=36';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=36';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=36';
+import { WorldSystem } from '../systems/WorldSystem.js?v=36';
+import { InventorySystem } from '../systems/InventorySystem.js?v=36';
+import { CombatSystem } from '../systems/CombatSystem.js?v=36';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=36';
 
-import { GameTime } from './GameTime.js?v=35';
-import { ResourceSystem } from './ResourceSystem.js?v=35';
-import { TemperatureSystem } from './TemperatureSystem.js?v=35';
-import { SaveSystem } from './SaveSystem.js?v=35';
+import { GameTime } from './GameTime.js?v=36';
+import { ResourceSystem } from './ResourceSystem.js?v=36';
+import { TemperatureSystem } from './TemperatureSystem.js?v=36';
+import { SaveSystem } from './SaveSystem.js?v=36';
 
-import { Character } from '../entities/Character.js?v=35';
-import { Enemy } from '../entities/Enemy.js?v=35';
-import { Item } from '../entities/Item.js?v=35';
-import { EnemySystem } from '../systems/EnemySystem.js?v=35';
-import { SkillSystem } from '../systems/SkillSystem.js?v=35';
+import { Character } from '../entities/Character.js?v=36';
+import { Enemy } from '../entities/Enemy.js?v=36';
+import { Item } from '../entities/Item.js?v=36';
+import { EnemySystem } from '../systems/EnemySystem.js?v=36';
+import { SkillSystem } from '../systems/SkillSystem.js?v=36';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=35';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=35';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=35';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=35';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=35';
-import { PartyUI } from '../ui/PartyUI.js?v=35';
-import { InventoryUI } from '../ui/InventoryUI.js?v=35';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=35';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=35';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=35';
-import { showStartMenu } from '../ui/StartMenu.js?v=35';
-import { installOrientationLockRetry } from './OrientationLock.js?v=35';
+import { ShelterUI } from '../ui/ShelterUI.js?v=36';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=36';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=36';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=36';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=36';
+import { PartyUI } from '../ui/PartyUI.js?v=36';
+import { InventoryUI } from '../ui/InventoryUI.js?v=36';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=36';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=36';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=36';
+import { showStartMenu } from '../ui/StartMenu.js?v=36';
+import { installOrientationLockRetry } from './OrientationLock.js?v=36';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -827,20 +827,31 @@ class Game {
     const boxHeight = this.sceneWrap.clientHeight;
     const rooms = [...this.discoveredRooms.values()].sort((a, b) => a.depth - b.depth);
 
-    // First pass at "fit to width" scale per room, same formula the old
-    // single-room-per-screen stack used — then, if the rooms stacked at
-    // that scale would be taller than the viewport, shrink every room by
-    // the same factor so the whole stack fits without scrolling.
+    // Character sprites are drawn considerably taller than one room's own
+    // row height (see CHARACTER_HEIGHT_TILES vs a typical 8-row room) —
+    // heads routinely reach above the room art's own "ceiling" line, which
+    // the normal follow view always had headroom for (its own bottomMargin
+    // math). Packing rooms edge-to-edge here with zero gap left nothing
+    // above the very first room in the stack, clipping anyone standing in
+    // it against the canvas's own top edge. HEADROOM_FRACTION reserves a
+    // slice of one room's height above the whole stack to fix that.
+    const HEADROOM_FRACTION = 0.35;
+
     let naturalTotalHeight = 0;
+    let naturalRoomHeight = 0;
     for (const room of rooms) {
       const cellSize = room.mapData.cellSize;
       const scale = boxWidth / (room.mapData.cols * cellSize);
-      naturalTotalHeight += room.mapData.rows * cellSize * scale;
+      const h = room.mapData.rows * cellSize * scale;
+      naturalRoomHeight = h; // same for every current room (all 8 rows) — fine as a headroom reference either way
+      naturalTotalHeight += h;
     }
-    const fitFactor = naturalTotalHeight > boxHeight ? boxHeight / naturalTotalHeight : 1;
+    const naturalHeadroom = naturalRoomHeight * HEADROOM_FRACTION;
+    const fitFactor =
+      naturalTotalHeight + naturalHeadroom > boxHeight ? boxHeight / (naturalTotalHeight + naturalHeadroom) : 1;
 
     this.roomStackLayout = new Map();
-    let cumulativeY = 0;
+    let cumulativeY = naturalHeadroom * fitFactor;
     for (const room of rooms) {
       const cellSize = room.mapData.cellSize;
       const scale = (boxWidth / (room.mapData.cols * cellSize)) * fitFactor;
@@ -1024,13 +1035,23 @@ class Game {
       return;
     }
 
-    // Overview mode (see _setOverview) shows the whole base at once —
-    // tapping a room here sends the whole party straight there instead of
-    // the normal single-room tap handling below, which assumes coordinates
-    // within just the active room's own grid.
+    // Overview mode (see _setOverview) shows the whole base at once — but
+    // only taps that land on some OTHER, non-active room are intercepted
+    // to send the party there (see _onOverviewTap); a tap inside the
+    // active room's own slot falls straight through to the normal
+    // movement/interaction handling below instead, using that room's own
+    // (already-active) scale/offset — so the party stays fully
+    // controllable while zoomed out, not just clickable-to-travel.
     if (this._roomMode && this._overview) {
-      this._onOverviewTap(e);
-      return;
+      const activeLayout = this.roomStackLayout?.get(this.mapData.id);
+      const rect = this.canvas.getBoundingClientRect();
+      const tapY = e.clientY - rect.top;
+      const inActiveRoom =
+        activeLayout && tapY >= activeLayout.cumulativeY && tapY < activeLayout.cumulativeY + activeLayout.heightPx;
+      if (!inActiveRoom) {
+        this._onOverviewTap(e);
+        return;
+      }
     }
 
     // Any tap on the map dismisses the enemy mini-menu and the character
