@@ -5,38 +5,39 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=42';
-import { MovementSystem } from '../systems/MovementSystem.js?v=42';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=42';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=42';
-import { WorldSystem } from '../systems/WorldSystem.js?v=42';
-import { InventorySystem } from '../systems/InventorySystem.js?v=42';
-import { CombatSystem } from '../systems/CombatSystem.js?v=42';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=42';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=43';
+import { MovementSystem } from '../systems/MovementSystem.js?v=43';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=43';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=43';
+import { WorldSystem } from '../systems/WorldSystem.js?v=43';
+import { InventorySystem } from '../systems/InventorySystem.js?v=43';
+import { CombatSystem } from '../systems/CombatSystem.js?v=43';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=43';
 
-import { GameTime } from './GameTime.js?v=42';
-import { ResourceSystem } from './ResourceSystem.js?v=42';
-import { TemperatureSystem } from './TemperatureSystem.js?v=42';
-import { SaveSystem } from './SaveSystem.js?v=42';
+import { GameTime } from './GameTime.js?v=43';
+import { ResourceSystem } from './ResourceSystem.js?v=43';
+import { TemperatureSystem } from './TemperatureSystem.js?v=43';
+import { SaveSystem } from './SaveSystem.js?v=43';
 
-import { Character } from '../entities/Character.js?v=42';
-import { Enemy } from '../entities/Enemy.js?v=42';
-import { Item } from '../entities/Item.js?v=42';
-import { EnemySystem } from '../systems/EnemySystem.js?v=42';
-import { SkillSystem } from '../systems/SkillSystem.js?v=42';
+import { Character } from '../entities/Character.js?v=43';
+import { Enemy } from '../entities/Enemy.js?v=43';
+import { Item } from '../entities/Item.js?v=43';
+import { EnemySystem } from '../systems/EnemySystem.js?v=43';
+import { SkillSystem } from '../systems/SkillSystem.js?v=43';
+import { InteractionSystem } from '../systems/InteractionSystem.js?v=43';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=42';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=42';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=42';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=42';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=42';
-import { PartyUI } from '../ui/PartyUI.js?v=42';
-import { InventoryUI } from '../ui/InventoryUI.js?v=42';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=42';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=42';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=42';
-import { showStartMenu } from '../ui/StartMenu.js?v=42';
-import { installOrientationLockRetry } from './OrientationLock.js?v=42';
+import { ShelterUI } from '../ui/ShelterUI.js?v=43';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=43';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=43';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=43';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=43';
+import { PartyUI } from '../ui/PartyUI.js?v=43';
+import { InventoryUI } from '../ui/InventoryUI.js?v=43';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=43';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=43';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=43';
+import { showStartMenu } from '../ui/StartMenu.js?v=43';
+import { installOrientationLockRetry } from './OrientationLock.js?v=43';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -87,18 +88,26 @@ const FOLLOW_DISTANCE_TILES = 3; // how far "Выбрать всех" followers 
 
 class Game {
   async init() {
-    const [balance, mapData, charactersData, itemsData, skillsData] = await Promise.all([
+    const [balance, mapData, charactersData, itemsData, skillsData, interactionsData] = await Promise.all([
       fetchJson('game/data/balance.json'),
       fetchJson(INITIAL_ROOM_FILE),
       fetchJson('game/data/characters.json'),
       fetchJson('game/data/items.json'),
-      fetchJson('game/data/skills.json')
+      fetchJson('game/data/skills.json'),
+      fetchJson('game/data/interactions.json')
     ]);
 
     this.balance = balance;
     this.mapData = mapData;
     this.itemsById = new Map(itemsData.items.map((i) => [i.id, new Item(i)]));
     this.skillsById = new Map(skillsData.skills.map((s) => [s.id, s]));
+    // Squad interactions (race-agnostic — see InteractionSystem.js for
+    // why nothing here or there is hardcoded to any one race). Ships with
+    // an empty interactions.json for now; nothing currently calls
+    // getActive()/applyEffect(), this is just wired up and ready for
+    // whichever future feature (a squad-bonus UI, a combat-stat hook,
+    // ...) is the first to actually use it.
+    this.interactionSystem = new InteractionSystem(interactionsData);
 
     const save = new SaveSystem().load();
     this.saveSystem = new SaveSystem();

@@ -5,6 +5,15 @@ export class Character {
   constructor(data) {
     this.id = data.id;
     this.name = data.name;
+    // Species/faction — currently only "human" exists, but this is a plain
+    // data field on purpose: nothing in Character/CharacterSystem/combat
+    // reads or branches on it. It exists so InteractionSystem (see
+    // game/systems/InteractionSystem.js and game/data/interactions.json)
+    // has something to match against once non-human party members and
+    // race-aware interactions actually exist — adding a race later means
+    // adding a characters.json entry with a different "race" and maybe
+    // some interactions.json data, not touching this class.
+    this.race = data.race ?? 'human';
     this.avatar = data.avatar ?? null; // path to portrait art, null falls back to initials in the roster UI
     // Full-body art for the Отряд screen's centre portrait frame (see
     // game/ui/PartyUI.js) — reuses this character's own idle sprite (first
@@ -169,6 +178,7 @@ export class Character {
     return {
       id: this.id,
       name: this.name,
+      race: this.race,
       avatar: this.avatar,
       skill: this.skillId,
       health: this.health,
