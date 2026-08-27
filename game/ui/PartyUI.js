@@ -122,6 +122,7 @@ export class PartyUI {
     const ratio = character ? Math.max(0, Math.min(1, character.health / 100)) : 0;
     const skill = character?.skillId ? this._skillsById?.get(character.skillId) : null;
     const chargeRatio = character?.skillId ? character.skillCharge / character.skillChargeMax : 0;
+    const raceLabel = character ? this._raceLabel(character.race) : '';
 
     return `
       <div class="squad-hole squad-stat-health"><div class="squad-stat-fill" style="width:${character ? ratio * 100 : 0}%"></div></div>
@@ -129,6 +130,7 @@ export class PartyUI {
       <div class="squad-hole squad-stat-end">${character ? character.endurance : ''}</div>
       <div class="squad-hole squad-stat-agi">${character ? character.agility : ''}</div>
       <div class="squad-hole squad-stat-int">${character ? character.intelligence : ''}</div>
+      <div class="squad-hole squad-stat-race">${raceLabel ? `Раса: ${raceLabel}` : ''}</div>
       <div class="squad-hole squad-stat-conc-label">${character ? 'КОНЦ' : ''}</div>
       <div class="squad-hole squad-stat-conc-value">${character ? character.concentration : ''}</div>
       ${skill ? `
@@ -141,6 +143,20 @@ export class PartyUI {
         </div>
       ` : ''}
     `;
+  }
+
+  /**
+   * UI-only display text for a character's race (see Character.race /
+   * game/systems/InteractionSystem.js) — purely cosmetic label mapping,
+   * doesn't feed back into game logic. Falls back to the raw stored value
+   * (capitalised) for any race this list hasn't caught up with yet, so a
+   * newly-added race in characters.json still shows *something* sensible
+   * here without needing a matching UI change first.
+   */
+  _raceLabel(race) {
+    const known = { human: 'Человек' };
+    if (known[race]) return known[race];
+    return race ? race.charAt(0).toUpperCase() + race.slice(1) : '';
   }
 
   _avatarHtml(character) {

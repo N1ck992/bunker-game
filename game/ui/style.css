@@ -806,6 +806,7 @@ button.squad-hole:disabled { cursor: default; }
 .squad-stat-agi { left: 73.24%; top: 43.16%; width: 6.51%; height: 5.96%; }
 .squad-stat-int { left: 73.24%; top: 50.29%; width: 6.51%; height: 6.15%; }
 .squad-stat-str, .squad-stat-end, .squad-stat-agi, .squad-stat-int { font-size: 15px; }
+.squad-stat-race { left: 81%; top: 50.29%; width: 10%; height: 6.15%; font-size: 12px; color: var(--squad-ink-dim, #a9967a); }
 
 /* Концентрация (attribute value, same footing and exact same label/value
  * column split as СИЛ/ВЫН/ЛОВ/ИНТ above — a label on the left where their

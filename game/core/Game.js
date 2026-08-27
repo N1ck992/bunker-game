@@ -5,39 +5,39 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=43';
-import { MovementSystem } from '../systems/MovementSystem.js?v=43';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=43';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=43';
-import { WorldSystem } from '../systems/WorldSystem.js?v=43';
-import { InventorySystem } from '../systems/InventorySystem.js?v=43';
-import { CombatSystem } from '../systems/CombatSystem.js?v=43';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=43';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=44';
+import { MovementSystem } from '../systems/MovementSystem.js?v=44';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=44';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=44';
+import { WorldSystem } from '../systems/WorldSystem.js?v=44';
+import { InventorySystem } from '../systems/InventorySystem.js?v=44';
+import { CombatSystem } from '../systems/CombatSystem.js?v=44';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=44';
 
-import { GameTime } from './GameTime.js?v=43';
-import { ResourceSystem } from './ResourceSystem.js?v=43';
-import { TemperatureSystem } from './TemperatureSystem.js?v=43';
-import { SaveSystem } from './SaveSystem.js?v=43';
+import { GameTime } from './GameTime.js?v=44';
+import { ResourceSystem } from './ResourceSystem.js?v=44';
+import { TemperatureSystem } from './TemperatureSystem.js?v=44';
+import { SaveSystem } from './SaveSystem.js?v=44';
 
-import { Character } from '../entities/Character.js?v=43';
-import { Enemy } from '../entities/Enemy.js?v=43';
-import { Item } from '../entities/Item.js?v=43';
-import { EnemySystem } from '../systems/EnemySystem.js?v=43';
-import { SkillSystem } from '../systems/SkillSystem.js?v=43';
-import { InteractionSystem } from '../systems/InteractionSystem.js?v=43';
+import { Character } from '../entities/Character.js?v=44';
+import { Enemy } from '../entities/Enemy.js?v=44';
+import { Item } from '../entities/Item.js?v=44';
+import { EnemySystem } from '../systems/EnemySystem.js?v=44';
+import { SkillSystem } from '../systems/SkillSystem.js?v=44';
+import { InteractionSystem } from '../systems/InteractionSystem.js?v=44';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=43';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=43';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=43';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=43';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=43';
-import { PartyUI } from '../ui/PartyUI.js?v=43';
-import { InventoryUI } from '../ui/InventoryUI.js?v=43';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=43';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=43';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=43';
-import { showStartMenu } from '../ui/StartMenu.js?v=43';
-import { installOrientationLockRetry } from './OrientationLock.js?v=43';
+import { ShelterUI } from '../ui/ShelterUI.js?v=44';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=44';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=44';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=44';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=44';
+import { PartyUI } from '../ui/PartyUI.js?v=44';
+import { InventoryUI } from '../ui/InventoryUI.js?v=44';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=44';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=44';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=44';
+import { showStartMenu } from '../ui/StartMenu.js?v=44';
+import { installOrientationLockRetry } from './OrientationLock.js?v=44';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -771,6 +771,33 @@ class Game {
   // this._overview check. See _resizeCanvasOverview for the other mode
   // (button-toggled — see _setOverview), which is what actually shows the
   // rest of the discovered base at once.
+  /**
+   * How many grid-rows tall a room's art actually needs to be shown
+   * without cropping OR distorting it — normally just mapData.rows, but
+   * some rooms' background/midground layers have real proportions taller
+   * than the grid's own row count once drawn at their own aspect ratio
+   * (see _renderParallaxLayers) rather than force-stretched to fit it.
+   * Used to shrink the whole scene (via heightScale in
+   * _resizeCanvasRoomFollow/_resizeCanvasOverview) just enough to fit the
+   * tallest layer in, instead of clipping it or squashing it back to the
+   * grid's own aspect. Character/tile positioning still uses the real
+   * mapData.rows elsewhere — this is purely a "how much vertical space
+   * does the visible art need" question.
+   */
+  _roomEffectiveRows(mapData, layers) {
+    let maxRows = mapData.rows;
+    if (layers) {
+      for (const name of ['background', 'midground']) {
+        const img = layers[name];
+        if (img?.naturalWidth) {
+          const rows = mapData.cols * (img.naturalHeight / img.naturalWidth);
+          if (rows > maxRows) maxRows = rows;
+        }
+      }
+    }
+    return maxRows;
+  }
+
   _resizeCanvasRoomFollow() {
     const boxWidth = this.sceneWrap.clientWidth;
     const boxHeight = this.sceneWrap.clientHeight;
@@ -785,15 +812,21 @@ class Game {
     // canvas's own bottom edge (not the room's total height), a taller
     // room pushes row 0 — and a standing character's head, which reaches
     // above row 0 — further up and off the top of the canvas, not less.
-    // Taking the smaller scale instead means the room (all 8 rows, top to
-    // bottom) is always guaranteed to fit within the viewport on both
-    // axes — the trade-off is a bit of empty space on whichever axis isn't
-    // the limiting one, instead of ever clipping the character or the room
-    // art itself.
+    // Taking the smaller scale instead means the room (all `effectiveRows`
+    // rows, top to bottom — see _roomEffectiveRows, which can be more than
+    // the grid's own row count for art with unusually tall proportions,
+    // like reactor_room_01's midground) is always guaranteed to fit within
+    // the viewport on both axes — the trade-off is a bit of empty space on
+    // whichever axis isn't the limiting one, instead of ever clipping or
+    // squashing the room art (or the character) to make it fit.
+    const effectiveRows = this._roomEffectiveRows(this.mapData, this.roomLayers);
     const widthScale = boxWidth / (visibleCols * cellSize);
-    const heightScale = boxHeight / (this.mapData.rows * cellSize);
+    const heightScale = boxHeight / (effectiveRows * cellSize);
     this.scale = Math.min(widthScale, heightScale);
     this.roomWidthPx = this.mapData.cols * cellSize * this.scale;
+    // Real grid rows here, not effectiveRows — this is what floor/
+    // character positioning below (and in _renderCharacters etc.) is
+    // measured against, unchanged regardless of how tall the art is.
     this.roomHeightPx = this.mapData.rows * cellSize * this.scale;
 
     this.canvas.width = boxWidth;
@@ -865,13 +898,19 @@ class Game {
     // slice of one room's height above the whole stack to fix that.
     const HEADROOM_FRACTION = 0.35;
 
+    // Each room's slot uses its own effectiveRows (see _roomEffectiveRows)
+    // instead of always its grid's own row count — a room whose art is
+    // naturally taller than its grid (reactor_room_01's midground, for
+    // one) gets a taller slot to match, so _renderRoomStackBackdrop's clip
+    // never has to crop it.
     let naturalTotalHeight = 0;
     let naturalRoomHeight = 0;
     for (const room of rooms) {
       const cellSize = room.mapData.cellSize;
       const scale = boxWidth / (room.mapData.cols * cellSize);
-      const h = room.mapData.rows * cellSize * scale;
-      naturalRoomHeight = h; // same for every current room (all 8 rows) — fine as a headroom reference either way
+      const effectiveRows = this._roomEffectiveRows(room.mapData, room.layers);
+      const h = effectiveRows * cellSize * scale;
+      naturalRoomHeight = h; // used as a headroom reference either way — doesn't need to be exact
       naturalTotalHeight += h;
     }
     const naturalHeadroom = naturalRoomHeight * HEADROOM_FRACTION;
@@ -883,8 +922,9 @@ class Game {
     for (const room of rooms) {
       const cellSize = room.mapData.cellSize;
       const scale = (boxWidth / (room.mapData.cols * cellSize)) * fitFactor;
+      const effectiveRows = this._roomEffectiveRows(room.mapData, room.layers);
       const widthPx = room.mapData.cols * cellSize * scale;
-      const heightPx = room.mapData.rows * cellSize * scale;
+      const heightPx = effectiveRows * cellSize * scale;
       const xOffset = (boxWidth - widthPx) / 2;
       this.roomStackLayout.set(room.mapData.id, { cumulativeY, widthPx, heightPx, xOffset, scale });
       cumulativeY += heightPx;
