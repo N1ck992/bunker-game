@@ -778,7 +778,7 @@ button.squad-hole:disabled { cursor: default; }
   color: var(--squad-ink-dim, #a9967a);
 }
 
-.squad-centre-pose { left: 19.53%; top: 4.88%; width: 52.73%; height: 63.48%; display: flex; align-items: flex-end; justify-content: flex-start; padding-left: 12%; box-sizing: border-box; }
+.squad-centre-pose { left: 19.53%; top: 4.88%; width: 52.73%; height: 63.48%; display: flex; align-items: flex-end; justify-content: flex-start; padding-left: 17.5%; box-sizing: border-box; }
 .squad-pose-img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
 /* Stat value column — one baked label each (Здоровье/Раса/СИЛ/ВЫН/ЛОВ/
