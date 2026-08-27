@@ -5,39 +5,39 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=50';
-import { MovementSystem } from '../systems/MovementSystem.js?v=50';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=50';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=50';
-import { WorldSystem } from '../systems/WorldSystem.js?v=50';
-import { InventorySystem } from '../systems/InventorySystem.js?v=50';
-import { CombatSystem } from '../systems/CombatSystem.js?v=50';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=50';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=51';
+import { MovementSystem } from '../systems/MovementSystem.js?v=51';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=51';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=51';
+import { WorldSystem } from '../systems/WorldSystem.js?v=51';
+import { InventorySystem } from '../systems/InventorySystem.js?v=51';
+import { CombatSystem } from '../systems/CombatSystem.js?v=51';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=51';
 
-import { GameTime } from './GameTime.js?v=50';
-import { ResourceSystem } from './ResourceSystem.js?v=50';
-import { TemperatureSystem } from './TemperatureSystem.js?v=50';
-import { SaveSystem } from './SaveSystem.js?v=50';
+import { GameTime } from './GameTime.js?v=51';
+import { ResourceSystem } from './ResourceSystem.js?v=51';
+import { TemperatureSystem } from './TemperatureSystem.js?v=51';
+import { SaveSystem } from './SaveSystem.js?v=51';
 
-import { Character } from '../entities/Character.js?v=50';
-import { Enemy } from '../entities/Enemy.js?v=50';
-import { Item } from '../entities/Item.js?v=50';
-import { EnemySystem } from '../systems/EnemySystem.js?v=50';
-import { SkillSystem } from '../systems/SkillSystem.js?v=50';
-import { InteractionSystem } from '../systems/InteractionSystem.js?v=50';
+import { Character } from '../entities/Character.js?v=51';
+import { Enemy } from '../entities/Enemy.js?v=51';
+import { Item } from '../entities/Item.js?v=51';
+import { EnemySystem } from '../systems/EnemySystem.js?v=51';
+import { SkillSystem } from '../systems/SkillSystem.js?v=51';
+import { InteractionSystem } from '../systems/InteractionSystem.js?v=51';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=50';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=50';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=50';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=50';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=50';
-import { PartyUI } from '../ui/PartyUI.js?v=50';
-import { InventoryUI } from '../ui/InventoryUI.js?v=50';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=50';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=50';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=50';
-import { showStartMenu } from '../ui/StartMenu.js?v=50';
-import { installOrientationLockRetry } from './OrientationLock.js?v=50';
+import { ShelterUI } from '../ui/ShelterUI.js?v=51';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=51';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=51';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=51';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=51';
+import { PartyUI } from '../ui/PartyUI.js?v=51';
+import { InventoryUI } from '../ui/InventoryUI.js?v=51';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=51';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=51';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=51';
+import { showStartMenu } from '../ui/StartMenu.js?v=51';
+import { installOrientationLockRetry } from './OrientationLock.js?v=51';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -843,10 +843,18 @@ class Game {
     const floorRow = this.mapData.spawnPoint.row;
     const bottomMargin = boxHeight * 0.12;
     this.offsetY = boxHeight - (floorRow + 1) * cellSize * this.scale - bottomMargin;
-    // Belt-and-braces: never let the room's own top edge drop below the
-    // canvas's top edge (a gap above the art) — with the min-scale above
-    // this shouldn't trigger in practice, but costs nothing to guard.
-    this.offsetY = Math.min(0, this.offsetY);
+    // NOTE: no clamp here on purpose — a previous version forced offsetY
+    // to never exceed 0 as a "belt-and-braces" guard against a gap above
+    // the art. For a room whose effectiveRows pulled the scale down a lot
+    // (see above — the reactor room's midground, well taller than the
+    // grid), that clamp was actively wrong: the real, positive offsetY is
+    // exactly what puts the floor near the bottom of the screen the way
+    // bottomMargin intends; forcing it to 0 pinned the whole room to the
+    // canvas's top edge instead, leaving a large black gap below the
+    // floor where the room should have continued. The min-scale (widthScale
+    // vs heightScale) above is what actually prevents the room from ever
+    // being taller than the viewport now — this clamp was solving that
+    // same problem a second, conflicting way.
 
     this._updateCamera(0); // snap instantly on load/resize/mode-switch, no lerp
   }

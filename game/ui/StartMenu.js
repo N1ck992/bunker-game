@@ -4,8 +4,8 @@
 // into Game.init(), which already loads the save itself — this module only
 // decides *whether* to clear the save first, it doesn't touch game logic.
 
-import { SaveSystem } from '../core/SaveSystem.js?v=50';
-import { requestLandscapeLock } from '../core/OrientationLock.js?v=50';
+import { SaveSystem } from '../core/SaveSystem.js?v=51';
+import { requestLandscapeLock } from '../core/OrientationLock.js?v=51';
 
 export function showStartMenu(onStart) {
   const app = document.getElementById('app');
