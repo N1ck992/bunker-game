@@ -714,15 +714,18 @@ canvas {
 
 /* ---------------------------------------------------------------------
  * Отряд (squad) screen — game/ui/PartyUI.js
- * Skinned from a single reference image, game/assets/ui/squad_panel_frame.png
- * (1536x1024) — every static label/icon (back arrow, Здоровье/СИЛ/ВЫН/
- * ЛОВ/ИНТ, vehicle/flashlight glyphs, the 5 bottom cells, the add-squad
- * icon) is baked into that art. The regions that need to show live data
- * were cut out of it as transparent holes; every ".squad-hole" rule below
- * is one of those holes, positioned in % of the 1536x1024 frame so it
- * stays aligned at any screen size — see PartyUI.js for which element
- * fills which hole. Kept scoped under .squad-screen so nothing here leaks
- * into the rest of the UI.
+ * Skinned from a single exact reference mockup the user supplied
+ * (game/assets/ui/squad_panel_frame.png, 1536x1024) — every static
+ * label/icon (back arrow, Здоровье/Раса/СИЛ/ВЫН/ЛОВ/ИНТ/КОНЦ, the
+ * divider line, the bottom row's 5 cells, the add-squad icon) is baked
+ * into that art. The regions that need to show live data (avatar photo,
+ * full-body pose, stat values, ability text, bottom-row thumbnails) were
+ * cut out of it as transparent holes; every ".squad-hole" rule below is
+ * one of those holes, positioned in % of the 1536x1024 frame so it stays
+ * aligned at any screen size — see PartyUI.js for which element fills
+ * which hole. This is an exact match to that reference, not a
+ * general-purpose layout — check with the user before adding anything
+ * that isn't in it.
  * ------------------------------------------------------------------- */
 .squad-screen {
   position: fixed;
@@ -759,20 +762,11 @@ canvas {
 button.squad-hole { cursor: pointer; }
 button.squad-hole:disabled { cursor: default; }
 
-.squad-back-btn { left: 6.19%; top: 7.81%; width: 6.51%; height: 8.79%; }
+.squad-back-btn { left: 3.91%; top: 5.86%; width: 5.21%; height: 7.32%; }
 
-/* Left column: avatar circle + vehicle icon (both tap to switch the
- * centre pose / stat values — see PartyUI._viewMode) and a static
- * gadget icon underneath (no gadget items exist yet). */
-.squad-select-avatar { left: 6.25%; top: 19.14%; width: 13.02%; height: 19.53%; border-radius: 50%; overflow: hidden; }
-.squad-select-vehicle-side { left: 9.11%; top: 38.57%; width: 9.11%; height: 13.18%; display: flex; align-items: center; justify-content: center; }
-.squad-gadget-side { left: 9.11%; top: 51.76%; width: 9.11%; height: 12.7%; display: flex; align-items: center; justify-content: center; }
-.squad-select-avatar.active,
-.squad-select-vehicle-side.active { box-shadow: 0 0 0 3px var(--squad-gold-bright, #f5c878); border-radius: inherit; }
-.squad-select-avatar.inactive { opacity: 0.6; filter: grayscale(1); }
-
-.squad-select-avatar img,
-.squad-avatar-fallback {
+.squad-avatar-hole { left: 3.06%; top: 15.53%; width: 16.67%; height: 25%; border-radius: 50%; overflow: hidden; }
+.squad-avatar-hole.inactive { opacity: 0.6; filter: grayscale(1); }
+.squad-avatar-hole img, .squad-avatar-fallback {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -784,131 +778,65 @@ button.squad-hole:disabled { cursor: default; }
   color: var(--squad-ink-dim, #a9967a);
 }
 
-/* Centre pose (hero full-body or vehicle art) + the mid-column vehicle/
- * gadget icons next to it — same content as the left column, mirrored
- * here per the reference art's layout. */
-.squad-centre-pose { left: 25.72%; top: 8.3%; width: 24.09%; height: 58.59%; display: flex; align-items: flex-end; justify-content: center; }
+.squad-centre-pose { left: 19.53%; top: 4.88%; width: 52.73%; height: 63.48%; display: flex; align-items: flex-end; justify-content: center; }
 .squad-pose-img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.squad-pose-emoji { font-size: 64px; }
-.squad-vehicle-mid { left: 51.76%; top: 17.38%; width: 13.02%; height: 13.67%; display: flex; align-items: center; justify-content: center; }
-.squad-gadget-mid { left: 51.76%; top: 31.45%; width: 13.02%; height: 13.96%; display: flex; align-items: center; justify-content: center; }
-.squad-vehicle-mid img, .squad-gadget-mid img,
-.squad-select-vehicle-side img, .squad-gadget-side img { width: 70%; height: 70%; object-fit: contain; }
 
-.squad-icon-emoji { font-size: 22px; }
-
-/* Right-hand stat values — labels (Здоровье/СИЛ/ВЫН/ЛОВ/ИНТ) are baked
- * into the art; these fill in just the number/bar next to each one. */
-.squad-stat-health { left: 80.4%; top: 20.02%; width: 10.42%; height: 6.35%; background: var(--squad-bg-0, #08090a); border: 1px solid var(--squad-gold-dim, #8a6a37); }
+/* Stat value column — one baked label each (Здоровье/Раса/СИЛ/ВЫН/ЛОВ/
+ * ИНТ/КОНЦ), this just fills in the number/bar/word next to it. */
+.squad-stat-health { left: 81.05%; top: 9.57%; width: 14.32%; height: 4.39%; background: var(--squad-bg-0, #08090a); border: 1px solid var(--squad-gold-dim, #8a6a37); }
 .squad-stat-fill { height: 100%; background: var(--ok, #6fae5f); }
-.squad-stat-str { left: 73.24%; top: 28.52%; width: 6.51%; height: 5.47%; }
-.squad-stat-end { left: 73.24%; top: 35.84%; width: 6.51%; height: 5.47%; }
-.squad-stat-agi { left: 73.24%; top: 43.16%; width: 6.51%; height: 5.96%; }
-.squad-stat-int { left: 73.24%; top: 50.29%; width: 6.51%; height: 6.15%; }
-.squad-stat-str, .squad-stat-end, .squad-stat-agi, .squad-stat-int { font-size: 15px; }
-.squad-stat-race {
-  left: 79%;
-  top: 50.29%;
-  width: 13%;
-  height: 6.15%;
-  font-size: 10px;
-  color: var(--squad-ink-dim, #a9967a);
+
+.squad-stat-race,
+.squad-stat-str, .squad-stat-end, .squad-stat-agi, .squad-stat-int, .squad-stat-conc {
+  font-size: 15px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.squad-stat-race { left: 80.73%; top: 14.45%; width: 12.37%; height: 4.3%; }
+.squad-stat-str  { left: 78.45%; top: 18.65%; width: 6.84%; height: 4.69%; }
+.squad-stat-end  { left: 78.45%; top: 24.02%; width: 6.84%; height: 4.69%; }
+.squad-stat-agi  { left: 78.45%; top: 29.39%; width: 6.84%; height: 4.69%; }
+.squad-stat-int  { left: 78.45%; top: 34.77%; width: 6.84%; height: 4.69%; }
+.squad-stat-conc { left: 78.45%; top: 40.14%; width: 6.84%; height: 4.69%; }
 
-/* Концентрация (attribute value, same footing and exact same label/value
- * column split as СИЛ/ВЫН/ЛОВ/ИНТ above — a label on the left where their
- * baked labels sit, a number in the same value column at 73.24%) + the
- * skill charge bar + ability name/description below it. Added by the
- * skill system, after this screen's reference art was made, so none of
- * this has a baked spot — placed in the open dark space just below the
- * stats box (its drawn border doesn't reach this far down) using the
- * same left margin/font/colour as the rest of the box, so it reads as a
- * continuation of it rather than a mismatched inserted block. */
-.squad-stat-conc-label {
-  left: 60.5%;
-  top: 57.61%;
-  width: 12%;
-  height: 5.47%;
-  font-size: 15px;
-  color: var(--squad-ink, #d8c9a8);
-}
-.squad-stat-conc-value {
-  left: 73.24%;
-  top: 57.61%;
-  width: 6.51%;
-  height: 5.47%;
-  font-size: 15px;
-  color: var(--squad-ink, #d8c9a8);
-}
-
-.squad-charge-row {
-  left: 60.5%;
-  top: 63%;
-  width: 29.7%;
-  height: 3%;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.squad-charge-label {
-  font-size: 11px;
-  letter-spacing: 0.5px;
-  color: var(--squad-ink-dim, #a9967a);
-  flex: 0 0 auto;
-}
-.squad-charge-track {
-  flex: 1;
-  height: 6px;
-  background: rgba(0,0,0,0.5);
-  border: 1px solid var(--squad-gold-dim, #8a6a37);
-}
-.squad-charge-fill { height: 100%; background: #4aa3e0; }
-
-.squad-ability-box {
-  left: 60.5%;
-  top: 66.7%;
-  width: 29.7%;
-  height: 3%;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-size: 11px;
-}
 .squad-ability-name {
-  color: var(--squad-gold-bright, #f5c878);
+  left: 72.92%;
+  top: 48.14%;
+  width: 24%;
+  height: 3.42%;
+  font-size: 15px;
   font-weight: bold;
+  color: var(--squad-gold-bright, #f5c878);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .squad-ability-desc {
-  color: var(--squad-ink-dim, #a9967a);
+  left: 72.92%;
+  top: 52.54%;
+  width: 24%;
+  height: 8%;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--squad-ink, #d8c9a8);
+  overflow: hidden;
 }
 
-/* Bottom row — 5 squad slots, each a union of its avatar-circle hole and
- * vehicle-icon hole from the art, one button per settler (tap = make
- * lead, see PartyUI._slotHtml). */
-/* Empty wrapper, purely a DOM anchor for the 5 absolutely-positioned slot
- * buttons below — NOT sized to the frame (that would silently intercept
- * every tap elsewhere on the screen, since it'd sit on top of the back
- * button/avatar/vehicle holes in paint order despite having nothing
- * visible in most of its area). pointer-events:none passes taps through
- * everywhere except the slots themselves, which re-enable it. */
+/* Bottom row — 5 squad slots, one button per settler (tap = make lead,
+ * see PartyUI._slotHtml). Just the avatar circle in this reference — no
+ * vehicle icon underneath it. */
 .squad-bottom-row { position: absolute; inset: 0; pointer-events: none; }
 .squad-slot {
   position: absolute;
   pointer-events: auto;
-  top: 69.92%;
-  width: 8.46%;
-  height: 19.43%;
+  top: 70.02%;
+  width: 11.46%;
+  height: 17.19%;
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
-  /* Reset the browser's default <button> chrome (light background/border
-   * on most mobile browsers) — this is what showed as a big white square
-   * behind each avatar. Every other interactive element on this screen is
-   * tagged .squad-hole, which already resets this; this one wasn't. */
   background: none;
   border: none;
   padding: 0;
@@ -916,19 +844,17 @@ button.squad-hole:disabled { cursor: default; }
   font-family: inherit;
   color: inherit;
 }
-.squad-slot-0 { left: 8.79%; }
-.squad-slot-1 { left: 24.67%; }
-.squad-slot-2 { left: 40.56%; }
-.squad-slot-3 { left: 56.45%; }
-.squad-slot-4 { left: 72.33%; }
-.squad-slot.active { box-shadow: 0 0 0 2px var(--squad-gold-bright, #f5c878); }
+.squad-slot-0 { left: 6.32%; }
+.squad-slot-1 { left: 24.54%; }
+.squad-slot-2 { left: 42.77%; }
+.squad-slot-3 { left: 60.68%; }
+.squad-slot-4 { left: 77.28%; }
+.squad-slot.active { box-shadow: 0 0 0 2px var(--squad-gold-bright, #f5c878); border-radius: 50%; }
 .squad-slot.inactive .squad-slot-avatar { opacity: 0.6; filter: grayscale(1); }
-.squad-slot-avatar { width: 92%; aspect-ratio: 1; border-radius: 50%; overflow: hidden; margin-top: 2%; }
+.squad-slot-avatar { width: 90%; aspect-ratio: 1; border-radius: 50%; overflow: hidden; }
 .squad-slot-avatar img, .squad-slot .squad-avatar-fallback { width: 100%; height: 100%; object-fit: cover; }
-.squad-slot-vehicle { width: 100%; height: 34%; margin-top: 6%; display: flex; align-items: center; justify-content: center; }
-.squad-slot-vehicle img { width: 70%; height: 70%; object-fit: contain; }
 
-.squad-add-slot { left: 85.6%; top: 76.17%; width: 11.07%; height: 16.6%; }
+.squad-add-slot { left: 90.82%; top: 71.29%; width: 6.51%; height: 15.63%; }
 
 /* ---------------------------------------------------------------------
  * Хранилище (storage/inventory) screen — game/ui/InventoryUI.js

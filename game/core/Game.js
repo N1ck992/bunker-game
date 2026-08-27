@@ -5,39 +5,39 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=45';
-import { MovementSystem } from '../systems/MovementSystem.js?v=45';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=45';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=45';
-import { WorldSystem } from '../systems/WorldSystem.js?v=45';
-import { InventorySystem } from '../systems/InventorySystem.js?v=45';
-import { CombatSystem } from '../systems/CombatSystem.js?v=45';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=45';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=46';
+import { MovementSystem } from '../systems/MovementSystem.js?v=46';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=46';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=46';
+import { WorldSystem } from '../systems/WorldSystem.js?v=46';
+import { InventorySystem } from '../systems/InventorySystem.js?v=46';
+import { CombatSystem } from '../systems/CombatSystem.js?v=46';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=46';
 
-import { GameTime } from './GameTime.js?v=45';
-import { ResourceSystem } from './ResourceSystem.js?v=45';
-import { TemperatureSystem } from './TemperatureSystem.js?v=45';
-import { SaveSystem } from './SaveSystem.js?v=45';
+import { GameTime } from './GameTime.js?v=46';
+import { ResourceSystem } from './ResourceSystem.js?v=46';
+import { TemperatureSystem } from './TemperatureSystem.js?v=46';
+import { SaveSystem } from './SaveSystem.js?v=46';
 
-import { Character } from '../entities/Character.js?v=45';
-import { Enemy } from '../entities/Enemy.js?v=45';
-import { Item } from '../entities/Item.js?v=45';
-import { EnemySystem } from '../systems/EnemySystem.js?v=45';
-import { SkillSystem } from '../systems/SkillSystem.js?v=45';
-import { InteractionSystem } from '../systems/InteractionSystem.js?v=45';
+import { Character } from '../entities/Character.js?v=46';
+import { Enemy } from '../entities/Enemy.js?v=46';
+import { Item } from '../entities/Item.js?v=46';
+import { EnemySystem } from '../systems/EnemySystem.js?v=46';
+import { SkillSystem } from '../systems/SkillSystem.js?v=46';
+import { InteractionSystem } from '../systems/InteractionSystem.js?v=46';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=45';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=45';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=45';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=45';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=45';
-import { PartyUI } from '../ui/PartyUI.js?v=45';
-import { InventoryUI } from '../ui/InventoryUI.js?v=45';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=45';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=45';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=45';
-import { showStartMenu } from '../ui/StartMenu.js?v=45';
-import { installOrientationLockRetry } from './OrientationLock.js?v=45';
+import { ShelterUI } from '../ui/ShelterUI.js?v=46';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=46';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=46';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=46';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=46';
+import { PartyUI } from '../ui/PartyUI.js?v=46';
+import { InventoryUI } from '../ui/InventoryUI.js?v=46';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=46';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=46';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=46';
+import { showStartMenu } from '../ui/StartMenu.js?v=46';
+import { installOrientationLockRetry } from './OrientationLock.js?v=46';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
