@@ -86,17 +86,22 @@ const FOLLOW_DISTANCE_TILES = 3; // how far "Выбрать всех" followers 
 
 class Game {
   async init() {
-    const [balance, mapData, charactersData, itemsData, interactionsData] = await Promise.all([
+    const [balance, mapData, charactersData, itemsData, interactionsData, factionsData] = await Promise.all([
       fetchJson('game/data/balance.json'),
       fetchJson(INITIAL_ROOM_FILE),
       fetchJson('game/data/characters.json'),
       fetchJson('game/data/items.json'),
-      fetchJson('game/data/interactions.json')
+      fetchJson('game/data/interactions.json'),
+      fetchJson('game/data/factions.json')
     ]);
 
     this.balance = balance;
     this.mapData = mapData;
     this.itemsById = new Map(itemsData.items.map((i) => [i.id, new Item(i)]));
+    // Faction lookup (ТЗ п.18) — keyed by id, so Character.faction (a
+    // plain id string) can be resolved to its display name/description
+    // wherever a future UI needs it (hero selection, roster, ...).
+    this.factionsById = new Map(factionsData.factions.map((f) => [f.id, f]));
     // NOTE: the old skills.json / ability system was removed along with
     // CombatSystem/SkillSystem — the new, data-driven ability system (ТЗ
     // п.8) will be designed once its actual data format is ready.

@@ -40,6 +40,20 @@ export class Character {
     // adding a characters.json entry with a different "race" and maybe
     // some interactions.json data, not touching this class.
     this.race = data.race ?? 'human';
+    // Lore faction (see game/data/factions.json / ТЗ п.18) — a plain id
+    // string on purpose, same reasoning as `race` above: nothing branches
+    // on which faction this is, it's just a tag for future UI/interactions/
+    // AI-analysis to key off of. Distinct from `race`: race is the
+    // biological/species classification InteractionSystem already reads,
+    // faction is the broader lore grouping (обычные/кибернетические/
+    // биологически эволюционировавшие люди, and whatever gets added later).
+    this.faction = data.faction ?? 'baseline_humans';
+    // Free-form role/type tag (e.g. "assault", "support", "recon", ...) —
+    // ТЗ п.4's "тип". Not an enum enforced anywhere; purely descriptive
+    // metadata for future UI/filtering, same spirit as faction above.
+    this.heroType = data.heroType ?? null;
+    // Short flavour text for hero-selection/inspection screens (ТЗ п.4).
+    this.description = data.description ?? '';
     this.avatar = data.avatar ?? null; // path to portrait art, null falls back to initials in the roster UI
     // Full-body art for the Отряд screen's centre portrait frame (see
     // game/ui/PartyUI.js) — reuses this character's own idle sprite (first
@@ -58,6 +72,42 @@ export class Character {
     // Current HP, separate from the "maxHealth" stat (which can itself be
     // buffed/debuffed by modifiers) — same pattern Enemy.js uses.
     this.health = data.health ?? this.stats.get('maxHealth');
+
+    // Hero-innate permanent modifiers (ТЗ п.7) — e.g. a hero whose own
+    // design says "+15% attack" regardless of gear/vehicle. Declared as
+    // data in characters.json ("modifiers": [{stat, type, value}]) and
+    // applied once here as permanent (no duration) Stats modifiers tagged
+    // with this hero's own id as the source, so they're easy to tell apart
+    // from gear/vehicle/ability modifiers layered on top later. Kept as
+    // plain data on this.modifiers too (not just inside Stats) so
+    // toSaveData can round-trip them — Stats.toJSON() only exports raw
+    // base values, not which modifiers produced the current numbers.
+    this.modifiers = data.modifiers ?? [];
+    for (const mod of this.modifiers) {
+      this.stats.addModifier({ ...mod, duration: null, source: `hero:${this.id}` });
+    }
+
+    // Ability system hooks (ТЗ п.8) — lists of ability ids this hero has,
+    // resolved against whatever ability/effect data file ends up holding
+    // their actual definitions (not built yet — the old skills.json/
+    // SkillSystem was removed, see the file header). Empty by default so
+    // every existing hero loads cleanly with no abilities rather than
+    // crashing on a missing lookup; a future AbilitySystem fills these in
+    // once the data format exists.
+    this.activeAbilities = data.activeAbilities ?? [];
+    this.passiveAbilities = data.passiveAbilities ?? [];
+
+    // Freeform bag for anything that doesn't fit the stat/ability model —
+    // ТЗ п.4's "специальные свойства" (e.g. "immune to fire", "can open
+    // hack doors", ...). Plain data, nothing reads it yet; a future system
+    // can check specialProperties.someFlag without this class changing.
+    this.specialProperties = data.specialProperties ?? {};
+
+    // Forward-looking hook for hero<->vehicle interaction rules (ТЗ п.6 —
+    // "герой способен усиливать технику/менять её поведение"). Left empty
+    // until the Vehicle system (next stage) defines what actually goes
+    // here; this.vehicle below is just which vehicle item is equipped.
+    this.vehicleInteraction = data.vehicleInteraction ?? {};
 
     this.temperature = data.temperature ?? 20;
 
@@ -176,9 +226,17 @@ export class Character {
       id: this.id,
       name: this.name,
       race: this.race,
+      faction: this.faction,
+      heroType: this.heroType,
+      description: this.description,
       avatar: this.avatar,
       health: this.health,
       stats: this.stats.toJSON(),
+      modifiers: this.modifiers,
+      activeAbilities: this.activeAbilities,
+      passiveAbilities: this.passiveAbilities,
+      specialProperties: this.specialProperties,
+      vehicleInteraction: this.vehicleInteraction,
       temperature: this.temperature,
       clothing: this.clothing,
       weapon: this.weapon,

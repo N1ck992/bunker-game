@@ -91,7 +91,15 @@
         "attackSpeed": 1,
         "critChance": 0,
         "critDamage": 50
-      }
+      },
+      "faction": "baseline_humans",
+      "heroType": null,
+      "description": "Марк — рядовой боец отряда, привычен к рукопашному и огневому контакту.",
+      "modifiers": [],
+      "activeAbilities": [],
+      "passiveAbilities": [],
+      "specialProperties": {},
+      "vehicleInteraction": {}
     },
     {
       "id": "char_2",
@@ -170,7 +178,15 @@
         "attackSpeed": 1,
         "critChance": 0,
         "critDamage": 50
-      }
+      },
+      "faction": "baseline_humans",
+      "heroType": null,
+      "description": "Ольга — специалист по электронике и взлому, ведёт себя осторожно в бою.",
+      "modifiers": [],
+      "activeAbilities": [],
+      "passiveAbilities": [],
+      "specialProperties": {},
+      "vehicleInteraction": {}
     },
     {
       "id": "char_3",
@@ -253,7 +269,15 @@
         "attackSpeed": 1,
         "critChance": 0,
         "critDamage": 50
-      }
+      },
+      "faction": "baseline_humans",
+      "heroType": null,
+      "description": "Вероника — опытный боец, склонна прикрывать союзников.",
+      "modifiers": [],
+      "activeAbilities": [],
+      "passiveAbilities": [],
+      "specialProperties": {},
+      "vehicleInteraction": {}
     }
   ]
 }
