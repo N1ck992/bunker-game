@@ -63,15 +63,17 @@ export class BattleSystem {
    * @param {AbilitySystem} abilitySystem
    * @param {object} [balance] - game/data/balance.json, for balance.combat.attackAnimSeconds
    * @param {(vehicle:Vehicle, leader:Character, enemy:Enemy) => void} [onEngage]
-   * @param {(vehicle:Vehicle, leader:Character, enemy:Enemy) => void} [onAttack]
+   * @param {(vehicle:Vehicle, leader:Character, enemy:Enemy, result:{damage:number, hit:boolean}) => void} [onAttack]
    * @param {(vehicle:Vehicle, leader:Character, abilityDef:object) => void} [onAbility]
+   * @param {(vehicle:Vehicle, leader:Character, newFacingDir:number) => void} [onFacingChange] - diagnostic hook, fired only when BattleSystem itself actually changes a leader's facing — see the battle-log/"вращается" investigation.
    */
-  constructor(abilitySystem, balance, onEngage, onAttack, onAbility) {
+  constructor(abilitySystem, balance, onEngage, onAttack, onAbility, onFacingChange) {
     this.abilitySystem = abilitySystem;
     this.combatBalance = balance?.combat ?? {};
     this.onEngage = onEngage;
     this.onAttack = onAttack;
     this.onAbility = onAbility;
+    this.onFacingChange = onFacingChange;
   }
 
   /**
@@ -154,7 +156,9 @@ export class BattleSystem {
       // because the target shifted a tile during it. It still re-aims
       // correctly for every new shot.
       if (leader.attackAnimRemaining <= 0) {
-        leader.facingDir = target.position.col >= leader.position.col ? 1 : -1;
+        const newFacing = target.position.col >= leader.position.col ? 1 : -1;
+        if (newFacing !== leader.facingDir) this.onFacingChange?.(vehicle, leader, newFacing);
+        leader.facingDir = newFacing;
       }
       // The vehicle (via its leader's on-map position) holds ground once
       // engaged — same "combatState 'attacking' freezes movement" contract
@@ -188,13 +192,15 @@ export class BattleSystem {
     }
   }
 
-  /** Actually rolls accuracy, computes damage and applies it, and fires onAttack (VFX/toast) — see the pending-hit scheduling in update() above for why this is deferred instead of instant. */
+  /** Actually rolls accuracy, computes damage and applies it, and fires onAttack (VFX/toast/log) — see the pending-hit scheduling in update() above for why this is deferred instead of instant. */
   _resolvePendingHit({ vehicle, leader, adjutant, target }) {
-    if (this._rollHit(vehicle, leader, adjutant)) {
-      const damage = this._computeDamage(vehicle, leader, adjutant, target, vehicle.stats.get('attack'));
+    const hit = this._rollHit(vehicle, leader, adjutant);
+    let damage = 0;
+    if (hit) {
+      damage = this._computeDamage(vehicle, leader, adjutant, target, vehicle.stats.get('attack'));
       target.takeDamage(damage);
     }
-    this.onAttack?.(vehicle, leader, target);
+    this.onAttack?.(vehicle, leader, target, { damage, hit });
   }
 
   /** Combined value of a "percentage points" style stat (firepower/damageIntensity/cooldownReduction/pierce/armor/accuracy) across the vehicle and its crew — see file header. */
@@ -303,6 +309,9 @@ export class BattleSystem {
         const abilityBase = vehicle.stats.get('attack') * (tier.damageCoefficient / 100);
         const damage = this._computeDamage(vehicle, leader, adjutant, target, abilityBase);
         target.takeDamage(damage);
+        this.onAbility?.(vehicle, leader, { ...tier, abilityId, damage, hit: true });
+      } else {
+        this.onAbility?.(vehicle, leader, { ...tier, abilityId, damage: 0, hit: false });
       }
 
       if (tier.cooldownReductionPercent) {
@@ -311,7 +320,6 @@ export class BattleSystem {
       }
 
       vehicle.abilityCooldowns[abilityId] = tier.prepSeconds;
-      this.onAbility?.(vehicle, leader, { ...tier, abilityId });
     }
   }
 

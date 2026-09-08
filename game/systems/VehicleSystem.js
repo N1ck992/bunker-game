@@ -9,7 +9,7 @@
 // any vehicle/hero at all, but the squad can still fight back while it
 // stands (both confirmed by the user).
 
-import { Vehicle } from '../entities/Vehicle.js?v=56';
+import { Vehicle } from '../entities/Vehicle.js?v=57';
 
 export const MAX_SQUAD_VEHICLES = 5;
 

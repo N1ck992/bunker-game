@@ -22,12 +22,14 @@ export class EnemySystem {
    * @param {MovementSystem} movementSystem
    * @param {(enemy:Enemy) => void} [onEngage] - called once, the first time an enemy starts attacking
    * @param {object} [balance] - game/data/balance.json, for balance.combat.attackAnimSeconds
+   * @param {(enemy:Enemy, target:Character|Vehicle, damage:number) => void} [onAttackTarget] - fired every time a hit actually lands (for the battle log)
    */
-  constructor(pathfinder, movementSystem, onEngage, balance) {
+  constructor(pathfinder, movementSystem, onEngage, balance, onAttackTarget) {
     this.pathfinder = pathfinder;
     this.movementSystem = movementSystem;
     this.onEngage = onEngage;
     this.attackAnimSeconds = balance?.combat?.attackAnimSeconds ?? DEFAULT_ATTACK_ANIM_SECONDS;
+    this.onAttackTarget = onAttackTarget;
     // Stacking order, keyed by the target character's id — the list of
     // enemy ids currently engaging that character, in the order they first
     // engaged. Each enemy's position in this list (0 = closest) offsets how
@@ -280,11 +282,9 @@ export class EnemySystem {
       // character's own health become exposed again (not yet wired: what
       // happens to the character/vehicle at that point is a follow-up).
       const vehicle = this._vehicleSystem?.squad.find((v) => v.leaderId === target.id) ?? null;
-      if (vehicle && vehicle.isActive) {
-        vehicle.takeDamage(enemy.damage);
-      } else {
-        target.takeDamage(enemy.damage);
-      }
+      const damaged = vehicle && vehicle.isActive ? vehicle : target;
+      damaged.takeDamage(enemy.damage);
+      this.onAttackTarget?.(enemy, damaged, enemy.damage);
     }
   }
 

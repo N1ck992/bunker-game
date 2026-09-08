@@ -17,7 +17,7 @@
 // can share the same definition id (e.g. two identical cyber-suits), the
 // same way Enemy instances can share a unitDef.
 
-import { Stats } from '../systems/StatsSystem.js?v=56';
+import { Stats } from '../systems/StatsSystem.js?v=57';
 
 let _nextInstanceId = 1;
 

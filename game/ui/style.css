@@ -489,6 +489,68 @@ canvas {
   text-align: center;
 }
 
+/* Version badge — bottom-centre, always visible, so it's possible to
+ * confirm at a glance whether the browser picked up the latest deploy.
+ * See GAME_VERSION in Game.js. */
+.version-badge {
+  position: fixed;
+  left: 50%;
+  bottom: 4px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--steel-500, #8a8f94);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 1px 6px;
+  border-radius: 3px;
+  z-index: 60;
+  pointer-events: none;
+  font-family: monospace;
+}
+
+/* Battle log — collapsible panel, centred, sits above the version badge.
+ * Collapsed: just the header strip, clipped to a fixed short height so at
+ * most the last line or two peeks through above it. Expanded: scrollable
+ * list of every recent combat event, newest at the bottom. Not part of
+ * any reference mockup — this is a debugging/QA tool the user asked for,
+ * styled to match the game's existing dark/amber palette rather than any
+ * specific baked frame image. */
+.battle-log {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  width: min(92%, 420px);
+  background: rgba(8, 9, 10, 0.85);
+  border: 1px solid var(--amber-dim);
+  border-radius: 4px;
+  z-index: 55;
+  font-size: 11px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.battle-log-header {
+  padding: 4px 8px;
+  color: var(--amber, #d9a441);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.battle-log-toggle-hint { opacity: 0.7; }
+.battle-log.collapsed .battle-log-toggle-hint::before { content: ''; }
+.battle-log:not(.collapsed) .battle-log-toggle-hint { transform: rotate(90deg); display: inline-block; }
+.battle-log-body {
+  overflow-y: auto;
+  padding: 0 8px;
+  color: var(--text, #d8d4c8);
+}
+.battle-log.collapsed .battle-log-body { max-height: 18px; }
+.battle-log:not(.collapsed) .battle-log-body { max-height: 40vh; padding-bottom: 6px; }
+.battle-log-line { padding: 1px 0; line-height: 1.4; }
+.battle-log-stamp { color: var(--steel-500, #8a8f94); font-family: monospace; }
+
 .start-menu {
   position: fixed;
   inset: 0;

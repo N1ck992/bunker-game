@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=56';
-import { MovementSystem } from '../systems/MovementSystem.js?v=56';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=56';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=56';
-import { WorldSystem } from '../systems/WorldSystem.js?v=56';
-import { InventorySystem } from '../systems/InventorySystem.js?v=56';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=56';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=57';
+import { MovementSystem } from '../systems/MovementSystem.js?v=57';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=57';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=57';
+import { WorldSystem } from '../systems/WorldSystem.js?v=57';
+import { InventorySystem } from '../systems/InventorySystem.js?v=57';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=57';
 
-import { GameTime } from './GameTime.js?v=56';
-import { ResourceSystem } from './ResourceSystem.js?v=56';
-import { TemperatureSystem } from './TemperatureSystem.js?v=56';
-import { SaveSystem } from './SaveSystem.js?v=56';
+import { GameTime } from './GameTime.js?v=57';
+import { ResourceSystem } from './ResourceSystem.js?v=57';
+import { TemperatureSystem } from './TemperatureSystem.js?v=57';
+import { SaveSystem } from './SaveSystem.js?v=57';
 
-import { Character } from '../entities/Character.js?v=56';
-import { Enemy } from '../entities/Enemy.js?v=56';
-import { Item } from '../entities/Item.js?v=56';
-import { EnemySystem } from '../systems/EnemySystem.js?v=56';
-import { InteractionSystem } from '../systems/InteractionSystem.js?v=56';
-import { VehicleSystem, MAX_SQUAD_VEHICLES } from '../systems/VehicleSystem.js?v=56';
-import { AbilitySystem } from '../systems/AbilitySystem.js?v=56';
-import { BattleSystem } from '../systems/BattleSystem.js?v=56';
+import { Character } from '../entities/Character.js?v=57';
+import { Enemy } from '../entities/Enemy.js?v=57';
+import { Item } from '../entities/Item.js?v=57';
+import { EnemySystem } from '../systems/EnemySystem.js?v=57';
+import { InteractionSystem } from '../systems/InteractionSystem.js?v=57';
+import { VehicleSystem, MAX_SQUAD_VEHICLES } from '../systems/VehicleSystem.js?v=57';
+import { AbilitySystem } from '../systems/AbilitySystem.js?v=57';
+import { BattleSystem } from '../systems/BattleSystem.js?v=57';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=56';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=56';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=56';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=56';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=56';
-import { PartyUI } from '../ui/PartyUI.js?v=56';
-import { InventoryUI } from '../ui/InventoryUI.js?v=56';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=56';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=56';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=56';
-import { showStartMenu } from '../ui/StartMenu.js?v=56';
-import { installOrientationLockRetry } from './OrientationLock.js?v=56';
+import { ShelterUI } from '../ui/ShelterUI.js?v=57';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=57';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=57';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=57';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=57';
+import { PartyUI } from '../ui/PartyUI.js?v=57';
+import { InventoryUI } from '../ui/InventoryUI.js?v=57';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=57';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=57';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=57';
+import { showStartMenu } from '../ui/StartMenu.js?v=57';
+import { installOrientationLockRetry } from './OrientationLock.js?v=57';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -77,6 +77,15 @@ const ATTACK_EFFECT_TRAVEL_PER_TILE_MS = 25;
 const ATTACK_EFFECT_IMPACT_MS = 500;
 const RECRUIT_RANGE_TILES = 1.5; // how close a party member must walk to auto-recruit a waiting NPC
 const MAX_PARTY_SIZE = 5; // hard cap on how many settlers can be checked "в отряде" at once
+// Bumped on every deploy alongside the ?v= cache-busting suffix on every
+// import (see index.html and every "?v=NN" import in this file/its
+// modules) — shown on-screen (see _buildDom's version badge) so the user
+// can confirm at a glance whether their browser actually picked up the
+// latest code, rather than guessing from behaviour alone. MUST match the
+// current ?v= number exactly, or the badge is worse than useless — it'll
+// look fine while the browser is still serving stale JS.
+const GAME_VERSION = 'v57';
+const BATTLE_LOG_MAX = 200; // ring buffer size for this.battleLog — see _logBattle
 // Only Ольга (char_2) can hack a "hack:<seconds>" door's keypad — see
 // _commandHackDoor/_startHacking. She's the party's dedicated hacker (высокий
 // интеллект, and the only character with a full multi-frame "examine" sprite
@@ -221,8 +230,14 @@ class Game {
       this.movementSystem,
       (enemy, target) => {
         this._toast(`${enemy.name} атакует ${target.name}!`);
+        this._logBattle(`${enemy.name} → ${target.name}: вступает в бой`);
       },
-      balance
+      balance,
+      (enemy, damagedTarget, damage) => {
+        // damagedTarget is either the Character (no vehicle) or the Vehicle
+        // that absorbed the hit — both have .name.
+        this._logBattle(`${enemy.name} → ${damagedTarget.name}: урон ${damage.toFixed(0)}`);
+      }
     );
     this.inventorySystem = new InventorySystem(this.itemsById);
     // NOTE: the old CombatSystem/SkillSystem (hero auto-attack + the
@@ -256,9 +271,10 @@ class Game {
       balance,
       (vehicle, leader, enemy) => {
         this._toast(`${leader.name} (${vehicle.name}) вступает в бой с целью: ${enemy.name}!`);
+        this._logBattle(`${leader.name} (${vehicle.name}) → ${enemy.name}: вступает в бой`);
         this.enemySystem.alertFaction(this.enemies, enemy.raceId);
       },
-      (vehicle, leader, enemy) => {
+      (vehicle, leader, enemy, { damage, hit }) => {
         const dist = Math.hypot(enemy.position.col - leader.position.col, enemy.position.row - leader.position.row);
         this._attackEffects.push({
           from: { ...leader.position },
@@ -266,12 +282,38 @@ class Game {
           start: this._now ?? performance.now(),
           travelMs: ATTACK_EFFECT_TRAVEL_BASE_MS + dist * ATTACK_EFFECT_TRAVEL_PER_TILE_MS
         });
+        this._logBattle(
+          hit
+            ? `${leader.name} → ${enemy.name}: урон ${damage.toFixed(0)}`
+            : `${leader.name} → ${enemy.name}: промах`
+        );
       },
       (vehicle, leader, tier) => {
         this._toast(`${leader.name} применяет способность: Свинцовый дождь${tier.awakened ? ' (пробуждённый)' : ''}!`);
+        this._logBattle(
+          tier.hit
+            ? `${leader.name}: Свинцовый дождь${tier.awakened ? ' (пробужд.)' : ''} — урон ${tier.damage.toFixed(0)}`
+            : `${leader.name}: Свинцовый дождь${tier.awakened ? ' (пробужд.)' : ''} — промах`
+        );
+      },
+      (vehicle, leader, newFacingDir) => {
+        // Diagnostic — every facing change BattleSystem itself makes, so
+        // the battle log can show whether "спиннинг" comes from here or
+        // from somewhere else entirely (see the generic per-frame watcher
+        // in _updateBattle/_checkFacingDrift below).
+        this._logBattle(`[БС] ${leader.name} поворот -> ${newFacingDir > 0 ? '→' : '←'}`);
       }
     );
     this._attackEffects = []; // in-flight/impacting energy bolt VFX, see _renderAttackEffects
+    // Battle log (ТЗ debugging aid) — capped ring buffer of recent combat
+    // events (engage/hit/miss/ability/incoming damage), newest last. See
+    // _logBattle/_renderBattleLogUI. Also doubles as a live diagnostic for
+    // tracking down the "vehicle spins during combat" report — the
+    // per-frame facing watcher below logs into the SAME list, tagged
+    // differently, so it's possible to tell whether a facing change came
+    // from BattleSystem's own logic or from something else entirely.
+    this.battleLog = [];
+    this._lastFacingByCharacterId = new Map();
 
     this._buildDom();
     this._loadBunkerImage();
@@ -520,6 +562,35 @@ class Game {
     this.toastEl = document.createElement('div');
     this.toastEl.className = 'toast hidden';
     this.uiRoot.appendChild(this.toastEl);
+
+    // Version badge (bottom-centre) — so it's possible to confirm at a
+    // glance whether the browser actually picked up the latest deploy
+    // instead of serving a stale cached copy. See GAME_VERSION at the top
+    // of this file — bump it (and every ?v= import suffix) together on
+    // every deploy, or this becomes actively misleading.
+    this.versionBadgeEl = document.createElement('div');
+    this.versionBadgeEl.className = 'version-badge';
+    this.versionBadgeEl.textContent = GAME_VERSION;
+    this.uiRoot.appendChild(this.versionBadgeEl);
+
+    // Battle log (see _logBattle/battleLog) — collapsed by default to a
+    // single-line "last event" strip; tapping it expands to a scrollable
+    // list of every recent combat event (engage/hit/miss/ability/incoming
+    // damage), newest at the bottom. Currently doubles as a live debugging
+    // aid for the "vehicle spins" investigation (see _checkFacingDrift) —
+    // entries tagged [БС] come from BattleSystem itself, [СЛЕЖ] from a
+    // generic per-frame watcher that catches facing changes from ANYWHERE.
+    this.battleLogEl = document.createElement('div');
+    this.battleLogEl.className = 'battle-log collapsed';
+    this.battleLogEl.innerHTML = `
+      <div class="battle-log-header">Лог боя <span class="battle-log-toggle-hint">▸</span></div>
+      <div class="battle-log-body"></div>
+    `;
+    this.battleLogEl.querySelector('.battle-log-header').addEventListener('click', () => {
+      this.battleLogEl.classList.toggle('collapsed');
+    });
+    this.uiRoot.appendChild(this.battleLogEl);
+    this.battleLogBodyEl = this.battleLogEl.querySelector('.battle-log-body');
 
     // 'shelter' (default bunker interior) or 'worldmap' (full-screen hex map),
     // toggled by the left bar's Карта/Бункер button — see _toggleWorldMap.
@@ -2635,6 +2706,66 @@ class Game {
     this._toastTimer = setTimeout(() => this.toastEl.classList.add('hidden'), 2200);
   }
 
+  /**
+   * Appends one line to the battle log (see this.battleLog / the panel
+   * built by _buildDom's battle-log markup, updated in _renderBattleLogUI
+   * during the render loop). Capped ring buffer — oldest entries drop off
+   * once BATTLE_LOG_MAX is exceeded so this can't grow forever over a long
+   * fight.
+   */
+  _logBattle(text) {
+    const elapsed = this.gameTime?.totalElapsed ?? null;
+    const stamp = elapsed != null ? `${elapsed.toFixed(1)}с` : '';
+    this.battleLog.push({ stamp, text });
+    if (this.battleLog.length > BATTLE_LOG_MAX) this.battleLog.shift();
+    this._battleLogDirty = true;
+  }
+
+  /**
+   * Diagnostic sweep, run once per frame right after every combat system
+   * has had its turn — compares each party character's current facingDir
+   * against what it was last frame and logs any change that ISN'T already
+   * accounted for by BattleSystem's own onFacingChange hook (tagged
+   * "[БС]" in the log). A change that shows up here with no matching "[БС]"
+   * line right before it did NOT come from BattleSystem — e.g. MovementSystem
+   * turning a character mid-step, or SquadCombatSystem repositioning them —
+   * which is exactly what's needed to track down the "vehicle spins during
+   * combat" report from outside BattleSystem's own logic. Temporary
+   * debugging aid; safe to leave running permanently (cheap — one map
+   * lookup + comparison per character per frame).
+   */
+  _checkFacingDrift() {
+    for (const character of this.characters) {
+      const prev = this._lastFacingByCharacterId.get(character.id);
+      if (prev !== undefined && prev !== character.facingDir) {
+        const pathLen = character.path?.length ?? 0;
+        this._logBattle(
+          `[СЛЕЖ] ${character.name} поворот -> ${character.facingDir > 0 ? '→' : '←'} ` +
+          `(состояние: ${character.combatState}, путь: ${pathLen})`
+        );
+      }
+      this._lastFacingByCharacterId.set(character.id, character.facingDir);
+    }
+  }
+
+  /**
+   * Rebuilds the battle-log panel's DOM from this.battleLog, only when
+   * something actually changed (_logBattle sets _battleLogDirty) — avoids
+   * touching the DOM every single frame for no reason. Collapsed view
+   * (see the CSS) just clips to the header + last couple of lines via
+   * overflow, so this doesn't need separate collapsed/expanded markup.
+   */
+  _renderBattleLogUI() {
+    if (!this._battleLogDirty) return;
+    this._battleLogDirty = false;
+    this.battleLogBodyEl.innerHTML = this.battleLog
+      .map((entry) => `<div class="battle-log-line">${entry.stamp ? `<span class="battle-log-stamp">${entry.stamp}</span> ` : ''}${entry.text}</div>`)
+      .join('');
+    // Always show the newest lines — matters most in the collapsed strip,
+    // where only the bottom of the scroll area is visible at all.
+    this.battleLogBodyEl.scrollTop = this.battleLogBodyEl.scrollHeight;
+  }
+
   _loop(now) {
     const dt = Math.min(0.1, (now - this._lastFrameTime) / 1000);
     this._lastFrameTime = now;
@@ -2675,6 +2806,8 @@ class Game {
     // A hero with no vehicle assigned as leader simply doesn't fight, per
     // "герой сам по себе передвигаться/воевать не сможет, ему нужна техника".
     this.battleSystem.update(this.vehicleSystem, this.characters, this.enemies, dt);
+    this._checkFacingDrift();
+    this._renderBattleLogUI();
 
     // Overview mode (see _setOverview) only ever changes because the
     // player pressed "Приблизить"/"Отдалить" — nothing else touches it.
