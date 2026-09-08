@@ -89,7 +89,8 @@
         ]
       },
       "weightClass": "heavy",
-      "unitClass": "heavy_tank"
+      "unitClass": "heavy_tank",
+      "attackAnimSeconds": 2.5
     }
   ]
 }

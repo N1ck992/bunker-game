@@ -40,6 +40,15 @@
 
 const MIN_ATTACK_COOLDOWN_SECONDS = 0.25;
 const BASE_ATTACK_COOLDOWN_SECONDS = 2; // baseline before attackSpeed/cooldownReduction — a vehicle with attackSpeed 1 fires every 2s
+const DEFAULT_ATTACK_ANIM_SECONDS = 0.35; // fallback if neither the vehicle nor balance.json specify one
+// How far into the attack animation the actual hit lands (as a fraction of
+// attackAnimDuration) — see the pending-hit mechanism in update()/
+// _resolvePendingHit below. 0.85 puts it near the end, matching "the beam
+// visually reaches full extension right before impact" rather than
+// damage landing instantly the moment the cooldown resets (which used to
+// make a slow multi-second charge-up weapon look like it "hits instantly"
+// with a disconnected animation playing afterward).
+const HIT_POINT_FRACTION = 0.85;
 
 // Armor-penetration curve tuning (see _armorMultiplier) — a well-matched
 // hit (pierce ≈ armor) deals full damage; both a big under-penetration and
@@ -79,6 +88,19 @@ export class BattleSystem {
       if (!leader || !leader.isActive) continue;
       const adjutant = vehicle.adjutantId ? characters.find((c) => c.id === vehicle.adjutantId) : null;
 
+      // Resolve a shot fired earlier this cycle once its animation reaches
+      // the actual "impact" point — see HIT_POINT_FRACTION. Always
+      // processed before anything else touches this vehicle/leader this
+      // frame, so it lands even if the target died/left range in the
+      // meantime (Enemy.takeDamage on an already-dead target is a no-op).
+      if (leader._pendingHit) {
+        leader._pendingHit.delayRemaining -= dt;
+        if (leader._pendingHit.delayRemaining <= 0) {
+          this._resolvePendingHit(leader._pendingHit);
+          leader._pendingHit = null;
+        }
+      }
+
       if (leader.attackCooldownRemaining > 0) {
         leader.attackCooldownRemaining = Math.max(0, leader.attackCooldownRemaining - dt);
       }
@@ -115,24 +137,37 @@ export class BattleSystem {
 
       if (leader.attackCooldownRemaining <= 0) {
         leader.attackCooldownRemaining = leader.attackCooldownSeconds;
-        leader.attackAnimRemaining = Math.min(
-          this.combatBalance.attackAnimSeconds ?? 0.35,
-          leader.attackCooldownSeconds
-        );
+        const animSeconds = vehicle.attackAnimSeconds ?? this.combatBalance.attackAnimSeconds ?? DEFAULT_ATTACK_ANIM_SECONDS;
+        leader.attackAnimRemaining = Math.min(animSeconds, leader.attackCooldownSeconds);
         leader.attackAnimDuration = leader.attackAnimRemaining;
 
-        // The shot always fires (animation/cooldown/VFX all happen
-        // regardless) — a miss just means _computeDamage never runs, so
-        // the target simply takes 0.
-        if (this._rollHit(vehicle, leader, adjutant)) {
-          const damage = this._computeDamage(vehicle, leader, adjutant, target, vehicle.stats.get('attack'));
-          target.takeDamage(damage);
-        }
-        this.onAttack?.(vehicle, leader, target);
+        // Damage doesn't land yet — see the pending-hit block at the top
+        // of this loop, which resolves it once the animation reaches
+        // HIT_POINT_FRACTION of the way through. Any earlier
+        // still-pending hit (shouldn't normally happen — the cooldown is
+        // always longer than the animation — but just in case) resolves
+        // immediately rather than being silently dropped.
+        if (leader._pendingHit) this._resolvePendingHit(leader._pendingHit);
+        leader._pendingHit = {
+          vehicle,
+          leader,
+          adjutant,
+          target,
+          delayRemaining: leader.attackAnimDuration * HIT_POINT_FRACTION
+        };
       }
 
       this._updateActiveAbilities(vehicle, leader, adjutant, target, dt);
     }
+  }
+
+  /** Actually rolls accuracy, computes damage and applies it, and fires onAttack (VFX/toast) — see the pending-hit scheduling in update() above for why this is deferred instead of instant. */
+  _resolvePendingHit({ vehicle, leader, adjutant, target }) {
+    if (this._rollHit(vehicle, leader, adjutant)) {
+      const damage = this._computeDamage(vehicle, leader, adjutant, target, vehicle.stats.get('attack'));
+      target.takeDamage(damage);
+    }
+    this.onAttack?.(vehicle, leader, target);
   }
 
   /** Combined value of a "percentage points" style stat (firepower/damageIntensity/cooldownReduction/pierce/armor/accuracy) across the vehicle and its crew — see file header. */
@@ -217,14 +252,25 @@ export class BattleSystem {
   /** Charges and auto-fires the leader's active abilities (ТЗ п.8/п.13's "Свинцовый дождь" example) while a target is in range. Adjutant abilities firing after the leader's own is a known follow-up, not implemented yet. */
   _updateActiveAbilities(vehicle, leader, adjutant, target, dt) {
     for (const abilityId of leader.activeAbilities) {
-      const remaining = vehicle.abilityCooldowns[abilityId] ?? 0;
+      const tier = this.abilitySystem.getActiveTier(leader, abilityId);
+      if (!tier) continue;
+
+      if (vehicle.abilityCooldowns[abilityId] === undefined) {
+        // First engagement this ability has ever seen — it still has to
+        // charge for its full prepSeconds before firing, exactly like any
+        // later use (see e.g. "Время подготовки: 8 сек" in the ability's
+        // own description). Previously an unset cooldown read as "ready"
+        // and fired the ability the very first frame of combat, before
+        // any wind-up at all — looked like an instant, un-telegraphed hit.
+        vehicle.abilityCooldowns[abilityId] = tier.prepSeconds;
+        continue;
+      }
+
+      const remaining = vehicle.abilityCooldowns[abilityId];
       if (remaining > 0) {
         vehicle.abilityCooldowns[abilityId] = Math.max(0, remaining - dt);
         continue;
       }
-
-      const tier = this.abilitySystem.getActiveTier(leader, abilityId);
-      if (!tier) continue;
 
       if (this._rollHit(vehicle, leader, adjutant)) {
         const abilityBase = vehicle.stats.get('attack') * (tier.damageCoefficient / 100);

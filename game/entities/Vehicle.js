@@ -55,6 +55,13 @@ export class Vehicle {
       attackRight: def.sprites?.attackRight ?? []
     };
     this.damageType = def.damageType ?? null;
+    // Optional override for how long the attack animation actually plays
+    // (seconds) — see game/systems/BattleSystem.js/Game._renderCharacters.
+    // null falls back to balance.json's combat.attackAnimSeconds. Exists
+    // per-vehicle (not just in balance.json) because a heavy weapon's
+    // multi-second charge-up animation needs a very different pacing than
+    // a quick sidearm swing would.
+    this.attackAnimSeconds = def.attackAnimSeconds ?? null;
 
     this.stats = new Stats({ ...def.stats });
     this.health = this.stats.get('maxHealth');

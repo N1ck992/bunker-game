@@ -23,7 +23,7 @@ import { Enemy } from '../entities/Enemy.js?v=52';
 import { Item } from '../entities/Item.js?v=52';
 import { EnemySystem } from '../systems/EnemySystem.js?v=52';
 import { InteractionSystem } from '../systems/InteractionSystem.js?v=52';
-import { VehicleSystem } from '../systems/VehicleSystem.js?v=52';
+import { VehicleSystem, MAX_SQUAD_VEHICLES } from '../systems/VehicleSystem.js?v=52';
 import { AbilitySystem } from '../systems/AbilitySystem.js?v=52';
 import { BattleSystem } from '../systems/BattleSystem.js?v=52';
 
@@ -2458,11 +2458,12 @@ class Game {
    */
   _openPartyUI() {
     const squad = this.characters.filter((c) => c.inParty !== false);
-    this.partyUI.show(
-      squad,
-      this.itemsById,
-      null,
-      (characterId) => {
+    this.partyUI.show({
+      characters: squad,
+      itemsById: this.itemsById,
+      vehicleSystem: this.vehicleSystem,
+      vehicleDefsById: this.vehicleDefsById,
+      onSelectLead: (characterId) => {
         for (const character of this.characters) {
           // Only one lead/tank at a time — tapping a squad slot makes that
           // settler the lead and clears everyone else's flag.
@@ -2470,11 +2471,49 @@ class Game {
         }
         this._openPartyUI();
       },
-      () => {}
-    );
+      onSelectVehicle: (characterId) => this._cycleLeaderVehicle(characterId),
+      onClose: () => {}
+    });
   }
 
-  /** "Выбрать всех" toggle next to the roster's "Отряд" button. */
+  /**
+   * The "Отряд" screen's vehicle picker (left, under the avatar) — cycles
+   * the given character through every known vehicle definition
+   * (game/data/vehicles.json), assigning them as that vehicle's leader
+   * (see VehicleSystem.assignHero). Reuses an existing crewless instance
+   * of the target definition if the squad already has one (e.g. from an
+   * earlier swap) rather than always minting a new one. Temporary manual
+   * control until a real squad/vehicle-management screen exists — see
+   * VehicleSystem's own file header.
+   */
+  _cycleLeaderVehicle(characterId) {
+    const defs = [...this.vehicleDefsById.values()];
+    if (defs.length === 0) return;
+
+    const currentVehicle = this.vehicleSystem.squad.find((v) => v.leaderId === characterId) ?? null;
+    const currentIndex = currentVehicle ? defs.findIndex((d) => d.id === currentVehicle.defId) : -1;
+    const nextDef = defs[(currentIndex + 1) % defs.length];
+
+    if (currentVehicle && currentVehicle.defId === nextDef.id) {
+      this._toast('Другой техники для этого героя пока нет.');
+      return;
+    }
+
+    this.vehicleSystem.unassignHeroEverywhere(characterId);
+    let targetVehicle = this.vehicleSystem.squad.find(
+      (v) => v.defId === nextDef.id && !v.leaderId && !v.adjutantId
+    );
+    if (!targetVehicle) targetVehicle = this.vehicleSystem.addVehicle(nextDef.id);
+    if (!targetVehicle) {
+      this._toast(`Отряд техники уже заполнен (максимум ${MAX_SQUAD_VEHICLES}).`);
+      return;
+    }
+
+    this.vehicleSystem.assignHero(targetVehicle.instanceId, characterId, 'leader');
+    this._openPartyUI();
+  }
+
+  /** \"Выбрать всех\" toggle next to the roster's \"Отряд\" button. */
   _toggleFollowAllParty() {
     this.followAllParty = !this.followAllParty;
     this._toast(
@@ -3386,12 +3425,19 @@ class Game {
         sprite = runFrames[frameIndex];
       } else if (character.combatState === 'attacking' && character.attackAnimRemaining > 0) {
         // Only mid-swing/shot during the brief pulse set right when an
-        // attack actually fires (see CombatSystem.update) — otherwise it
-        // holds an idle "ready" pose below, so a slow-firing weapon (a
-        // revolver, say) doesn't loop the attack animation nonstop while
-        // waiting out attackCooldownRemaining (see the reload bar drawn
-        // further down).
-        const ATTACK_FPS = 12; // plays the 12-frame swing over ~1s (see balance.combat.attackAnimSeconds)
+        // attack actually fires (see BattleSystem.update) — otherwise it
+        // holds an idle "ready" pose below, so a slow-firing weapon
+        // doesn't loop the attack animation nonstop while waiting out
+        // attackCooldownRemaining (see the reload bar drawn further down).
+        // FPS is derived from the frame count and the anim's own duration
+        // (not a fixed number) so a slow multi-second charge-up (a heavy
+        // weapon's beam windup, say) actually takes that long to play
+        // through instead of blitzing through every frame in well under a
+        // second and then just idling for the rest — see
+        // character.attackAnimDuration, which BattleSystem sets from
+        // balance/vehicle data specifically to control this pacing.
+        const framesCount = spriteSet.attack.length;
+        const attackFps = character.attackAnimDuration > 0 ? framesCount / character.attackAnimDuration : 12;
         // Elapsed-since-the-swing-started (not the absolute game clock, which
         // used to make the cycle start mid-frame depending on when the swing
         // happened to fire — see attackAnimDuration) and clamped to the last
@@ -3399,7 +3445,7 @@ class Game {
         // recover in order once and holds on the recovery pose, same idea as
         // the afk fidget below.
         const elapsed = character.attackAnimDuration - character.attackAnimRemaining;
-        const frameIndex = Math.min(spriteSet.attack.length - 1, Math.floor(elapsed * ATTACK_FPS));
+        const frameIndex = Math.min(framesCount - 1, Math.floor(elapsed * attackFps));
         sprite = spriteSet.attack[frameIndex];
       } else if (character.combatState === 'attacking') {
         const frameIndex = Math.floor((this._now / 1000) * IDLE_FPS) % spriteSet.idle.length;
@@ -3494,10 +3540,29 @@ class Game {
         ctx.restore();
       }
 
-      // NOTE: the old "Концентрация" charge bar and guardian_shield ring
-      // (tied to Character.skillId/skillCharge/shieldRemaining) were
-      // removed along with SkillSystem — see Character.js. The future
-      // ability system's own status visuals go here once it exists.
+      // Active-ability countdown (ТЗ п.8 — "должны отображаться таймером
+      // до применения, иначе как понять") — a small "⚡ N.Nс" label above
+      // the reload bar, counting down whichever active ability this
+      // character's vehicle (if any) is currently charging. Minimal
+      // numeric readout for now, not a proper ability-icon slot — that
+      // comes with the future squad/vehicle management screen.
+      const abilityVehicle = this._vehicleForLeader(character.id);
+      if (abilityVehicle && character.activeAbilities.length > 0) {
+        const abilityId = character.activeAbilities[0];
+        const remaining = abilityVehicle.abilityCooldowns[abilityId];
+        if (remaining > 0) {
+          ctx.save();
+          ctx.font = `bold ${Math.max(10, 11 * this.scale)}px monospace`;
+          ctx.textAlign = 'center';
+          const labelY = groundY - drawH - 24;
+          const label = `⚡ ${remaining.toFixed(1)}с`;
+          ctx.fillStyle = '#0b0d0a';
+          ctx.fillText(label, x, labelY + 1);
+          ctx.fillStyle = '#7fe0ff';
+          ctx.fillText(label, x, labelY);
+          ctx.restore();
+        }
+      }
     }
   }
 

@@ -32,9 +32,14 @@ export class Enemy {
     // Combat/movement stats — see game/data/enemies/README.md. unitDef's
     // flat health/damage feed the same Stats container a Character uses,
     // so mods/buffs/debuffs work identically on either side of a fight.
+    // armor (optional, defaults to 0 via Stats.getBase if a unit's data
+    // doesn't set one) is what BattleSystem's armor-penetration-vs-armor
+    // formula reads for any vehicle attacking this enemy — see
+    // game/systems/BattleSystem.js.
     this.stats = new Stats({
       maxHealth: unitDef.health,
-      attack: unitDef.damage
+      attack: unitDef.damage,
+      armor: unitDef.armor ?? 0
     });
     this.health = unitDef.health;
     // Tile gap the enemy keeps from its target: it stops chasing this many

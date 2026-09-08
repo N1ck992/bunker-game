@@ -6,8 +6,8 @@
     {
       "id": "mutant_stalker",
       "name": "Мутант",
-      "health": 40,
-      "damage": 6,
+      "health": 6000,
+      "damage": 350,
       "attackDistance": 3,
       "aggroRange": 6,
       "attackCooldownSeconds": 1.6,
@@ -56,7 +56,8 @@
           "game/assets/enemies/mutants/mutant_stalker/attack_10.png",
           "game/assets/enemies/mutants/mutant_stalker/attack_11.png"
         ]
-      }
+      },
+      "armor": 4
     }
   ]
 }
