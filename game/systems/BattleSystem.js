@@ -57,6 +57,11 @@ const HIT_POINT_FRACTION = 0.85;
 // not "no damage".
 const UNDER_PENETRATION_FLOOR = 0.1;
 const OVER_PENETRATION_FLOOR = 0.5;
+// How close to the actual moment of impact facing locks in place (see the
+// "nearImpact" check in update()) — short enough that it's imperceptible
+// as a delay in normal tracking, long enough to stop the muzzle visibly
+// snapping direction in the exact frame the shot fires.
+const FACING_LOCK_SECONDS = 0.3;
 
 export class BattleSystem {
   /**
@@ -95,11 +100,18 @@ export class BattleSystem {
       // processed before anything else touches this vehicle/leader this
       // frame, so it lands even if the target died/left range in the
       // meantime (Enemy.takeDamage on an already-dead target is a no-op).
+      // hitResolvedThisFrame keeps the facing-lock below true for the
+      // exact frame a hit resolves — leader._pendingHit itself gets
+      // cleared right here, which would otherwise make the "nearImpact"
+      // check further down think there's nothing to protect and let the
+      // sprite flip direction in the very frame the shot lands.
+      let hitResolvedThisFrame = false;
       if (leader._pendingHit) {
         leader._pendingHit.delayRemaining -= dt;
         if (leader._pendingHit.delayRemaining <= 0) {
           this._resolvePendingHit(leader._pendingHit);
           leader._pendingHit = null;
+          hitResolvedThisFrame = true;
         }
       }
 
@@ -150,12 +162,19 @@ export class BattleSystem {
 
       leader.combatState = 'attacking';
       leader.targetEnemyId = target.id;
-      // Only turn to face the target between shots (attackAnimRemaining
-      // already at 0) — never mid-swing, so the sprite can't flip
-      // direction partway through its own charge-up/fire animation just
-      // because the target shifted a tile during it. It still re-aims
-      // correctly for every new shot.
-      if (leader.attackAnimRemaining <= 0) {
+      // Track the target continuously (like a turret) rather than only
+      // between shots — a long charge-up (2.5s here) is easily enough time
+      // for the enemy to walk around to the other side, and freezing
+      // facing for the WHOLE swing meant the robot kept visibly aiming
+      // at where the enemy used to be until the entire animation finished
+      // (confirmed from a screenshot: gun pointing one way, enemy clearly
+      // standing on the other side, mid-ability). The only freeze that's
+      // actually needed is right at the very end, in the last instant
+      // before the shot visually lands (see FACING_LOCK_SECONDS) — that's
+      // what stops the muzzle snapping direction in the exact frame it
+      // fires; everything before that is free to re-aim.
+      const nearImpact = hitResolvedThisFrame || (leader._pendingHit && leader._pendingHit.delayRemaining < FACING_LOCK_SECONDS);
+      if (!nearImpact) {
         const newFacing = target.position.col >= leader.position.col ? 1 : -1;
         if (newFacing !== leader.facingDir) {
           this.onFacingChange?.(vehicle, leader, newFacing, target.position.col - leader.position.col);
