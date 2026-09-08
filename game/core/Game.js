@@ -24,6 +24,7 @@ import { Item } from '../entities/Item.js?v=52';
 import { EnemySystem } from '../systems/EnemySystem.js?v=52';
 import { InteractionSystem } from '../systems/InteractionSystem.js?v=52';
 import { VehicleSystem } from '../systems/VehicleSystem.js?v=52';
+import { AbilitySystem } from '../systems/AbilitySystem.js?v=52';
 
 import { ShelterUI } from '../ui/ShelterUI.js?v=52';
 import { LeftBarUI } from '../ui/LeftBarUI.js?v=52';
@@ -87,14 +88,15 @@ const FOLLOW_DISTANCE_TILES = 3; // how far "Выбрать всех" followers 
 
 class Game {
   async init() {
-    const [balance, mapData, charactersData, itemsData, interactionsData, factionsData, vehiclesData] = await Promise.all([
+    const [balance, mapData, charactersData, itemsData, interactionsData, factionsData, vehiclesData, abilitiesData] = await Promise.all([
       fetchJson('game/data/balance.json'),
       fetchJson(INITIAL_ROOM_FILE),
       fetchJson('game/data/characters.json'),
       fetchJson('game/data/items.json'),
       fetchJson('game/data/interactions.json'),
       fetchJson('game/data/factions.json'),
-      fetchJson('game/data/vehicles.json')
+      fetchJson('game/data/vehicles.json'),
+      fetchJson('game/data/abilities.json')
     ]);
 
     this.balance = balance;
@@ -109,6 +111,10 @@ class Game {
     // separate, later step) — this stage is just the data + squad
     // bookkeeping foundation.
     this.vehicleDefsById = new Map(vehiclesData.vehicles.map((v) => [v.id, v]));
+    // Ability definitions (ТЗ п.8) — keyed by id, consumed by AbilitySystem
+    // below (passives -> Stats modifiers; active abilities' actual damage
+    // dealing comes with the future Battle System).
+    this.abilitiesById = new Map(abilitiesData.abilities.map((a) => [a.id, a]));
     // NOTE: the old skills.json / ability system was removed along with
     // CombatSystem/SkillSystem — the new, data-driven ability system (ТЗ
     // п.8) will be designed once its actual data format is ready.
@@ -141,6 +147,16 @@ class Game {
 
     if (save) this._applySave(save);
     this._splitRecruits();
+
+    // Ability system (ТЗ п.8) — applies every character's passive
+    // abilities as real Stats modifiers right away (active abilities'
+    // damage-dealing waits on the future Battle System). Run for both
+    // party members and not-yet-recruited settlers so a recruit's passives
+    // are already baked in the moment they join.
+    this.abilitySystem = new AbilitySystem(this.abilitiesById);
+    for (const character of [...this.characters, ...this.recruits]) {
+      this.abilitySystem.applyPassives(character);
+    }
 
     // Interactable states (doors/ladders) keyed by "col,row" for the pathfinder.
     this.interactableStates = new Map();

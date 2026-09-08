@@ -96,10 +96,23 @@
       "heroType": null,
       "description": "Марк — рядовой боец отряда, привычен к рукопашному и огневому контакту.",
       "modifiers": [],
-      "activeAbilities": [],
-      "passiveAbilities": [],
+      "activeAbilities": [
+        "lead_rain_tactical"
+      ],
+      "passiveAbilities": [
+        "damage_intensity_passive",
+        "firepower_passive",
+        "cooldown_passive"
+      ],
       "specialProperties": {},
-      "vehicleInteraction": {}
+      "vehicleInteraction": {},
+      "level": 60,
+      "abilityLevels": {
+        "damage_intensity_passive": 5,
+        "firepower_passive": 5,
+        "cooldown_passive": 5,
+        "lead_rain_tactical": 5
+      }
     },
     {
       "id": "char_2",

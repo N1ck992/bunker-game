@@ -24,7 +24,21 @@ const DEFAULT_BASE_STATS = {
   attackRange: 1,
   attackSpeed: 1,
   critChance: 0,
-  critDamage: 50
+  critDamage: 50,
+  // Officer/vehicle-wide ability stats (see game/systems/AbilitySystem.js).
+  // All three are "percentage points" accumulators, not 0-1 multipliers —
+  // an ability granting "+15%" adds a flat +15 to the relevant one of
+  // these via a Stats flat modifier (see AbilitySystem.applyPassives), so
+  // Stats.get(...) directly returns the total % to use in the (future)
+  // damage formula. firepower boosts this unit's own attack; damageIntensity
+  // is a further multiplier on top of the final damage number, on any
+  // damage type — countered by the target's damageResistance;
+  // cooldownReduction shortens ability/attack cooldowns for units this
+  // hero commands (squad-wide effect, not just themselves).
+  firepower: 0,
+  damageIntensity: 0,
+  damageResistance: 0,
+  cooldownReduction: 0
 };
 
 export class Character {
@@ -88,14 +102,21 @@ export class Character {
     }
 
     // Ability system hooks (ТЗ п.8) — lists of ability ids this hero has,
-    // resolved against whatever ability/effect data file ends up holding
-    // their actual definitions (not built yet — the old skills.json/
-    // SkillSystem was removed, see the file header). Empty by default so
-    // every existing hero loads cleanly with no abilities rather than
-    // crashing on a missing lookup; a future AbilitySystem fills these in
-    // once the data format exists.
+    // resolved against game/data/abilities.json by AbilitySystem. Empty by
+    // default so every existing hero loads cleanly with no abilities.
     this.activeAbilities = data.activeAbilities ?? [];
     this.passiveAbilities = data.passiveAbilities ?? [];
+
+    // Hero level and per-ability rank — no cap enforced anywhere right now
+    // (per explicit request, so any hero/ability can be set straight to
+    // its max for testing). AbilitySystem clamps an ability's level to
+    // however many tiers its data actually defines, but the hero level
+    // itself is just a plain number.
+    this.level = data.level ?? 1;
+    // abilityId -> current level (1-based). An ability id present in
+    // activeAbilities/passiveAbilities with no entry here defaults to
+    // level 1 (see AbilitySystem.getAbilityLevel).
+    this.abilityLevels = { ...(data.abilityLevels ?? {}) };
 
     // Freeform bag for anything that doesn't fit the stat/ability model —
     // ТЗ п.4's "специальные свойства" (e.g. "immune to fire", "can open
@@ -235,6 +256,8 @@ export class Character {
       modifiers: this.modifiers,
       activeAbilities: this.activeAbilities,
       passiveAbilities: this.passiveAbilities,
+      level: this.level,
+      abilityLevels: { ...this.abilityLevels },
       specialProperties: this.specialProperties,
       vehicleInteraction: this.vehicleInteraction,
       temperature: this.temperature,

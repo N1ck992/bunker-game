@@ -1,0 +1,53 @@
+{
+  "comment": "Способности героев/техники (ТЗ п.8), обрабатываются game/systems/AbilitySystem.js. Пассивная способность (type: passive) даёт постоянный бонус к одной из характеристик через Stats (см. StatsSystem.js/Character.js) — значение по уровню берётся из tiers[level-1] (уровень 1..tiers.length, без ограничения сверху со стороны кода — если уровень больше числа тиров, используется последний тир). Активная/тактическая способность (type: active) пока не наносит урон сама — боевая система, которая это читает, будет добавлена позже (Этап 8); здесь только полное описание способности данными: время подготовки, коэффициент урона по уровням и побочный эффект (например, снижение времени перезарядки у контролируемых войск). unlockHeroLevel — оригинальное игровое требование по уровню офицера; на данном этапе разработки не проверяется нигде в коде (по просьбе — все ограничения на прокачку временно сняты для тестирования), оставлено просто как информация для будущего баланса. awakened — усиленный вариант активной способности, доступный когда способность и вообще все остальные способности этого героя находятся на максимальном уровне (см. AbilitySystem.isAwakened).",
+  "abilities": [
+    {
+      "id": "damage_intensity_passive",
+      "name": "Интенсивность урона",
+      "type": "passive",
+      "description": "Интенсивность урона подразделения этого офицера повышается. Дополнительный множитель урона, повышающий наносимый урон всех типов — нейтрализуется сопротивлением урону (damageResistance) у цели.",
+      "effect": { "stat": "damageIntensity" },
+      "tiers": [5, 7, 9, 12, 15]
+    },
+    {
+      "id": "firepower_passive",
+      "name": "Подавляющий огонь",
+      "type": "passive",
+      "description": "Повышает огневую мощь подразделения этого офицера.",
+      "effect": { "stat": "firepower" },
+      "tiers": [10, 12, 14, 16, 20]
+    },
+    {
+      "id": "cooldown_passive",
+      "name": "Огонь по готовности",
+      "type": "passive",
+      "description": "Время зарядки у войск этого офицера снижается.",
+      "effect": { "stat": "cooldownReduction" },
+      "tiers": [4, 5, 6, 7, 10],
+      "unlockHeroLevel": 30
+    },
+    {
+      "id": "lead_rain_tactical",
+      "name": "Свинцовый дождь",
+      "type": "active",
+      "activeCategory": "tactical",
+      "description": "Накрывает противника непрерывным огнём из пулемёта, нанося урон, и снижает время заряжания у контролируемых войск на несколько секунд.",
+      "prepSeconds": 8,
+      "tiers": [
+        { "damageCoefficient": 550, "cooldownReductionPercent": 4, "effectDurationSeconds": 4 },
+        { "damageCoefficient": 650, "cooldownReductionPercent": 5, "effectDurationSeconds": 4 },
+        { "damageCoefficient": 800, "cooldownReductionPercent": 6, "effectDurationSeconds": 4 },
+        { "damageCoefficient": 950, "cooldownReductionPercent": 7, "effectDurationSeconds": 4 },
+        { "damageCoefficient": 1200, "cooldownReductionPercent": 10, "effectDurationSeconds": 4 }
+      ],
+      "awakened": {
+        "name": "Свинцовый дождь (Пробуждённый)",
+        "description": "Усиленная версия — становится доступна, когда все способности героя достигли максимального уровня.",
+        "prepSeconds": 8,
+        "tiers": [
+          { "damageCoefficient": 1300, "cooldownReductionPercent": 10, "effectDurationSeconds": 8 }
+        ]
+      }
+    }
+  ]
+}
