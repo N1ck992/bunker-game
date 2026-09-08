@@ -6,8 +6,8 @@
     {
       "id": "mutant_stalker",
       "name": "Мутант",
-      "health": 6000,
-      "damage": 350,
+      "health": 119500,
+      "damage": 30,
       "attackDistance": 3,
       "aggroRange": 6,
       "attackCooldownSeconds": 1.6,

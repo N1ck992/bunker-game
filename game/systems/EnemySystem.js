@@ -42,8 +42,13 @@ export class EnemySystem {
    * @param {Enemy[]} enemies
    * @param {Character[]} characters
    * @param {number} dt
+   * @param {VehicleSystem} [vehicleSystem] - if a target character currently
+   *   leads a vehicle, incoming damage hits that vehicle's own HP pool
+   *   instead of the character's personal health — see _attack. Optional
+   *   only so this system still works before any vehicle exists at all.
    */
-  update(enemies, characters, dt) {
+  update(enemies, characters, dt, vehicleSystem = null) {
+    this._vehicleSystem = vehicleSystem;
     // Refreshed fresh every frame below (see _attack) — a character stops
     // being "under attack" the instant every enemy targeting them backs off
     // or dies, same frame their combatState would too.
@@ -267,7 +272,19 @@ export class EnemySystem {
       // "ready" pose the rest of the cooldown, with a reload bar over the
       // head counting up to the next hit.
       enemy.attackAnimRemaining = Math.min(this.attackAnimSeconds, enemy.attackCooldownSeconds);
-      target.takeDamage(enemy.damage);
+
+      // If `target` is currently leading a vehicle (ТЗ п.6), the vehicle
+      // is what's actually standing there taking the hit — its own HP/
+      // armor pool absorbs the damage, not the pilot's small personal
+      // health bar. Only once the vehicle itself is destroyed does the
+      // character's own health become exposed again (not yet wired: what
+      // happens to the character/vehicle at that point is a follow-up).
+      const vehicle = this._vehicleSystem?.squad.find((v) => v.leaderId === target.id) ?? null;
+      if (vehicle && vehicle.isActive) {
+        vehicle.takeDamage(enemy.damage);
+      } else {
+        target.takeDamage(enemy.damage);
+      }
     }
   }
 
