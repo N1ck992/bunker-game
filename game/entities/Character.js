@@ -11,7 +11,7 @@
 // automatic battle system that reads these stats comes in a later stage;
 // for now this is just the data foundation.
 
-import { Stats } from '../systems/StatsSystem.js?v=57';
+import { Stats } from '../systems/StatsSystem.js?v=58';
 
 // Used for any base stat characters.json doesn't specify, so a
 // half-filled data entry still produces a usable Stats object instead of

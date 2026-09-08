@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=57';
-import { MovementSystem } from '../systems/MovementSystem.js?v=57';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=57';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=57';
-import { WorldSystem } from '../systems/WorldSystem.js?v=57';
-import { InventorySystem } from '../systems/InventorySystem.js?v=57';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=57';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=58';
+import { MovementSystem } from '../systems/MovementSystem.js?v=58';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=58';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=58';
+import { WorldSystem } from '../systems/WorldSystem.js?v=58';
+import { InventorySystem } from '../systems/InventorySystem.js?v=58';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=58';
 
-import { GameTime } from './GameTime.js?v=57';
-import { ResourceSystem } from './ResourceSystem.js?v=57';
-import { TemperatureSystem } from './TemperatureSystem.js?v=57';
-import { SaveSystem } from './SaveSystem.js?v=57';
+import { GameTime } from './GameTime.js?v=58';
+import { ResourceSystem } from './ResourceSystem.js?v=58';
+import { TemperatureSystem } from './TemperatureSystem.js?v=58';
+import { SaveSystem } from './SaveSystem.js?v=58';
 
-import { Character } from '../entities/Character.js?v=57';
-import { Enemy } from '../entities/Enemy.js?v=57';
-import { Item } from '../entities/Item.js?v=57';
-import { EnemySystem } from '../systems/EnemySystem.js?v=57';
-import { InteractionSystem } from '../systems/InteractionSystem.js?v=57';
-import { VehicleSystem, MAX_SQUAD_VEHICLES } from '../systems/VehicleSystem.js?v=57';
-import { AbilitySystem } from '../systems/AbilitySystem.js?v=57';
-import { BattleSystem } from '../systems/BattleSystem.js?v=57';
+import { Character } from '../entities/Character.js?v=58';
+import { Enemy } from '../entities/Enemy.js?v=58';
+import { Item } from '../entities/Item.js?v=58';
+import { EnemySystem } from '../systems/EnemySystem.js?v=58';
+import { InteractionSystem } from '../systems/InteractionSystem.js?v=58';
+import { VehicleSystem, MAX_SQUAD_VEHICLES } from '../systems/VehicleSystem.js?v=58';
+import { AbilitySystem } from '../systems/AbilitySystem.js?v=58';
+import { BattleSystem } from '../systems/BattleSystem.js?v=58';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=57';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=57';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=57';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=57';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=57';
-import { PartyUI } from '../ui/PartyUI.js?v=57';
-import { InventoryUI } from '../ui/InventoryUI.js?v=57';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=57';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=57';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=57';
-import { showStartMenu } from '../ui/StartMenu.js?v=57';
-import { installOrientationLockRetry } from './OrientationLock.js?v=57';
+import { ShelterUI } from '../ui/ShelterUI.js?v=58';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=58';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=58';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=58';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=58';
+import { PartyUI } from '../ui/PartyUI.js?v=58';
+import { InventoryUI } from '../ui/InventoryUI.js?v=58';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=58';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=58';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=58';
+import { showStartMenu } from '../ui/StartMenu.js?v=58';
+import { installOrientationLockRetry } from './OrientationLock.js?v=58';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -84,7 +84,7 @@ const MAX_PARTY_SIZE = 5; // hard cap on how many settlers can be checked "в о
 // latest code, rather than guessing from behaviour alone. MUST match the
 // current ?v= number exactly, or the badge is worse than useless — it'll
 // look fine while the browser is still serving stale JS.
-const GAME_VERSION = 'v57';
+const GAME_VERSION = 'v58';
 const BATTLE_LOG_MAX = 200; // ring buffer size for this.battleLog — see _logBattle
 // Only Ольга (char_2) can hack a "hack:<seconds>" door's keypad — see
 // _commandHackDoor/_startHacking. She's the party's dedicated hacker (высокий
@@ -2714,8 +2714,7 @@ class Game {
    * fight.
    */
   _logBattle(text) {
-    const elapsed = this.gameTime?.totalElapsed ?? null;
-    const stamp = elapsed != null ? `${elapsed.toFixed(1)}с` : '';
+    const stamp = `${(this._battleClockSeconds ?? 0).toFixed(1)}с`;
     this.battleLog.push({ stamp, text });
     if (this.battleLog.length > BATTLE_LOG_MAX) this.battleLog.shift();
     this._battleLogDirty = true;
@@ -2778,6 +2777,14 @@ class Game {
   }
 
   _update(dt) {
+    // Independent real-time clock for the battle log's timestamps (see
+    // _logBattle) — deliberately NOT gameTime.totalElapsed, which is
+    // frozen (day/night cycle disabled, see the comment two lines below)
+    // and was making every single log line read "0.0с" regardless of how
+    // much real time had actually passed between events. This one just
+    // accumulates dt every frame, same as everything else in this method.
+    this._battleClockSeconds = (this._battleClockSeconds ?? 0) + dt;
+
     // Day/night cycle temporarily disabled — see TEMPERATURE_ENABLED comment
     // above the night-overlay check in _render. gameTime.update() is what
     // actually advances the phase, so leaving it uncalled freezes the game
