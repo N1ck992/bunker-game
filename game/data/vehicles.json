@@ -13,7 +13,7 @@
         "maxHealth": 43200,
         "armor": 62,
         "attack": 5730,
-        "attackRange": 5,
+        "attackRange": 8,
         "speed": 27,
         "attackSpeed": 0.5,
         "pierce": 63,

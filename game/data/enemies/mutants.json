@@ -8,8 +8,8 @@
       "name": "Мутант",
       "health": 200000,
       "damage": 10,
-      "attackDistance": 3,
-      "aggroRange": 6,
+      "attackDistance": 7,
+      "aggroRange": 10,
       "attackCooldownSeconds": 1.6,
       "tilesPerSecond": 2.2,
       "sprites": {
