@@ -115,7 +115,27 @@ export class BattleSystem {
       const attackRange = vehicle.stats.get('attackRange');
       leader.attackCooldownSeconds = this._effectiveAttackCooldown(vehicle, leader, adjutant);
 
-      const target = this._pickTarget(leader, attackRange, enemies);
+      // Sticky targeting: keep fighting the SAME enemy as long as it's
+      // still alive and in range, instead of re-picking "nearest" fresh
+      // every single frame. Without this, a target whose own AI movement
+      // nudges it a tile to either side of the leader's column (or a
+      // second enemy that's momentarily marginally closer) could flip
+      // which enemy/direction counts as "nearest" 60 times a second,
+      // making the robot appear to spin and re-target randomly mid-fight
+      // instead of committing to whoever it's actually shooting at.
+      let target = null;
+      if (leader.targetEnemyId) {
+        const current = enemies.find((e) => e.id === leader.targetEnemyId);
+        if (current?.isActive) {
+          const d = Math.hypot(
+            leader.position.col - current.position.col,
+            leader.position.row - current.position.row
+          );
+          if (d <= attackRange) target = current;
+        }
+      }
+      if (!target) target = this._pickTarget(leader, attackRange, enemies);
+
       if (!target) {
         leader.combatState = 'idle';
         leader.targetEnemyId = null;
@@ -128,7 +148,14 @@ export class BattleSystem {
 
       leader.combatState = 'attacking';
       leader.targetEnemyId = target.id;
-      leader.facingDir = target.position.col >= leader.position.col ? 1 : -1;
+      // Only turn to face the target between shots (attackAnimRemaining
+      // already at 0) — never mid-swing, so the sprite can't flip
+      // direction partway through its own charge-up/fire animation just
+      // because the target shifted a tile during it. It still re-aims
+      // correctly for every new shot.
+      if (leader.attackAnimRemaining <= 0) {
+        leader.facingDir = target.position.col >= leader.position.col ? 1 : -1;
+      }
       // The vehicle (via its leader's on-map position) holds ground once
       // engaged — same "combatState 'attacking' freezes movement" contract
       // MovementSystem already enforces for any character.
