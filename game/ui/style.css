@@ -890,33 +890,55 @@ button.squad-hole:disabled { cursor: default; }
   text-overflow: ellipsis;
 }
 .squad-stat-race { left: 80.73%; top: 14.45%; width: 12.37%; height: 4.3%; }
-.squad-stat-str  { left: 78.45%; top: 18.65%; width: 6.84%; height: 4.69%; }
-.squad-stat-end  { left: 78.45%; top: 24.02%; width: 6.84%; height: 4.69%; }
-.squad-stat-agi  { left: 78.45%; top: 29.39%; width: 6.84%; height: 4.69%; }
-.squad-stat-int  { left: 78.45%; top: 34.77%; width: 6.84%; height: 4.69%; }
-.squad-stat-conc { left: 78.45%; top: 40.14%; width: 6.84%; height: 4.69%; }
 
-.squad-ability-name {
-  left: 72.92%;
-  top: 48.14%;
-  width: 24%;
-  height: 3.42%;
+/* Ability circles — reuse the five row slots the old СИЛ/ВЫН/ЛОВ/ИНТ/КОНЦ
+ * attribute values sat in (see PartyUI._abilityCirclesHtml); same
+ * positions, now round tappable icon buttons instead of plain numbers.
+ * Not baked into squad_panel_frame.png as circles, so each one draws its
+ * own small background/border. */
+.squad-ability-circle {
+  border-radius: 50%;
+  background: var(--squad-bg-0, #08090a);
+  border: 1px solid var(--squad-gold-dim, #8a6a37);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.squad-ability-circle:active { border-color: var(--squad-gold-bright, #f5c878); }
+.squad-ability-circle.squad-stat-str  { left: 78.45%; top: 18.65%; width: 6.84%; height: 4.69%; }
+.squad-ability-circle.squad-stat-end  { left: 78.45%; top: 24.02%; width: 6.84%; height: 4.69%; }
+.squad-ability-circle.squad-stat-agi  { left: 78.45%; top: 29.39%; width: 6.84%; height: 4.69%; }
+.squad-ability-circle.squad-stat-int  { left: 78.45%; top: 34.77%; width: 6.84%; height: 4.69%; }
+.squad-ability-circle.squad-stat-conc { left: 78.45%; top: 40.14%; width: 6.84%; height: 4.69%; }
+
+/* Ability description box — appears below the circles when one is tapped
+ * (see PartyUI._toggleAbilityDescription). NOT part of the reference
+ * image (no baked hole here), so it draws its own background/border, same
+ * treatment as the vehicle picker. */
+.squad-ability-description {
+  left: 72.5%;
+  top: 46%;
+  width: 25%;
+  height: 22%;
+  background: rgba(8, 9, 10, 0.85);
+  border: 1px solid var(--squad-gold-dim, #8a6a37);
+  border-radius: 4px;
+  padding: 3%;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+.squad-ability-desc-title {
   font-size: 13px;
   font-weight: bold;
   color: var(--squad-gold-bright, #f5c878);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-bottom: 4px;
 }
-.squad-ability-desc {
-  left: 72.92%;
-  top: 52.54%;
-  width: 24%;
-  height: 8%;
+.squad-ability-desc-text {
   font-size: 11px;
   line-height: 1.35;
   color: var(--squad-ink, #d8c9a8);
-  overflow: hidden;
 }
 
 /* Bottom row — 5 squad slots, one button per settler (tap = make lead,

@@ -16,7 +16,7 @@
 // their own separate number system. maxHealth/damage getters below keep
 // the old direct-property reads (UI, rendering) working unchanged.
 
-import { Stats } from '../systems/StatsSystem.js?v=58';
+import { Stats } from '../systems/StatsSystem.js?v=59';
 
 export class Enemy {
   /**

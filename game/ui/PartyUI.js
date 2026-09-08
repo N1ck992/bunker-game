@@ -43,15 +43,17 @@ export class PartyUI {
    * @param {Map<string, Item>} params.itemsById
    * @param {VehicleSystem} [params.vehicleSystem]
    * @param {Map<string, object>} [params.vehicleDefsById] - game/data/vehicles.json entries, keyed by id
+   * @param {Map<string, object>} [params.abilitiesById] - game/data/abilities.json entries, keyed by id
    * @param {(characterId:string) => void} params.onSelectLead - fired when a bottom slot is tapped
    * @param {(characterId:string) => void} [params.onSelectVehicle] - fired when the vehicle picker is tapped
    * @param {() => void} params.onClose
    */
-  show({ characters, itemsById, vehicleSystem, vehicleDefsById, onSelectLead, onSelectVehicle, onClose }) {
+  show({ characters, itemsById, vehicleSystem, vehicleDefsById, abilitiesById, onSelectLead, onSelectVehicle, onClose }) {
     this._characters = characters;
     this._itemsById = itemsById;
     this._vehicleSystem = vehicleSystem ?? null;
     this._vehicleDefsById = vehicleDefsById ?? new Map();
+    this._abilitiesById = abilitiesById ?? new Map();
     this._onSelectLead = onSelectLead;
     this._onSelectVehicle = onSelectVehicle;
     this._onClose = onClose;
@@ -69,6 +71,8 @@ export class PartyUI {
         <div class="squad-hole squad-centre-pose">${this._centrePoseHtml(lead, leadVehicle)}</div>
 
         ${this._statValuesHtml(lead)}
+        ${this._abilityCirclesHtml(lead)}
+        <div class="squad-ability-description hidden"></div>
 
         <div class="squad-bottom-row">
           ${squad.map((c, i) => this._slotHtml(c, c.id === lead?.id, i)).join('')}
@@ -90,7 +94,38 @@ export class PartyUI {
       if (lead) onSelectVehicle?.(lead.id);
     });
 
+    this.panel.querySelectorAll('.squad-ability-circle').forEach((el) => {
+      el.addEventListener('click', () => this._toggleAbilityDescription(el.dataset.abilityId));
+    });
+
     this.panel.classList.remove('hidden');
+  }
+
+  /**
+   * Shows/hides the ability description box (below the ability circles —
+   * "нажав на них будет появляться описание каждой способности"). Tapping
+   * the same circle again closes it; tapping a different one swaps the
+   * text. NOT part of the reference image — same "own background/border"
+   * treatment as the vehicle picker, since there's no baked hole for it.
+   */
+  _toggleAbilityDescription(abilityId) {
+    const def = this._abilitiesById.get(abilityId);
+    const descEl = this.panel.querySelector('.squad-ability-description');
+    if (!def || !descEl) return;
+
+    const alreadyShowingThis = descEl.dataset.currentId === abilityId && !descEl.classList.contains('hidden');
+    if (alreadyShowingThis) {
+      descEl.classList.add('hidden');
+      descEl.dataset.currentId = '';
+      return;
+    }
+
+    descEl.dataset.currentId = abilityId;
+    descEl.innerHTML = `
+      <div class="squad-ability-desc-title">${def.name}${def.type === 'active' ? ' (активная)' : ''}</div>
+      <div class="squad-ability-desc-text">${def.description ?? ''}</div>
+    `;
+    descEl.classList.remove('hidden');
   }
 
   /** The vehicle (if any) `characterId` currently leads — see VehicleSystem.squad/Vehicle.leaderId. */
@@ -99,21 +134,10 @@ export class PartyUI {
   }
 
   /**
-   * Fills in just the value half of each baked stat row (Здоровье bar,
-   * Раса, СИЛ/ВЫН/ЛОВ/ИНТ/КОНЦ numbers) plus the ability name/description
-   * below them — every label and the divider line are part of
-   * squad_panel_frame.png. `character` null (nobody recruited yet) leaves
-   * every value hole empty rather than showing stale data.
-   *
-   * TODO(hero rework): the old fixed attribute set (СИЛ/ВЫН/ЛОВ/ИНТ/КОНЦ)
-   * these five holes were baked in the frame art for is gone — heroes now
-   * carry an open-ended Stats block (see Character.stats/StatsSystem.js)
-   * whose keys aren't fixed to exactly five, so they don't map cleanly onto
-   * this specific frame image any more. Left blank for now rather than
-   * showing mismatched numbers; revisit once the new hero stat display is
-   * actually designed. Same for the ability name/description block, which
-   * depended on the removed skillId/SkillSystem — will come back once the
-   * new ability data format exists.
+   * Fills in just the value half of the Здоровье/Раса baked stat rows —
+   * see squad_panel_frame.png. The five rows below them (originally
+   * СИЛ/ВЫН/ЛОВ/ИНТ/КОНЦ, from the old fixed attribute set) are now filled
+   * by _abilityCirclesHtml instead — see that method.
    */
   _statValuesHtml(character) {
     const ratio = character ? Math.max(0, Math.min(1, character.health / (character.stats?.get('maxHealth') || 100))) : 0;
@@ -122,12 +146,51 @@ export class PartyUI {
     return `
       <div class="squad-hole squad-stat-health"><div class="squad-stat-fill" style="width:${character ? ratio * 100 : 0}%"></div></div>
       <div class="squad-hole squad-stat-race">${raceLabel}</div>
-      <div class="squad-hole squad-stat-str"></div>
-      <div class="squad-hole squad-stat-end"></div>
-      <div class="squad-hole squad-stat-agi"></div>
-      <div class="squad-hole squad-stat-int"></div>
-      <div class="squad-hole squad-stat-conc"></div>
     `;
+  }
+
+  /**
+   * Ability circles (ТЗ: "в правом меню... кружочки с его способностями...
+   * нажав на них будет появляться описание") — reuses the five row slots
+   * the old СИЛ/ВЫН/ЛОВ/ИНТ/КОНЦ attribute values used to sit in (same
+   * positions, now holding a tappable icon per ability instead of a
+   * number). One circle per ability this character actually has
+   * (passives first, then actives), capped at 5 — there's only 5 baked
+   * row positions to reuse. A hero with fewer than 5 abilities (like
+   * Рэндел's 4) just leaves the remaining slots empty rather than
+   * guessing at extra ones.
+   */
+  _abilityCirclesHtml(character) {
+    if (!character) return '';
+    const slotClasses = ['squad-stat-str', 'squad-stat-end', 'squad-stat-agi', 'squad-stat-int', 'squad-stat-conc'];
+    const abilityIds = [...(character.passiveAbilities ?? []), ...(character.activeAbilities ?? [])].slice(0, slotClasses.length);
+
+    return abilityIds
+      .map((abilityId, i) => {
+        const def = this._abilitiesById.get(abilityId);
+        return `
+          <button class="squad-hole squad-ability-circle ${slotClasses[i]}" data-ability-id="${abilityId}" aria-label="${def?.name ?? abilityId}">
+            ${this._abilityIcon(abilityId, def)}
+          </button>
+        `;
+      })
+      .join('');
+  }
+
+  /**
+   * Small glyph per known ability id — purely cosmetic, no dedicated icon
+   * art exists yet. Falls back to the ability's own first initial for any
+   * id this map hasn't caught up with, so a newly-added ability still
+   * shows *something* recognisable without needing a matching UI change.
+   */
+  _abilityIcon(abilityId, def) {
+    const known = {
+      damage_intensity_passive: '🔥',
+      firepower_passive: '💪',
+      cooldown_passive: '⏱',
+      lead_rain_tactical: '🌧'
+    };
+    return known[abilityId] ?? (def?.name?.charAt(0).toUpperCase() ?? '?');
   }
 
   /**

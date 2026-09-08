@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=58';
-import { MovementSystem } from '../systems/MovementSystem.js?v=58';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=58';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=58';
-import { WorldSystem } from '../systems/WorldSystem.js?v=58';
-import { InventorySystem } from '../systems/InventorySystem.js?v=58';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=58';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=59';
+import { MovementSystem } from '../systems/MovementSystem.js?v=59';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=59';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=59';
+import { WorldSystem } from '../systems/WorldSystem.js?v=59';
+import { InventorySystem } from '../systems/InventorySystem.js?v=59';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=59';
 
-import { GameTime } from './GameTime.js?v=58';
-import { ResourceSystem } from './ResourceSystem.js?v=58';
-import { TemperatureSystem } from './TemperatureSystem.js?v=58';
-import { SaveSystem } from './SaveSystem.js?v=58';
+import { GameTime } from './GameTime.js?v=59';
+import { ResourceSystem } from './ResourceSystem.js?v=59';
+import { TemperatureSystem } from './TemperatureSystem.js?v=59';
+import { SaveSystem } from './SaveSystem.js?v=59';
 
-import { Character } from '../entities/Character.js?v=58';
-import { Enemy } from '../entities/Enemy.js?v=58';
-import { Item } from '../entities/Item.js?v=58';
-import { EnemySystem } from '../systems/EnemySystem.js?v=58';
-import { InteractionSystem } from '../systems/InteractionSystem.js?v=58';
-import { VehicleSystem, MAX_SQUAD_VEHICLES } from '../systems/VehicleSystem.js?v=58';
-import { AbilitySystem } from '../systems/AbilitySystem.js?v=58';
-import { BattleSystem } from '../systems/BattleSystem.js?v=58';
+import { Character } from '../entities/Character.js?v=59';
+import { Enemy } from '../entities/Enemy.js?v=59';
+import { Item } from '../entities/Item.js?v=59';
+import { EnemySystem } from '../systems/EnemySystem.js?v=59';
+import { InteractionSystem } from '../systems/InteractionSystem.js?v=59';
+import { VehicleSystem, MAX_SQUAD_VEHICLES } from '../systems/VehicleSystem.js?v=59';
+import { AbilitySystem } from '../systems/AbilitySystem.js?v=59';
+import { BattleSystem } from '../systems/BattleSystem.js?v=59';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=58';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=58';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=58';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=58';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=58';
-import { PartyUI } from '../ui/PartyUI.js?v=58';
-import { InventoryUI } from '../ui/InventoryUI.js?v=58';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=58';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=58';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=58';
-import { showStartMenu } from '../ui/StartMenu.js?v=58';
-import { installOrientationLockRetry } from './OrientationLock.js?v=58';
+import { ShelterUI } from '../ui/ShelterUI.js?v=59';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=59';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=59';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=59';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=59';
+import { PartyUI } from '../ui/PartyUI.js?v=59';
+import { InventoryUI } from '../ui/InventoryUI.js?v=59';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=59';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=59';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=59';
+import { showStartMenu } from '../ui/StartMenu.js?v=59';
+import { installOrientationLockRetry } from './OrientationLock.js?v=59';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -84,7 +84,7 @@ const MAX_PARTY_SIZE = 5; // hard cap on how many settlers can be checked "в о
 // latest code, rather than guessing from behaviour alone. MUST match the
 // current ?v= number exactly, or the badge is worse than useless — it'll
 // look fine while the browser is still serving stale JS.
-const GAME_VERSION = 'v58';
+const GAME_VERSION = 'v59';
 const BATTLE_LOG_MAX = 200; // ring buffer size for this.battleLog — see _logBattle
 // Only Ольга (char_2) can hack a "hack:<seconds>" door's keypad — see
 // _commandHackDoor/_startHacking. She's the party's dedicated hacker (высокий
@@ -295,13 +295,6 @@ class Game {
             ? `${leader.name}: Свинцовый дождь${tier.awakened ? ' (пробужд.)' : ''} — урон ${tier.damage.toFixed(0)}`
             : `${leader.name}: Свинцовый дождь${tier.awakened ? ' (пробужд.)' : ''} — промах`
         );
-      },
-      (vehicle, leader, newFacingDir) => {
-        // Diagnostic — every facing change BattleSystem itself makes, so
-        // the battle log can show whether "спиннинг" comes from here or
-        // from somewhere else entirely (see the generic per-frame watcher
-        // in _updateBattle/_checkFacingDrift below).
-        this._logBattle(`[БС] ${leader.name} поворот -> ${newFacingDir > 0 ? '→' : '←'}`);
       }
     );
     this._attackEffects = []; // in-flight/impacting energy bolt VFX, see _renderAttackEffects
@@ -313,7 +306,6 @@ class Game {
     // differently, so it's possible to tell whether a facing change came
     // from BattleSystem's own logic or from something else entirely.
     this.battleLog = [];
-    this._lastFacingByCharacterId = new Map();
 
     this._buildDom();
     this._loadBunkerImage();
@@ -2534,6 +2526,7 @@ class Game {
       itemsById: this.itemsById,
       vehicleSystem: this.vehicleSystem,
       vehicleDefsById: this.vehicleDefsById,
+      abilitiesById: this.abilitiesById,
       onSelectLead: (characterId) => {
         for (const character of this.characters) {
           // Only one lead/tank at a time — tapping a squad slot makes that
@@ -2721,33 +2714,6 @@ class Game {
   }
 
   /**
-   * Diagnostic sweep, run once per frame right after every combat system
-   * has had its turn — compares each party character's current facingDir
-   * against what it was last frame and logs any change that ISN'T already
-   * accounted for by BattleSystem's own onFacingChange hook (tagged
-   * "[БС]" in the log). A change that shows up here with no matching "[БС]"
-   * line right before it did NOT come from BattleSystem — e.g. MovementSystem
-   * turning a character mid-step, or SquadCombatSystem repositioning them —
-   * which is exactly what's needed to track down the "vehicle spins during
-   * combat" report from outside BattleSystem's own logic. Temporary
-   * debugging aid; safe to leave running permanently (cheap — one map
-   * lookup + comparison per character per frame).
-   */
-  _checkFacingDrift() {
-    for (const character of this.characters) {
-      const prev = this._lastFacingByCharacterId.get(character.id);
-      if (prev !== undefined && prev !== character.facingDir) {
-        const pathLen = character.path?.length ?? 0;
-        this._logBattle(
-          `[СЛЕЖ] ${character.name} поворот -> ${character.facingDir > 0 ? '→' : '←'} ` +
-          `(состояние: ${character.combatState}, путь: ${pathLen})`
-        );
-      }
-      this._lastFacingByCharacterId.set(character.id, character.facingDir);
-    }
-  }
-
-  /**
    * Rebuilds the battle-log panel's DOM from this.battleLog, only when
    * something actually changed (_logBattle sets _battleLogDirty) — avoids
    * touching the DOM every single frame for no reason. Collapsed view
@@ -2813,7 +2779,6 @@ class Game {
     // A hero with no vehicle assigned as leader simply doesn't fight, per
     // "герой сам по себе передвигаться/воевать не сможет, ему нужна техника".
     this.battleSystem.update(this.vehicleSystem, this.characters, this.enemies, dt);
-    this._checkFacingDrift();
     this._renderBattleLogUI();
 
     // Overview mode (see _setOverview) only ever changes because the
