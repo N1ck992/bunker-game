@@ -5,7 +5,7 @@
   "characters": [
     {
       "id": "char_1",
-      "name": "Mark",
+      "name": "Рэндел Миллер",
       "avatar": "game/assets/characters/avatars/char_3.png",
       "race": "human",
       "health": 100,
