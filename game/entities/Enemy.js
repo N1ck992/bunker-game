@@ -8,6 +8,15 @@
 // matching unit definition from game/data/enemies/<raceId>.json. Multiple
 // instances can share the same raceId+unitId (and therefore the same sprite
 // set — see Game._loadEnemySprites, which caches per unit type).
+//
+// Stat overhaul (see game/systems/StatsSystem.js / Character.js): combat
+// numbers live in this.stats now, the same generic container heroes use —
+// this is what lets a boss later be built from "hero + vehicle" components
+// using the exact same stat math (ТЗ п.12/13), instead of enemies having
+// their own separate number system. maxHealth/damage getters below keep
+// the old direct-property reads (UI, rendering) working unchanged.
+
+import { Stats } from '../systems/StatsSystem.js?v=52';
 
 export class Enemy {
   /**
@@ -20,10 +29,14 @@ export class Enemy {
     this.unitId = spawn.unitId;
     this.name = unitDef.name;
 
-    // Combat/movement stats, straight from data — see game/data/enemies/README.md
-    this.maxHealth = unitDef.health;
+    // Combat/movement stats — see game/data/enemies/README.md. unitDef's
+    // flat health/damage feed the same Stats container a Character uses,
+    // so mods/buffs/debuffs work identically on either side of a fight.
+    this.stats = new Stats({
+      maxHealth: unitDef.health,
+      attack: unitDef.damage
+    });
     this.health = unitDef.health;
-    this.damage = unitDef.damage;
     // Tile gap the enemy keeps from its target: it stops chasing this many
     // tiles away and attacks from there, so it never stands on the same
     // tile as (or visually overlapping) the character. Tune per unit in
@@ -54,13 +67,13 @@ export class Enemy {
     this.aiState = 'idle';
     this.targetCharacterId = null;
     // Set true the moment any settler engages ANY enemy sharing this one's
-    // raceId (see EnemySystem.alertFaction, called from CombatSystem's
-    // onEngage in Game.js) — the rest of the "faction" piling on once one of
-    // their own gets shot at, same as a real pack. Once alerted, this enemy
-    // hunts the party regardless of aggroRange (see EnemySystem._pickTarget)
-    // instead of needing the party to physically wander into its own small
-    // detection bubble first. Runtime-only, not saved — same as aiState,
-    // it's re-derived from the fight, not persisted between sessions.
+    // raceId (see EnemySystem.alertFaction, called from Game.js) — the rest
+    // of the "faction" piling on once one of their own gets attacked, same
+    // as a real pack. Once alerted, this enemy hunts the party regardless
+    // of aggroRange (see EnemySystem._pickTarget) instead of needing the
+    // party to physically wander into its own small detection bubble
+    // first. Runtime-only, not saved — same as aiState, it's re-derived
+    // from the fight, not persisted between sessions.
     this.alerted = false;
     this.attackCooldownRemaining = 0;
     // Brief pulse set by EnemySystem._attack each time a hit actually
@@ -78,6 +91,16 @@ export class Enemy {
     this._repathAccumulator = 0;
 
     this.state = 'active'; // 'active' | 'dead'
+  }
+
+  /** Convenience read-through to the stats container — see class comment. */
+  get maxHealth() {
+    return this.stats.get('maxHealth');
+  }
+
+  /** Convenience read-through to the stats container — see class comment. */
+  get damage() {
+    return this.stats.get('attack');
   }
 
   get isActive() {

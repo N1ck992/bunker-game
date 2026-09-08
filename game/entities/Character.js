@@ -1,5 +1,31 @@
 // Character.js
 // Data + small behaviour for a single settler. No rendering code here.
+//
+// Stat overhaul (Этап 2/3 of the hero+vehicle rework): the old fixed
+// attribute list (strength/endurance/agility/intelligence/concentration)
+// and the old ability system tied to it (skillId/skillCharge/shieldRemaining,
+// see the removed CombatSystem.js/SkillSystem.js) are gone. Combat numbers
+// now live in this.stats (see game/systems/StatsSystem.js) — a generic,
+// data-driven container, so adding a new stat later is a data change
+// (game/data/characters.json), not a change to this class. The actual
+// automatic battle system that reads these stats comes in a later stage;
+// for now this is just the data foundation.
+
+import { Stats } from '../systems/StatsSystem.js?v=52';
+
+// Used for any base stat characters.json doesn't specify, so a
+// half-filled data entry still produces a usable Stats object instead of
+// NaNs everywhere. Not a balance decision — just a safe fallback.
+const DEFAULT_BASE_STATS = {
+  maxHealth: 100,
+  attack: 10,
+  defense: 0,
+  speed: 3,
+  attackRange: 1,
+  attackSpeed: 1,
+  critChance: 0,
+  critDamage: 50
+};
 
 export class Character {
   constructor(data) {
@@ -22,17 +48,16 @@ export class Character {
     // null falls back to a generic placeholder icon there.
     this.fullBodyArt = data.sprites?.idle?.[0] ?? null;
 
-    this.health = data.health ?? 100;
-    this.strength = data.strength ?? 5;
-    this.endurance = data.endurance ?? 5;
-    this.agility = data.agility ?? 5;
-    this.intelligence = data.intelligence ?? 5;
-    // Attribute, same footing as the four above — how fast this character's
-    // ability charge fills (see skillCharge below / SkillSystem, which reads
-    // it against balance.combat.concentrationBaseline the same way
-    // CombatSystem reads ловкость against agilityBaseline for attack speed).
-    // Not itself a progress bar — that's skillCharge.
-    this.concentration = data.concentration ?? 5;
+    // Generic combat stat block (see game/systems/StatsSystem.js). Base
+    // values come from characters.json's "stats" object; anything omitted
+    // falls back to DEFAULT_BASE_STATS above. Future stats (new damage
+    // types, resistances, whatever) just need a new key in data — nothing
+    // here has to change.
+    this.stats = new Stats({ ...DEFAULT_BASE_STATS, ...(data.stats ?? {}) });
+
+    // Current HP, separate from the "maxHealth" stat (which can itself be
+    // buffed/debuffed by modifiers) — same pattern Enemy.js uses.
+    this.health = data.health ?? this.stats.get('maxHealth');
 
     this.temperature = data.temperature ?? 20;
 
@@ -42,7 +67,9 @@ export class Character {
     // separate from weapon/clothing: a transport-suit (and later cars,
     // motorcycles, other surface/space suits) is a piece of vehicle
     // technology, not amunition or clothing — see items.json's "vehicle"
-    // slot and Game._canTravelWorldMap.
+    // slot and Game._canTravelWorldMap. This is also the slot the upcoming
+    // Vehicle battle system (ТЗ п.5/6) will hang off — a hero's equipped
+    // vehicle id here doubles as which combat vehicle they're paired with.
     this.vehicle = data.vehicle ?? null;
     // Equipped gadget/device item id, or null. A third equip slot alongside
     // weapon/vehicle — the "дополнительное устройство" shown in the squad
@@ -53,49 +80,23 @@ export class Character {
     // Unequipped items are no longer tracked per-character — the whole party
     // shares one backpack now (see Game.partyInventory / InventorySystem).
 
-    // Combat runtime state, advanced by CombatSystem — not saved (recomputed
-    // fresh every load, same as Enemy's attackCooldownRemaining/aiState).
+    // Generic combat runtime state — the contract MovementSystem/EnemySystem/
+    // rendering already share (a character "holds position" while
+    // combatState === 'attacking' or isBeingAttacked, regardless of which
+    // system actually put them in that state). Nothing currently sets
+    // combatState to 'attacking' for a hero (the old CombatSystem that did
+    // is removed, pending the new Battle System stage) — these fields stay
+    // so the rest of the game keeps working unchanged once that system
+    // lands, without another pass through Movement/rendering code.
     this.attackCooldownRemaining = 0;
-    // The current effective cooldown (weapon base cooldown, sped up by
-    // ловкость for melee weapons) — recomputed every frame by CombatSystem.
-    // Game._renderCharacters divides attackCooldownRemaining by this to
-    // draw the reload bar over the character's head.
     this.attackCooldownSeconds = 0;
-    // Brief pulse set by CombatSystem each time a shot/swing actually
-    // lands — attack sprite frames only play while this is running, so a
-    // slow-firing weapon doesn't read as attacking nonstop; the rest of
-    // the cooldown shows an idle "ready" pose plus the reload bar above.
     this.attackAnimRemaining = 0;
-    // The pulse's total length at the moment it started (set alongside
-    // attackAnimRemaining above) — Game._renderCharacters uses
-    // attackAnimDuration - attackAnimRemaining as elapsed-into-the-swing so
-    // the attack frames always play draw→fire→recover in order from frame 0,
-    // instead of sampling off the absolute game clock (which used to land
-    // mid-cycle depending on when the swing happened to fire).
     this.attackAnimDuration = 0;
     this.combatState = 'idle'; // 'idle' | 'attacking'
     this.targetEnemyId = null;
-
-    // Ultimate-style ability system (see game/data/skills.json,
-    // SkillSystem.js): "skill" in characters.json is the id of the one
-    // this character has, if any. skillCharge climbs on its own while
-    // they're in the fight (either attacking or under attack — see
-    // SkillSystem), at a rate set by the concentration attribute above,
-    // and on reaching skillChargeMax the skill fires by itself and the bar
-    // resets to 0 — no player input involved, this is a passive
-    // "comes online periodically" ability, not something to activate
-    // manually.
-    this.skillId = data.skill ?? null;
-    this.skillCharge = 0;
-    this.skillChargeMax = 100;
-    // Seconds left on an active guardian_shield-type effect (see
-    // SkillSystem._trigger) — while > 0, Character.takeDamage below blocks
-    // all incoming damage outright, regardless of which character actually
-    // cast the shield.
-    this.shieldRemaining = 0;
     // Whether some enemy is currently attacking this character, refreshed
     // every frame by EnemySystem — separate from combatState, which only
-    // tracks this character's own weapon fire. A character under attack
+    // tracks this character's own attack. A character under attack
     // holds position even with no weapon equipped or the attacker out of
     // their own weapon's range — see MovementSystem.moveTo.
     this.isBeingAttacked = false;
@@ -122,7 +123,8 @@ export class Character {
     // isTank marks the one settler enemies should prefer to attack first —
     // see EnemySystem._pickTarget.
     this.inParty = data.inParty ?? true;
-    this.isTank = data.isTank ?? false;    // Firing-line stand order behind the tank (see SquadCombatSystem —
+    this.isTank = data.isTank ?? false;
+    // Firing-line stand order behind the tank (see SquadCombatSystem —
     // lower numbers stand closer to the tank, higher/unset ones fall back
     // to roster order). Set from the roster's per-character menu — see
     // CharacterMenuUI's "Очередь" picker / Game._setQueueOrder. Irrelevant
@@ -152,11 +154,6 @@ export class Character {
   }
 
   takeDamage(amount) {
-    // An active guardian_shield effect (see SkillSystem) blocks all
-    // incoming damage outright — checked here, at the one place every
-    // damage source (EnemySystem, anything else in the future) already
-    // funnels through, rather than duplicating the check at each call site.
-    if (this.shieldRemaining > 0) return;
     this.health = Math.max(0, this.health - amount);
     if (this.health <= 0) this.setInactive();
   }
@@ -180,13 +177,8 @@ export class Character {
       name: this.name,
       race: this.race,
       avatar: this.avatar,
-      skill: this.skillId,
       health: this.health,
-      strength: this.strength,
-      endurance: this.endurance,
-      agility: this.agility,
-      intelligence: this.intelligence,
-      concentration: this.concentration,
+      stats: this.stats.toJSON(),
       temperature: this.temperature,
       clothing: this.clothing,
       weapon: this.weapon,

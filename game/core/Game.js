@@ -11,7 +11,6 @@ import { CharacterSystem } from '../systems/CharacterSystem.js?v=52';
 import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=52';
 import { WorldSystem } from '../systems/WorldSystem.js?v=52';
 import { InventorySystem } from '../systems/InventorySystem.js?v=52';
-import { CombatSystem } from '../systems/CombatSystem.js?v=52';
 import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=52';
 
 import { GameTime } from './GameTime.js?v=52';
@@ -23,7 +22,6 @@ import { Character } from '../entities/Character.js?v=52';
 import { Enemy } from '../entities/Enemy.js?v=52';
 import { Item } from '../entities/Item.js?v=52';
 import { EnemySystem } from '../systems/EnemySystem.js?v=52';
-import { SkillSystem } from '../systems/SkillSystem.js?v=52';
 import { InteractionSystem } from '../systems/InteractionSystem.js?v=52';
 
 import { ShelterUI } from '../ui/ShelterUI.js?v=52';
@@ -88,19 +86,20 @@ const FOLLOW_DISTANCE_TILES = 3; // how far "Выбрать всех" followers 
 
 class Game {
   async init() {
-    const [balance, mapData, charactersData, itemsData, skillsData, interactionsData] = await Promise.all([
+    const [balance, mapData, charactersData, itemsData, interactionsData] = await Promise.all([
       fetchJson('game/data/balance.json'),
       fetchJson(INITIAL_ROOM_FILE),
       fetchJson('game/data/characters.json'),
       fetchJson('game/data/items.json'),
-      fetchJson('game/data/skills.json'),
       fetchJson('game/data/interactions.json')
     ]);
 
     this.balance = balance;
     this.mapData = mapData;
     this.itemsById = new Map(itemsData.items.map((i) => [i.id, new Item(i)]));
-    this.skillsById = new Map(skillsData.skills.map((s) => [s.id, s]));
+    // NOTE: the old skills.json / ability system was removed along with
+    // CombatSystem/SkillSystem — the new, data-driven ability system (ТЗ
+    // п.8) will be designed once its actual data format is ready.
     // Squad interactions (race-agnostic — see InteractionSystem.js for
     // why nothing here or there is hardcoded to any one race). Ships with
     // an empty interactions.json for now; nothing currently calls
@@ -197,29 +196,14 @@ class Game {
       balance
     );
     this.inventorySystem = new InventorySystem(this.itemsById);
-    this.combatSystem = new CombatSystem(
-      this.itemsById,
-      balance,
-      (character, enemy) => {
-        this._toast(`${character.name} открывает огонь по цели: ${enemy.name}!`);
-        // Attacking any one enemy calls its whole faction (raceId) down on
-        // the party at once — see EnemySystem.alertFaction/Enemy.alerted.
-        this.enemySystem.alertFaction(this.enemies, enemy.raceId);
-      },
-      (character, enemy) => {
-        const dist = Math.hypot(enemy.position.col - character.position.col, enemy.position.row - character.position.row);
-        this._attackEffects.push({
-          from: { ...character.position },
-          to: { ...enemy.position },
-          start: this._now ?? performance.now(),
-          travelMs: ATTACK_EFFECT_TRAVEL_BASE_MS + dist * ATTACK_EFFECT_TRAVEL_PER_TILE_MS
-        });
-      }
-    );
+    // NOTE: the old CombatSystem/SkillSystem (hero auto-attack + the
+    // strength/endurance/agility/intelligence/concentration attribute set)
+    // were removed as part of the hero+vehicle/stats/ability rework — see
+    // game/systems/StatsSystem.js and Character.js/Enemy.js. The new
+    // automatic Battle System that drives hero-side combat comes in a
+    // later stage; enemies (EnemySystem, unaffected) can still approach
+    // and attack in the meantime.
     this.squadCombatSystem = new SquadCombatSystem(this.movementSystem);
-    this.skillSystem = new SkillSystem(this.skillsById, balance, (character, skill) => {
-      this._toast(`${character.name} применяет умение: ${skill.name}!`);
-    });
     this._attackEffects = []; // in-flight/impacting energy bolt VFX, see _renderAttackEffects
 
     this._buildDom();
@@ -1549,20 +1533,20 @@ class Game {
   }
 
   /**
-   * "Атаковать" — walks the selected character to just inside their
-   * equipped weapon's range (never onto the enemy's own tile), then stops.
-   * Once there the path is empty, so the hero simply stands and faces the
-   * target while CombatSystem's per-frame auto-fire does the rest — the
-   * hero never chases past that point. No weapon equipped -> falls back to
-   * CombatSystem.INNATE_ATTACK (the built-in energy gauntlet, see
-   * CombatSystem.js) instead of refusing the order — a settler can always
-   * fire back.
+   * "Атаковать" — walks the selected character to just inside attack range
+   * of the target (never onto the enemy's own tile), then stops. Once
+   * there the path is empty, so the hero simply stands and faces the
+   * target and holds position. Actually dealing damage is the future
+   * Battle System's job (see the constructor note near CombatSystem's
+   * removal) — for now this is purely a "get in range and hold" walk
+   * order, using the hero's attackRange stat (see Character.stats /
+   * StatsSystem.js) instead of the removed CombatSystem.effectiveWeapon.
    */
   _commandAttack(enemy) {
     const character = this._activeSelectedCharacter();
     if (!character || !character.isActive) return;
 
-    const weapon = CombatSystem.effectiveWeapon(character, this.itemsById);
+    const attackRange = character.stats.get('attackRange');
 
     if (character.combatState === 'attacking' && character.targetEnemyId !== enemy.id) {
       this._toast(`${character.name} уже ведёт бой и не может двигаться.`);
@@ -1575,7 +1559,7 @@ class Game {
       enemy.position.row - character.position.row
     );
 
-    if (distance <= weapon.range) {
+    if (distance <= attackRange) {
       // Already in range — just turn to face the target and hold position.
       character.facingDir = dirToEnemy;
       return;
@@ -1583,7 +1567,7 @@ class Game {
 
     this.pendingFurnitureInteractions.delete(character.id);
 
-    const standoffDistance = Math.max(1, weapon.range - 1);
+    const standoffDistance = Math.max(1, attackRange - 1);
     const rawDesiredCol = enemy.position.col - dirToEnemy * standoffDistance;
     const desiredCol = this._findFreeStandoffCol(rawDesiredCol, character.position.row, character);
     const target = { col: desiredCol, row: character.position.row };
@@ -2329,7 +2313,7 @@ class Game {
     this.partyUI.show(
       squad,
       this.itemsById,
-      this.skillsById,
+      null,
       (characterId) => {
         for (const character of this.characters) {
           // Only one lead/tank at a time — tapping a squad slot makes that
@@ -2497,8 +2481,11 @@ class Game {
       this.squadCombatSystem.update(this.characters, this.enemies, this.pathfinder);
     }
     this.movementSystem.update(this.enemies, dt);
-    this.combatSystem.update(this.characters, this.enemies, dt);
-    this.skillSystem.update(this.characters, this.enemies, dt);
+    // Hero-side auto-attack (CombatSystem) and the old ability system
+    // (SkillSystem) were removed here — see the constructor note above.
+    // The new Battle System's update() call goes here once it exists.
+    for (const character of this.characters) character.stats.update(dt);
+    for (const enemy of this.enemies) enemy.stats.update(dt);
 
     // Overview mode (see _setOverview) only ever changes because the
     // player pressed "Приблизить"/"Отдалить" — nothing else touches it.
@@ -3357,36 +3344,10 @@ class Game {
         ctx.restore();
       }
 
-      // Концентрация bar — a second, thinner strip just below the reload
-      // bar (or in its usual spot if not currently attacking), only for
-      // characters with a skill (see Character.skillId/SkillSystem). Fills
-      // up on its own while the character's in the fight; SkillSystem
-      // resets it to 0 the instant it fires the skill.
-      if (character.skillId) {
-        ctx.save();
-        const barW = cs * 1.2;
-        const barY = groundY - drawH - 11;
-        const ratio = character.skillCharge / character.skillChargeMax;
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(x - barW / 2, barY, barW, 3);
-        ctx.fillStyle = ratio >= 1 ? '#ffe066' : '#4aa3e0';
-        ctx.fillRect(x - barW / 2, barY, barW * ratio, 3);
-        ctx.restore();
-      }
-
-      // Guardian_shield visual — a soft cyan ring around anyone currently
-      // shielded (see Character.shieldRemaining/SkillSystem), so it's clear
-      // at a glance why they're taking no damage.
-      if (character.shieldRemaining > 0) {
-        ctx.save();
-        ctx.globalAlpha = 0.55;
-        ctx.strokeStyle = '#7fe0ff';
-        ctx.lineWidth = Math.max(2, cs * 0.06);
-        ctx.beginPath();
-        ctx.ellipse(x, groundY - drawH * 0.5, drawW * 0.62, drawH * 0.58, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      }
+      // NOTE: the old "Концентрация" charge bar and guardian_shield ring
+      // (tied to Character.skillId/skillCharge/shieldRemaining) were
+      // removed along with SkillSystem — see Character.js. The future
+      // ability system's own status visuals go here once it exists.
     }
   }
 

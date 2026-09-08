@@ -80,24 +80,29 @@ export class PartyUI {
    * below them — every label and the divider line are part of
    * squad_panel_frame.png. `character` null (nobody recruited yet) leaves
    * every value hole empty rather than showing stale data.
+   *
+   * TODO(hero rework): the old fixed attribute set (СИЛ/ВЫН/ЛОВ/ИНТ/КОНЦ)
+   * these five holes were baked in the frame art for is gone — heroes now
+   * carry an open-ended Stats block (see Character.stats/StatsSystem.js)
+   * whose keys aren't fixed to exactly five, so they don't map cleanly onto
+   * this specific frame image any more. Left blank for now rather than
+   * showing mismatched numbers; revisit once the new hero stat display is
+   * actually designed. Same for the ability name/description block, which
+   * depended on the removed skillId/SkillSystem — will come back once the
+   * new ability data format exists.
    */
   _statValuesHtml(character) {
-    const ratio = character ? Math.max(0, Math.min(1, character.health / 100)) : 0;
-    const skill = character?.skillId ? this._skillsById?.get(character.skillId) : null;
+    const ratio = character ? Math.max(0, Math.min(1, character.health / (character.stats?.get('maxHealth') || 100))) : 0;
     const raceLabel = character ? this._raceLabel(character.race) : '';
 
     return `
       <div class="squad-hole squad-stat-health"><div class="squad-stat-fill" style="width:${character ? ratio * 100 : 0}%"></div></div>
       <div class="squad-hole squad-stat-race">${raceLabel}</div>
-      <div class="squad-hole squad-stat-str">${character ? character.strength : ''}</div>
-      <div class="squad-hole squad-stat-end">${character ? character.endurance : ''}</div>
-      <div class="squad-hole squad-stat-agi">${character ? character.agility : ''}</div>
-      <div class="squad-hole squad-stat-int">${character ? character.intelligence : ''}</div>
-      <div class="squad-hole squad-stat-conc">${character ? character.concentration : ''}</div>
-      ${skill ? `
-        <div class="squad-hole squad-ability-name">${skill.name}</div>
-        <div class="squad-hole squad-ability-desc">${skill.description}</div>
-      ` : ''}
+      <div class="squad-hole squad-stat-str"></div>
+      <div class="squad-hole squad-stat-end"></div>
+      <div class="squad-hole squad-stat-agi"></div>
+      <div class="squad-hole squad-stat-int"></div>
+      <div class="squad-hole squad-stat-conc"></div>
     `;
   }
 

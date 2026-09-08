@@ -1,23 +1,22 @@
 {
-  "partyInventory": ["transport_suit"],
+  "partyInventory": [
+    "transport_suit"
+  ],
   "characters": [
     {
       "id": "char_1",
       "name": "Mark",
       "avatar": "game/assets/characters/avatars/char_3.png",
-      "skill": "boosted_attack",
       "race": "human",
       "health": 100,
-      "strength": 5,
-      "endurance": 5,
-      "agility": 5,
-      "intelligence": 5,
-      "concentration": 5,
       "temperature": 20,
       "clothing": null,
       "weapon": null,
       "vehicle": null,
-      "position": { "col": 18, "row": 28 },
+      "position": {
+        "col": 18,
+        "row": 28
+      },
       "state": "active",
       "sprites": {
         "idle": [
@@ -31,7 +30,9 @@
           "game/assets/characters/char_idle_7.png",
           "game/assets/characters/char_idle_8.png"
         ],
-        "examine": ["game/assets/characters/char_examine.png"],
+        "examine": [
+          "game/assets/characters/char_examine.png"
+        ],
         "run": [
           "game/assets/characters/char_run_0.png",
           "game/assets/characters/char_run_1.png",
@@ -80,6 +81,16 @@
           "game/assets/characters/char_1/death_10.png",
           "game/assets/characters/char_1/death_11.png"
         ]
+      },
+      "stats": {
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 0,
+        "speed": 3,
+        "attackRange": 1,
+        "attackSpeed": 1,
+        "critChance": 0,
+        "critDamage": 50
       }
     },
     {
@@ -88,15 +99,14 @@
       "avatar": "game/assets/characters/avatars/char_1.png",
       "race": "human",
       "health": 100,
-      "strength": 3,
-      "endurance": 3,
-      "agility": 5,
-      "intelligence": 9,
       "temperature": 20,
       "clothing": null,
       "weapon": null,
       "vehicle": null,
-      "position": { "col": 30, "row": 28 },
+      "position": {
+        "col": 30,
+        "row": 28
+      },
       "state": "active",
       "recruited": false,
       "levelId": "bunker_level_-2",
@@ -129,7 +139,9 @@
           "game/assets/characters/char_2/run_right_10.png",
           "game/assets/characters/char_2/run_right_11.png"
         ],
-        "idle": ["game/assets/characters/char_2/placeholder.png"],
+        "idle": [
+          "game/assets/characters/char_2/placeholder.png"
+        ],
         "examine": [
           "game/assets/characters/char_2/examine_00.png",
           "game/assets/characters/char_2/examine_01.png",
@@ -142,27 +154,38 @@
           "game/assets/characters/char_2/examine_08.png",
           "game/assets/characters/char_2/examine_09.png"
         ],
-        "afk": ["game/assets/characters/char_2/placeholder.png"],
-        "attack": ["game/assets/characters/char_2/placeholder.png"]
+        "afk": [
+          "game/assets/characters/char_2/placeholder.png"
+        ],
+        "attack": [
+          "game/assets/characters/char_2/placeholder.png"
+        ]
+      },
+      "stats": {
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 0,
+        "speed": 3,
+        "attackRange": 1,
+        "attackSpeed": 1,
+        "critChance": 0,
+        "critDamage": 50
       }
     },
     {
       "id": "char_3",
       "name": "Вероника",
       "avatar": "game/assets/characters/avatars/char_3.png",
-      "skill": "guardian_shield",
       "race": "human",
       "health": 100,
-      "strength": 5,
-      "endurance": 5,
-      "agility": 5,
-      "intelligence": 5,
-      "concentration": 10,
       "temperature": 20,
       "clothing": null,
       "weapon": null,
       "vehicle": null,
-      "position": { "col": 10, "row": 7 },
+      "position": {
+        "col": 10,
+        "row": 7
+      },
       "state": "active",
       "recruited": false,
       "levelId": "technical_bay_01",
@@ -175,7 +198,9 @@
           "game/assets/characters/char_3/idle_04.png",
           "game/assets/characters/char_3/idle_05.png"
         ],
-        "examine": ["game/assets/characters/char_examine.png"],
+        "examine": [
+          "game/assets/characters/char_examine.png"
+        ],
         "runRight": [
           "game/assets/characters/char_3/run_right_00.png",
           "game/assets/characters/char_3/run_right_01.png",
@@ -218,6 +243,16 @@
           "game/assets/characters/char_attack_10.png",
           "game/assets/characters/char_attack_11.png"
         ]
+      },
+      "stats": {
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 0,
+        "speed": 3,
+        "attackRange": 1,
+        "attackSpeed": 1,
+        "critChance": 0,
+        "critDamage": 50
       }
     }
   ]
