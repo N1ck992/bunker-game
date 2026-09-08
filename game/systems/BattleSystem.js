@@ -157,7 +157,9 @@ export class BattleSystem {
       // correctly for every new shot.
       if (leader.attackAnimRemaining <= 0) {
         const newFacing = target.position.col >= leader.position.col ? 1 : -1;
-        if (newFacing !== leader.facingDir) this.onFacingChange?.(vehicle, leader, newFacing);
+        if (newFacing !== leader.facingDir) {
+          this.onFacingChange?.(vehicle, leader, newFacing, target.position.col - leader.position.col);
+        }
         leader.facingDir = newFacing;
       }
       // The vehicle (via its leader's on-map position) holds ground once
