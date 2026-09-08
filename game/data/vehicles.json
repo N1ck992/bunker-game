@@ -4,27 +4,40 @@
     {
       "id": "cyber_suit_basic",
       "name": "Кибер-костюм (тяжёлая техника)",
-      "description": "Тяжёлая наземная боевая техника фракции обычных людей — базовый экзоскелет/кибер-костюм.",
+      "description": "Обладает толстой бронёй и высокой огневой мощью. Низкая скорость передвижения делает тяжёлую технику уязвимой для бронебойных юнитов. Огневая мощь не так высока, как у сверхтяжёлых машин.",
       "category": "ground",
       "faction": "baseline_humans",
       "crewCapacity": 2,
       "sprite": null,
       "stats": {
-        "maxHealth": 150,
-        "armor": 5,
-        "attack": 12,
+        "maxHealth": 43200,
+        "armor": 62,
+        "attack": 5730,
         "attackRange": 1,
-        "speed": 3,
-        "attackSpeed": 1,
-        "pierce": 0,
+        "speed": 27,
+        "attackSpeed": 0.5,
+        "pierce": 63,
         "critChance": 0,
-        "critDamage": 50
+        "critDamage": 50,
+        "accuracy": 80.01
       },
       "damageType": "kinetic",
       "modifiers": [],
       "abilities": [],
       "passiveAbilities": [],
-      "specialProperties": {},
+      "specialProperties": {
+        "role": "defense",
+        "strongAgainst": [
+          "medium_tank"
+        ],
+        "weakAgainst": [
+          "infantry",
+          "tank_destroyer",
+          "super_heavy_tank"
+        ],
+        "campBonus": "Усиление для осады — наносит больше урона зданиям/укреплениям, чем тяжёлые танки других рас.",
+        "loreCrewSize": 6
+      },
       "sprites": {
         "runLeft": [
           "game/assets/vehicles/cyber_suit_basic/run_left/run_left_00.png",
@@ -75,7 +88,8 @@
           "game/assets/vehicles/cyber_suit_basic/attack_right/attack_right_07.png"
         ]
       },
-      "weightClass": "heavy"
+      "weightClass": "heavy",
+      "unitClass": "heavy_tank"
     }
   ]
 }

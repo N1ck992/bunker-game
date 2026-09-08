@@ -33,6 +33,11 @@ export class Vehicle {
     // vehicle vs a "light" one). Free-form string, nothing branches on it
     // yet; same forward-looking-tag spirit as Character.heroType.
     this.weightClass = def.weightClass ?? null;
+    // Narrower classification within weightClass/category (e.g. "heavy_tank"
+    // vs some other heavy ground vehicle) — drives future rock-paper-
+    // scissors style counters (see specialProperties.strongAgainst/
+    // weakAgainst below). Free-form, same spirit as heroType.
+    this.unitClass = def.unitClass ?? null;
     this.faction = def.faction ?? null; // null = usable by any faction
     // Single static icon/portrait, if the vehicle has one — separate from
     // the animated walk-cycle frames below.
