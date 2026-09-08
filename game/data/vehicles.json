@@ -1,0 +1,30 @@
+{
+  "comment": "Боевая техника (ТЗ п.5) — самолёты, машины, кибер-костюмы и т.д. Это НЕ то же самое, что items.json'овский слот \"vehicle\" (transport_suit, разрешающий выход на карту мира) — тот остаётся как есть. Здесь — отдельная боевая сущность со своими характеристиками (через ту же Stats-систему, что и герои — см. game/systems/StatsSystem.js) и экипажем из героев. category: 'air' | 'ground' | 'water'. crewCapacity — сколько героев может быть в экипаже (сейчас везде 2: лидер, отображаемый в бункере/на локации, и адъютант, который \"на связи\" и применяет способности вслед за лидером — см. game/systems/VehicleSystem.js), но поле не захардкожено на двойку, чтобы будущая техника могла иметь другой экипаж. faction — какой расе принадлежит (см. factions.json); null — доступна всем.",
+  "vehicles": [
+    {
+      "id": "cyber_suit_basic",
+      "name": "Кибер-костюм (базовый)",
+      "description": "Заготовка под первую технику расы киборгов — характеристики и арт ещё не финальные.",
+      "category": "ground",
+      "faction": "cyber_humans",
+      "crewCapacity": 2,
+      "sprite": null,
+      "stats": {
+        "maxHealth": 150,
+        "armor": 5,
+        "attack": 12,
+        "attackRange": 1,
+        "speed": 3,
+        "attackSpeed": 1,
+        "pierce": 0,
+        "critChance": 0,
+        "critDamage": 50
+      },
+      "damageType": "kinetic",
+      "modifiers": [],
+      "abilities": [],
+      "passiveAbilities": [],
+      "specialProperties": {}
+    }
+  ]
+}

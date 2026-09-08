@@ -23,6 +23,7 @@ import { Enemy } from '../entities/Enemy.js?v=52';
 import { Item } from '../entities/Item.js?v=52';
 import { EnemySystem } from '../systems/EnemySystem.js?v=52';
 import { InteractionSystem } from '../systems/InteractionSystem.js?v=52';
+import { VehicleSystem } from '../systems/VehicleSystem.js?v=52';
 
 import { ShelterUI } from '../ui/ShelterUI.js?v=52';
 import { LeftBarUI } from '../ui/LeftBarUI.js?v=52';
@@ -86,13 +87,14 @@ const FOLLOW_DISTANCE_TILES = 3; // how far "Выбрать всех" followers 
 
 class Game {
   async init() {
-    const [balance, mapData, charactersData, itemsData, interactionsData, factionsData] = await Promise.all([
+    const [balance, mapData, charactersData, itemsData, interactionsData, factionsData, vehiclesData] = await Promise.all([
       fetchJson('game/data/balance.json'),
       fetchJson(INITIAL_ROOM_FILE),
       fetchJson('game/data/characters.json'),
       fetchJson('game/data/items.json'),
       fetchJson('game/data/interactions.json'),
-      fetchJson('game/data/factions.json')
+      fetchJson('game/data/factions.json'),
+      fetchJson('game/data/vehicles.json')
     ]);
 
     this.balance = balance;
@@ -102,6 +104,11 @@ class Game {
     // plain id string) can be resolved to its display name/description
     // wherever a future UI needs it (hero selection, roster, ...).
     this.factionsById = new Map(factionsData.factions.map((f) => [f.id, f]));
+    // Vehicle definitions (ТЗ п.5) — keyed by id, consumed by VehicleSystem
+    // below. Not yet wired into the bunker map/rendering (that's a
+    // separate, later step) — this stage is just the data + squad
+    // bookkeeping foundation.
+    this.vehicleDefsById = new Map(vehiclesData.vehicles.map((v) => [v.id, v]));
     // NOTE: the old skills.json / ability system was removed along with
     // CombatSystem/SkillSystem — the new, data-driven ability system (ТЗ
     // п.8) will be designed once its actual data format is ready.
@@ -209,6 +216,13 @@ class Game {
     // later stage; enemies (EnemySystem, unaffected) can still approach
     // and attack in the meantime.
     this.squadCombatSystem = new SquadCombatSystem(this.movementSystem);
+    // Vehicle squad (ТЗ п.5/6) — up to MAX_SQUAD_VEHICLES machines, each
+    // with a leader/adjutant crew. Not yet shown on the map or wired into
+    // any bunker interaction; starts empty (or restored from a save, see
+    // _applySave below) until the future map-integration and squad-editor
+    // UI stages exist.
+    this.vehicleSystem = new VehicleSystem(this.vehicleDefsById);
+    if (save?.vehicleSquad) this.vehicleSystem.restoreFromSave(save.vehicleSquad);
     this._attackEffects = []; // in-flight/impacting energy bolt VFX, see _renderAttackEffects
 
     this._buildDom();
@@ -2491,6 +2505,7 @@ class Game {
     // The new Battle System's update() call goes here once it exists.
     for (const character of this.characters) character.stats.update(dt);
     for (const enemy of this.enemies) enemy.stats.update(dt);
+    this.vehicleSystem.update(dt);
 
     // Overview mode (see _setOverview) only ever changes because the
     // player pressed "Приблизить"/"Отдалить" — nothing else touches it.
@@ -3474,6 +3489,7 @@ class Game {
       characters: this.characters.map((c) => c.toSaveData()),
       partyInventory: [...this.partyInventory],
       enemies: this.enemies.map((e) => e.toSaveData()),
+      vehicleSquad: this.vehicleSystem.toSaveData(),
       resources: this.resourceSystem.toSaveData(),
       gameTime: this.gameTime.toSaveData(),
       interactables: this.mapData.interactables.map((it) => ({ id: it.id, locked: it.locked, state: it.state }))
