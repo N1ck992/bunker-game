@@ -3,10 +3,10 @@
   "vehicles": [
     {
       "id": "cyber_suit_basic",
-      "name": "Кибер-костюм (базовый)",
-      "description": "Заготовка под первую технику расы киборгов — характеристики и арт ещё не финальные.",
+      "name": "Кибер-костюм (тяжёлая техника)",
+      "description": "Тяжёлая наземная боевая техника фракции обычных людей — базовый экзоскелет/кибер-костюм.",
       "category": "ground",
-      "faction": "cyber_humans",
+      "faction": "baseline_humans",
       "crewCapacity": 2,
       "sprite": null,
       "stats": {
@@ -24,7 +24,38 @@
       "modifiers": [],
       "abilities": [],
       "passiveAbilities": [],
-      "specialProperties": {}
+      "specialProperties": {},
+      "sprites": {
+        "runLeft": [
+          "game/assets/vehicles/cyber_suit_basic/run_left/run_left_00.png",
+          "game/assets/vehicles/cyber_suit_basic/run_left/run_left_01.png",
+          "game/assets/vehicles/cyber_suit_basic/run_left/run_left_02.png",
+          "game/assets/vehicles/cyber_suit_basic/run_left/run_left_03.png",
+          "game/assets/vehicles/cyber_suit_basic/run_left/run_left_04.png",
+          "game/assets/vehicles/cyber_suit_basic/run_left/run_left_05.png",
+          "game/assets/vehicles/cyber_suit_basic/run_left/run_left_06.png",
+          "game/assets/vehicles/cyber_suit_basic/run_left/run_left_07.png",
+          "game/assets/vehicles/cyber_suit_basic/run_left/run_left_08.png",
+          "game/assets/vehicles/cyber_suit_basic/run_left/run_left_09.png",
+          "game/assets/vehicles/cyber_suit_basic/run_left/run_left_10.png",
+          "game/assets/vehicles/cyber_suit_basic/run_left/run_left_11.png"
+        ],
+        "runRight": [
+          "game/assets/vehicles/cyber_suit_basic/run_right/run_right_00.png",
+          "game/assets/vehicles/cyber_suit_basic/run_right/run_right_01.png",
+          "game/assets/vehicles/cyber_suit_basic/run_right/run_right_02.png",
+          "game/assets/vehicles/cyber_suit_basic/run_right/run_right_03.png",
+          "game/assets/vehicles/cyber_suit_basic/run_right/run_right_04.png",
+          "game/assets/vehicles/cyber_suit_basic/run_right/run_right_05.png",
+          "game/assets/vehicles/cyber_suit_basic/run_right/run_right_06.png",
+          "game/assets/vehicles/cyber_suit_basic/run_right/run_right_07.png",
+          "game/assets/vehicles/cyber_suit_basic/run_right/run_right_08.png",
+          "game/assets/vehicles/cyber_suit_basic/run_right/run_right_09.png",
+          "game/assets/vehicles/cyber_suit_basic/run_right/run_right_10.png",
+          "game/assets/vehicles/cyber_suit_basic/run_right/run_right_11.png"
+        ]
+      },
+      "weightClass": "heavy"
     }
   ]
 }

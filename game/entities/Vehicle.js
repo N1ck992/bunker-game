@@ -29,8 +29,21 @@ export class Vehicle {
     this.name = def.name;
     this.description = def.description ?? '';
     this.category = def.category; // 'air' | 'ground' | 'water'
+    // Weight class — a separate axis from category (e.g. a "heavy" ground
+    // vehicle vs a "light" one). Free-form string, nothing branches on it
+    // yet; same forward-looking-tag spirit as Character.heroType.
+    this.weightClass = def.weightClass ?? null;
     this.faction = def.faction ?? null; // null = usable by any faction
+    // Single static icon/portrait, if the vehicle has one — separate from
+    // the animated walk-cycle frames below.
     this.sprite = def.sprite ?? null;
+    // Walk-cycle animation frames (see game/assets/vehicles/.../run_left,
+    // run_right) — same left/right split idea as Character's runLeft/
+    // runRight sprite sets. Empty arrays for a vehicle with no art yet.
+    this.sprites = {
+      runLeft: def.sprites?.runLeft ?? [],
+      runRight: def.sprites?.runRight ?? []
+    };
     this.damageType = def.damageType ?? null;
 
     this.stats = new Stats({ ...def.stats });
