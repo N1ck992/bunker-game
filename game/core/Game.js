@@ -25,6 +25,7 @@ import { EnemySystem } from '../systems/EnemySystem.js?v=52';
 import { InteractionSystem } from '../systems/InteractionSystem.js?v=52';
 import { VehicleSystem } from '../systems/VehicleSystem.js?v=52';
 import { AbilitySystem } from '../systems/AbilitySystem.js?v=52';
+import { BattleSystem } from '../systems/BattleSystem.js?v=52';
 
 import { ShelterUI } from '../ui/ShelterUI.js?v=52';
 import { LeftBarUI } from '../ui/LeftBarUI.js?v=52';
@@ -238,7 +239,38 @@ class Game {
     // _applySave below) until the future map-integration and squad-editor
     // UI stages exist.
     this.vehicleSystem = new VehicleSystem(this.vehicleDefsById);
-    if (save?.vehicleSquad) this.vehicleSystem.restoreFromSave(save.vehicleSquad);
+    if (save?.vehicleSquad) {
+      this.vehicleSystem.restoreFromSave(save.vehicleSquad);
+    } else {
+      // No save yet — give the squad a starting vehicle so there's
+      // something to test combat with out of the box. Temporary stand-in
+      // for a real squad-management UI (assigning vehicles/crew by hand):
+      // Рэндел Миллер (char_1) leads the one cyber-suit we have data for.
+      // Remove/replace this once that UI exists.
+      const starterVehicle = this.vehicleSystem.addVehicle('cyber_suit_basic');
+      if (starterVehicle) this.vehicleSystem.assignHero(starterVehicle.instanceId, 'char_1', 'leader');
+    }
+
+    this.battleSystem = new BattleSystem(
+      this.abilitySystem,
+      balance,
+      (vehicle, leader, enemy) => {
+        this._toast(`${leader.name} (${vehicle.name}) вступает в бой с целью: ${enemy.name}!`);
+        this.enemySystem.alertFaction(this.enemies, enemy.raceId);
+      },
+      (vehicle, leader, enemy) => {
+        const dist = Math.hypot(enemy.position.col - leader.position.col, enemy.position.row - leader.position.row);
+        this._attackEffects.push({
+          from: { ...leader.position },
+          to: { ...enemy.position },
+          start: this._now ?? performance.now(),
+          travelMs: ATTACK_EFFECT_TRAVEL_BASE_MS + dist * ATTACK_EFFECT_TRAVEL_PER_TILE_MS
+        });
+      },
+      (vehicle, leader, tier) => {
+        this._toast(`${leader.name} применяет способность: Свинцовый дождь${tier.awakened ? ' (пробуждённый)' : ''}!`);
+      }
+    );
     this._attackEffects = []; // in-flight/impacting energy bolt VFX, see _renderAttackEffects
 
     this._buildDom();
@@ -1581,7 +1613,11 @@ class Game {
     const character = this._activeSelectedCharacter();
     if (!character || !character.isActive) return;
 
-    const attackRange = character.stats.get('attackRange');
+    // If this character leads a vehicle, walk into ITS attack range (what
+    // BattleSystem will actually fire with) rather than the character's
+    // own bare attackRange stat.
+    const vehicle = this.vehicleSystem.squad.find((v) => v.leaderId === character.id);
+    const attackRange = vehicle ? vehicle.stats.get('attackRange') : character.stats.get('attackRange');
 
     if (character.combatState === 'attacking' && character.targetEnemyId !== enemy.id) {
       this._toast(`${character.name} уже ведёт бой и не может двигаться.`);
@@ -2516,12 +2552,13 @@ class Game {
       this.squadCombatSystem.update(this.characters, this.enemies, this.pathfinder);
     }
     this.movementSystem.update(this.enemies, dt);
-    // Hero-side auto-attack (CombatSystem) and the old ability system
-    // (SkillSystem) were removed here — see the constructor note above.
-    // The new Battle System's update() call goes here once it exists.
     for (const character of this.characters) character.stats.update(dt);
     for (const enemy of this.enemies) enemy.stats.update(dt);
     this.vehicleSystem.update(dt);
+    // Hero+vehicle auto-attack (ТЗ п.6/п.9) — replaces the old CombatSystem.
+    // A hero with no vehicle assigned as leader simply doesn't fight, per
+    // "герой сам по себе передвигаться/воевать не сможет, ему нужна техника".
+    this.battleSystem.update(this.vehicleSystem, this.characters, this.enemies, dt);
 
     // Overview mode (see _setOverview) only ever changes because the
     // player pressed "Приблизить"/"Отдалить" — nothing else touches it.

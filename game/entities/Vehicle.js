@@ -66,6 +66,20 @@ export class Vehicle {
     this.adjutantId = null;
 
     this.state = 'active'; // 'active' | 'destroyed'
+
+    // Battle runtime state (see game/systems/BattleSystem.js) — not saved,
+    // same spirit as Character's attackCooldownRemaining/combatState.
+    // Active-ability cooldowns, keyed by ability id (an ability is
+    // "charging" while its remaining value counts down from
+    // tier.prepSeconds; ready to fire again at 0/undefined).
+    this.abilityCooldowns = {};
+    // Temporary attack-cooldown discount from an ability's own secondary
+    // effect (e.g. "Свинцовый дождь"'s "снижает время заряжания... на N%
+    // на M сек") — a percentage, decaying to 0 once tempCooldownRemaining
+    // runs out. Separate from the permanent cooldownReduction stat (crew
+    // passives), which BattleSystem always adds on top of this.
+    this.tempCooldownReductionPercent = 0;
+    this.tempCooldownRemaining = 0;
   }
 
   get isActive() {
