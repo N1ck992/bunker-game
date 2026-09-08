@@ -276,6 +276,7 @@ class Game {
     this._buildDom();
     this._loadBunkerImage();
     this._loadCharacterSprites();
+    this._loadVehicleSprites();
     this._loadEnemySprites();
     this._loadEffectSprites();
     this._bindInput();
@@ -580,12 +581,81 @@ class Game {
   }
 
   /**
-   * Resolves which sprite set a character (or waiting recruit) draws with —
-   * their entry in characterSpriteSets if they have one (currently just
-   * char_2), otherwise the shared default set every other character/recruit
-   * still uses. See _loadCharacterSprites.
+   * One runLeft/runRight sprite set per vehicle definition (see
+   * game/data/vehicles.json), loaded once and shared by every instance of
+   * that vehicle — same "per type, not per instance" idea as
+   * _loadEnemySprites. A vehicle with no art yet (empty arrays) just ends
+   * up with an empty set; _vehicleSpriteSet below falls back to the
+   * leader's own character sprites in that case rather than drawing
+   * nothing.
+   */
+  _loadVehicleSprites() {
+    this.vehicleSpriteSets = new Map();
+    for (const def of this.vehicleDefsById.values()) {
+      this.vehicleSpriteSets.set(def.id, {
+        runLeft: (def.sprites?.runLeft ?? []).map((path) => makeImage(path)),
+        runRight: (def.sprites?.runRight ?? []).map((path) => makeImage(path))
+      });
+    }
+  }
+
+  /**
+   * The vehicle (if any) that `characterId` currently leads — see
+   * VehicleSystem.squad/Vehicle.leaderId. A character isn't necessarily
+   * assigned to a vehicle at all (only Рэндел is, right now); everyone
+   * else keeps walking around on foot exactly as before.
+   */
+  _vehicleForLeader(characterId) {
+    return this.vehicleSystem.squad.find((v) => v.leaderId === characterId) ?? null;
+  }
+
+  /**
+   * Builds a sprite set shaped like a character's (idle/run.../attack/afk/
+   * examine keys — see _buildSpriteSet) out of a vehicle's runLeft/
+   * runRight walk-cycle frames, since that's all vehicle art actually has
+   * right now (ТЗ п.21 — minimal viz first, more animations later). Every
+   * non-run pose (idle/attack/afk/examine) just holds the first frame of
+   * whichever direction `facingDir` currently faces — recomputed fresh
+   * every call (cheap: a few array references, no image loads) so it's
+   * always oriented correctly without needing the generic mirror-by-
+   * facingDir path (see _renderCharacters — that path is skipped
+   * whenever a set has its own runLeft, exactly like char_2's directional
+   * art). No death frames yet — same "keeps cycling last idle pose,
+   * grey-tinted" fallback as any character without one.
+   */
+  _vehicleSpriteSet(vehicle, facingDir) {
+    const frames = this.vehicleSpriteSets.get(vehicle.defId);
+    if (!frames || (frames.runLeft.length === 0 && frames.runRight.length === 0)) return null;
+
+    const activeRun = (facingDir < 0 ? frames.runLeft : frames.runRight);
+    const fallbackRun = activeRun.length ? activeRun : (frames.runLeft.length ? frames.runLeft : frames.runRight);
+    const firstFrame = fallbackRun[0];
+
+    return {
+      runLeft: frames.runLeft.length ? frames.runLeft : frames.runRight,
+      runRight: frames.runRight.length ? frames.runRight : frames.runLeft,
+      idle: [firstFrame],
+      afk: [firstFrame],
+      attack: [firstFrame],
+      examine: [firstFrame]
+    };
+  }
+
+  /**
+   * Resolves which sprite set a character (or waiting recruit) draws with.
+   * A character currently leading a vehicle (see _vehicleForLeader) draws
+   * as that vehicle instead of themselves — "техника заменяет героя прямо
+   * в бункере" — falling back to their own character sprites if that
+   * vehicle's art isn't loaded for some reason. Everyone else keeps using
+   * their own entry in characterSpriteSets if they have one, otherwise the
+   * shared default set. See _loadCharacterSprites/_loadVehicleSprites.
    */
   _spriteSetFor(entity) {
+    const vehicle = this._vehicleForLeader(entity.id);
+    if (vehicle) {
+      const vehicleSet = this._vehicleSpriteSet(vehicle, entity.facingDir);
+      if (vehicleSet) return vehicleSet;
+    }
     return this.characterSpriteSets.get(entity.id) ?? this.sprites;
   }
 
