@@ -42,7 +42,12 @@ export class Vehicle {
     // runRight sprite sets. Empty arrays for a vehicle with no art yet.
     this.sprites = {
       runLeft: def.sprites?.runLeft ?? [],
-      runRight: def.sprites?.runRight ?? []
+      runRight: def.sprites?.runRight ?? [],
+      // Attack animation frames — same left/right split. Optional: a
+      // vehicle with no dedicated attack art (empty arrays) just holds
+      // its idle/run pose while attacking instead (see Game._renderCharacters).
+      attackLeft: def.sprites?.attackLeft ?? [],
+      attackRight: def.sprites?.attackRight ?? []
     };
     this.damageType = def.damageType ?? null;
 

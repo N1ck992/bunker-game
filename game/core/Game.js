@@ -594,7 +594,9 @@ class Game {
     for (const def of this.vehicleDefsById.values()) {
       this.vehicleSpriteSets.set(def.id, {
         runLeft: (def.sprites?.runLeft ?? []).map((path) => makeImage(path)),
-        runRight: (def.sprites?.runRight ?? []).map((path) => makeImage(path))
+        runRight: (def.sprites?.runRight ?? []).map((path) => makeImage(path)),
+        attackLeft: (def.sprites?.attackLeft ?? []).map((path) => makeImage(path)),
+        attackRight: (def.sprites?.attackRight ?? []).map((path) => makeImage(path))
       });
     }
   }
@@ -612,16 +614,18 @@ class Game {
   /**
    * Builds a sprite set shaped like a character's (idle/run.../attack/afk/
    * examine keys — see _buildSpriteSet) out of a vehicle's runLeft/
-   * runRight walk-cycle frames, since that's all vehicle art actually has
-   * right now (ТЗ п.21 — minimal viz first, more animations later). Every
-   * non-run pose (idle/attack/afk/examine) just holds the first frame of
-   * whichever direction `facingDir` currently faces — recomputed fresh
-   * every call (cheap: a few array references, no image loads) so it's
-   * always oriented correctly without needing the generic mirror-by-
-   * facingDir path (see _renderCharacters — that path is skipped
-   * whenever a set has its own runLeft, exactly like char_2's directional
-   * art). No death frames yet — same "keeps cycling last idle pose,
-   * grey-tinted" fallback as any character without one.
+   * runRight walk-cycle frames plus (if present) its own attackLeft/
+   * attackRight animation — see game/data/vehicles.json. idle/afk/examine
+   * still just hold the first frame of the current direction's run cycle
+   * (no dedicated art for those poses yet); attack uses the vehicle's own
+   * animation when it has one, falling back to that same static frame
+   * otherwise so a vehicle without attack art doesn't break. Recomputed
+   * fresh every call (cheap: a few array references, no image loads) so
+   * it's always oriented correctly without needing the generic mirror-by-
+   * facingDir path (see _renderCharacters — that path is skipped whenever
+   * a set has its own runLeft, exactly like char_2's directional art).
+   * No death frames yet — same "keeps cycling last idle pose, grey-tinted"
+   * fallback as any character without one.
    */
   _vehicleSpriteSet(vehicle, facingDir) {
     const frames = this.vehicleSpriteSets.get(vehicle.defId);
@@ -631,12 +635,15 @@ class Game {
     const fallbackRun = activeRun.length ? activeRun : (frames.runLeft.length ? frames.runLeft : frames.runRight);
     const firstFrame = fallbackRun[0];
 
+    const activeAttack = facingDir < 0 ? frames.attackLeft : frames.attackRight;
+    const attackFrames = activeAttack.length ? activeAttack : [firstFrame];
+
     return {
       runLeft: frames.runLeft.length ? frames.runLeft : frames.runRight,
       runRight: frames.runRight.length ? frames.runRight : frames.runLeft,
       idle: [firstFrame],
       afk: [firstFrame],
-      attack: [firstFrame],
+      attack: attackFrames,
       examine: [firstFrame]
     };
   }

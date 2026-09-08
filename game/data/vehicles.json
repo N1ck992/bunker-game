@@ -53,6 +53,26 @@
           "game/assets/vehicles/cyber_suit_basic/run_right/run_right_09.png",
           "game/assets/vehicles/cyber_suit_basic/run_right/run_right_10.png",
           "game/assets/vehicles/cyber_suit_basic/run_right/run_right_11.png"
+        ],
+        "attackLeft": [
+          "game/assets/vehicles/cyber_suit_basic/attack_left/attack_left_00.png",
+          "game/assets/vehicles/cyber_suit_basic/attack_left/attack_left_01.png",
+          "game/assets/vehicles/cyber_suit_basic/attack_left/attack_left_02.png",
+          "game/assets/vehicles/cyber_suit_basic/attack_left/attack_left_03.png",
+          "game/assets/vehicles/cyber_suit_basic/attack_left/attack_left_04.png",
+          "game/assets/vehicles/cyber_suit_basic/attack_left/attack_left_05.png",
+          "game/assets/vehicles/cyber_suit_basic/attack_left/attack_left_06.png",
+          "game/assets/vehicles/cyber_suit_basic/attack_left/attack_left_07.png"
+        ],
+        "attackRight": [
+          "game/assets/vehicles/cyber_suit_basic/attack_right/attack_right_00.png",
+          "game/assets/vehicles/cyber_suit_basic/attack_right/attack_right_01.png",
+          "game/assets/vehicles/cyber_suit_basic/attack_right/attack_right_02.png",
+          "game/assets/vehicles/cyber_suit_basic/attack_right/attack_right_03.png",
+          "game/assets/vehicles/cyber_suit_basic/attack_right/attack_right_04.png",
+          "game/assets/vehicles/cyber_suit_basic/attack_right/attack_right_05.png",
+          "game/assets/vehicles/cyber_suit_basic/attack_right/attack_right_06.png",
+          "game/assets/vehicles/cyber_suit_basic/attack_right/attack_right_07.png"
         ]
       },
       "weightClass": "heavy"
