@@ -38,7 +38,15 @@ const DEFAULT_BASE_STATS = {
   firepower: 0,
   damageIntensity: 0,
   damageResistance: 0,
-  cooldownReduction: 0
+  cooldownReduction: 0,
+  // Armor/penetration/accuracy — same "hero can boost the vehicle's own
+  // number" pattern as the four above (see BattleSystem._combinedPercent).
+  // A hero's own baseline here is 0 (no built-in armor/pierce/accuracy of
+  // their own) — these only matter once a hero's ability/modifier grants
+  // some, on top of whatever the vehicle itself brings.
+  armor: 0,
+  pierce: 0,
+  accuracy: 0
 };
 
 export class Character {

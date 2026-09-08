@@ -11,13 +11,25 @@
 // Damage formula (ТЗ п.7): vehicle's base "attack" stat, increased by
 // %firepower (vehicle + leader + adjutant combined — this is exactly the
 // "герой усиливает технику" link from ТЗ п.6), then multiplied again by
-// %damageIntensity (same combined sources) — an extra multiplier on top
-// that applies to any damage type — and finally reduced by the target's
+// %damageIntensity (same combined sources), then adjusted by the armor-
+// penetration-vs-armor check below, and finally reduced by the target's
 // own %damageResistance. firepower/damageIntensity/damageResistance/
-// cooldownReduction are the generic percentage-point stats added in
-// Character.js's DEFAULT_BASE_STATS — summing a hero's and a vehicle's
-// value for the same stat is just Stats.get(...) on each + addition, no
-// special-casing needed.
+// cooldownReduction/pierce/armor/accuracy are all generic percentage-
+// point-style stats added in Character.js's DEFAULT_BASE_STATS — summing
+// a hero's and a vehicle's value for the same stat is just Stats.get(...)
+// on each + addition (see _combinedPercent), no special-casing needed, so
+// a hero ability that boosts a vehicle's pierce/armor/accuracy works the
+// same way a firepower-boosting one already does.
+//
+// Armor penetration vs. armor (ТЗ description, user-supplied "Тяжёлый
+// танк" card): a hit whose pierce roughly matches the target's armor
+// deals full damage. Under-penetrating (pierce well below armor) bounces
+// off for much-reduced damage; over-penetrating (pierce well above armor)
+// also reduces damage, since the round passes through without dumping all
+// its energy — see _armorMultiplier. Accuracy (see _rollHit) is a flat
+// hit-chance roll before any of this; a vehicle with no accuracy value in
+// its data (base 0) always hits, so existing/future vehicles that never
+// bother defining accuracy aren't silently broken.
 //
 // The leader's own activeAbilities (see game/data/abilities.json /
 // AbilitySystem.js) charge on their own prepSeconds while a target is in
@@ -28,6 +40,14 @@
 
 const MIN_ATTACK_COOLDOWN_SECONDS = 0.25;
 const BASE_ATTACK_COOLDOWN_SECONDS = 2; // baseline before attackSpeed/cooldownReduction — a vehicle with attackSpeed 1 fires every 2s
+
+// Armor-penetration curve tuning (see _armorMultiplier) — a well-matched
+// hit (pierce ≈ armor) deals full damage; both a big under-penetration and
+// a big over-penetration ease toward these floors instead of ever hitting
+// exactly 0, since the source description says "significantly reduced",
+// not "no damage".
+const UNDER_PENETRATION_FLOOR = 0.1;
+const OVER_PENETRATION_FLOOR = 0.5;
 
 export class BattleSystem {
   /**
@@ -101,8 +121,13 @@ export class BattleSystem {
         );
         leader.attackAnimDuration = leader.attackAnimRemaining;
 
-        const damage = this._computeDamage(vehicle, leader, adjutant, target, vehicle.stats.get('attack'));
-        target.takeDamage(damage);
+        // The shot always fires (animation/cooldown/VFX all happen
+        // regardless) — a miss just means _computeDamage never runs, so
+        // the target simply takes 0.
+        if (this._rollHit(vehicle, leader, adjutant)) {
+          const damage = this._computeDamage(vehicle, leader, adjutant, target, vehicle.stats.get('attack'));
+          target.takeDamage(damage);
+        }
         this.onAttack?.(vehicle, leader, target);
       }
 
@@ -110,12 +135,57 @@ export class BattleSystem {
     }
   }
 
-  /** Combined value of a "percentage points" style stat (firepower/damageIntensity/cooldownReduction) across the vehicle and its crew — see file header. */
+  /** Combined value of a "percentage points" style stat (firepower/damageIntensity/cooldownReduction/pierce/armor/accuracy) across the vehicle and its crew — see file header. */
   _combinedPercent(vehicle, leader, adjutant, stat) {
     return vehicle.stats.get(stat) + (leader?.stats.get(stat) ?? 0) + (adjutant?.stats.get(stat) ?? 0);
   }
 
-  /** Base attack (or an ability's already-computed base number), boosted by combined firepower/damageIntensity, then reduced by the target's own damageResistance. */
+  /**
+   * Whether this shot actually lands — a flat percentage roll against the
+   * vehicle+crew's combined accuracy. A vehicle whose data never set an
+   * accuracy stat (base 0 — see Vehicle's Stats) always hits: accuracy is
+   * an opt-in mechanic, not a trap for every vehicle that doesn't define
+   * it. No target-side evasion stat exists yet, so this is attacker-only
+   * for now.
+   */
+  _rollHit(vehicle, leader, adjutant) {
+    if (vehicle.stats.getBase('accuracy') <= 0) return true;
+    const chance = Math.max(0, Math.min(100, this._combinedPercent(vehicle, leader, adjutant, 'accuracy')));
+    return Math.random() * 100 < chance;
+  }
+
+  /**
+   * Damage multiplier from the armor-penetration-vs-armor matchup (see
+   * file header). `overkill` is how far pierce exceeds armor — positive
+   * means the round gets through, negative means it doesn't.
+   *   - armor <= 0: nothing to penetrate or bounce off of — full damage,
+   *     regardless of pierce. Over-penetration is specifically about a
+   *     round punching through a PLATE without dumping all its energy;
+   *     with no plate there's no such event. (A tank's real-world "weak
+   *     against infantry" comes from unit-class counters — see
+   *     Vehicle.specialProperties.weakAgainst — not from this formula.)
+   *   - overkill ≈ 0 (pierce just barely enough): full damage.
+   *   - overkill large and positive (way over-penetrating): eases down
+   *     toward OVER_PENETRATION_FLOOR as the round increasingly just
+   *     passes through the plate instead of dumping its energy in it.
+   *   - overkill large and negative (way under-penetrating): eases down
+   *     toward UNDER_PENETRATION_FLOOR as the round increasingly just
+   *     bounces off instead of getting through at all.
+   */
+  _armorMultiplier(pierce, armor) {
+    if (armor <= 0) return 1;
+
+    const overkill = pierce - armor;
+    if (overkill >= 0) {
+      const ratio = Math.min(1, overkill / armor);
+      return 1 - (1 - OVER_PENETRATION_FLOOR) * ratio;
+    }
+    const shortfall = -overkill;
+    const ratio = Math.min(1, shortfall / Math.max(pierce, 1));
+    return 1 - (1 - UNDER_PENETRATION_FLOOR) * ratio;
+  }
+
+  /** Base attack (or an ability's already-computed base number), boosted by combined firepower/damageIntensity, adjusted for armor penetration, then reduced by the target's own damageResistance. */
   _computeDamage(vehicle, leader, adjutant, target, baseAmount) {
     const firepowerPercent = this._combinedPercent(vehicle, leader, adjutant, 'firepower');
     const afterFirepower = baseAmount * (1 + firepowerPercent / 100);
@@ -123,8 +193,12 @@ export class BattleSystem {
     const intensityPercent = this._combinedPercent(vehicle, leader, adjutant, 'damageIntensity');
     const afterIntensity = afterFirepower * (1 + intensityPercent / 100);
 
+    const pierce = this._combinedPercent(vehicle, leader, adjutant, 'pierce');
+    const targetArmor = target.stats?.get('armor') ?? 0;
+    const afterArmor = afterIntensity * this._armorMultiplier(pierce, targetArmor);
+
     const resistancePercent = target.stats?.get('damageResistance') ?? 0;
-    const final = afterIntensity * (1 - resistancePercent / 100);
+    const final = afterArmor * (1 - resistancePercent / 100);
     return Math.max(0, final);
   }
 
@@ -152,9 +226,11 @@ export class BattleSystem {
       const tier = this.abilitySystem.getActiveTier(leader, abilityId);
       if (!tier) continue;
 
-      const abilityBase = vehicle.stats.get('attack') * (tier.damageCoefficient / 100);
-      const damage = this._computeDamage(vehicle, leader, adjutant, target, abilityBase);
-      target.takeDamage(damage);
+      if (this._rollHit(vehicle, leader, adjutant)) {
+        const abilityBase = vehicle.stats.get('attack') * (tier.damageCoefficient / 100);
+        const damage = this._computeDamage(vehicle, leader, adjutant, target, abilityBase);
+        target.takeDamage(damage);
+      }
 
       if (tier.cooldownReductionPercent) {
         vehicle.tempCooldownReductionPercent = tier.cooldownReductionPercent;
