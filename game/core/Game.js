@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=52';
-import { MovementSystem } from '../systems/MovementSystem.js?v=52';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=52';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=52';
-import { WorldSystem } from '../systems/WorldSystem.js?v=52';
-import { InventorySystem } from '../systems/InventorySystem.js?v=52';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=52';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=53';
+import { MovementSystem } from '../systems/MovementSystem.js?v=53';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=53';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=53';
+import { WorldSystem } from '../systems/WorldSystem.js?v=53';
+import { InventorySystem } from '../systems/InventorySystem.js?v=53';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=53';
 
-import { GameTime } from './GameTime.js?v=52';
-import { ResourceSystem } from './ResourceSystem.js?v=52';
-import { TemperatureSystem } from './TemperatureSystem.js?v=52';
-import { SaveSystem } from './SaveSystem.js?v=52';
+import { GameTime } from './GameTime.js?v=53';
+import { ResourceSystem } from './ResourceSystem.js?v=53';
+import { TemperatureSystem } from './TemperatureSystem.js?v=53';
+import { SaveSystem } from './SaveSystem.js?v=53';
 
-import { Character } from '../entities/Character.js?v=52';
-import { Enemy } from '../entities/Enemy.js?v=52';
-import { Item } from '../entities/Item.js?v=52';
-import { EnemySystem } from '../systems/EnemySystem.js?v=52';
-import { InteractionSystem } from '../systems/InteractionSystem.js?v=52';
-import { VehicleSystem, MAX_SQUAD_VEHICLES } from '../systems/VehicleSystem.js?v=52';
-import { AbilitySystem } from '../systems/AbilitySystem.js?v=52';
-import { BattleSystem } from '../systems/BattleSystem.js?v=52';
+import { Character } from '../entities/Character.js?v=53';
+import { Enemy } from '../entities/Enemy.js?v=53';
+import { Item } from '../entities/Item.js?v=53';
+import { EnemySystem } from '../systems/EnemySystem.js?v=53';
+import { InteractionSystem } from '../systems/InteractionSystem.js?v=53';
+import { VehicleSystem, MAX_SQUAD_VEHICLES } from '../systems/VehicleSystem.js?v=53';
+import { AbilitySystem } from '../systems/AbilitySystem.js?v=53';
+import { BattleSystem } from '../systems/BattleSystem.js?v=53';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=52';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=52';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=52';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=52';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=52';
-import { PartyUI } from '../ui/PartyUI.js?v=52';
-import { InventoryUI } from '../ui/InventoryUI.js?v=52';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=52';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=52';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=52';
-import { showStartMenu } from '../ui/StartMenu.js?v=52';
-import { installOrientationLockRetry } from './OrientationLock.js?v=52';
+import { ShelterUI } from '../ui/ShelterUI.js?v=53';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=53';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=53';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=53';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=53';
+import { PartyUI } from '../ui/PartyUI.js?v=53';
+import { InventoryUI } from '../ui/InventoryUI.js?v=53';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=53';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=53';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=53';
+import { showStartMenu } from '../ui/StartMenu.js?v=53';
+import { installOrientationLockRetry } from './OrientationLock.js?v=53';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
