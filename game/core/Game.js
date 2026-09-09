@@ -5,40 +5,40 @@
 // prototype doesn't need a separate renderer module yet — everything else
 // (pathfinding, resources, temperature, rooms...) lives in its own system file.
 
-import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=62';
-import { MovementSystem } from '../systems/MovementSystem.js?v=62';
-import { CharacterSystem } from '../systems/CharacterSystem.js?v=62';
-import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=62';
-import { WorldSystem } from '../systems/WorldSystem.js?v=62';
-import { InventorySystem } from '../systems/InventorySystem.js?v=62';
-import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=62';
+import { PathfindingSystem } from '../systems/PathfindingSystem.js?v=63';
+import { MovementSystem } from '../systems/MovementSystem.js?v=63';
+import { CharacterSystem } from '../systems/CharacterSystem.js?v=63';
+import { ConstructionSystem } from '../systems/ConstructionSystem.js?v=63';
+import { WorldSystem } from '../systems/WorldSystem.js?v=63';
+import { InventorySystem } from '../systems/InventorySystem.js?v=63';
+import { SquadCombatSystem } from '../systems/SquadCombatSystem.js?v=63';
 
-import { GameTime } from './GameTime.js?v=62';
-import { ResourceSystem } from './ResourceSystem.js?v=62';
-import { TemperatureSystem } from './TemperatureSystem.js?v=62';
-import { SaveSystem } from './SaveSystem.js?v=62';
+import { GameTime } from './GameTime.js?v=63';
+import { ResourceSystem } from './ResourceSystem.js?v=63';
+import { TemperatureSystem } from './TemperatureSystem.js?v=63';
+import { SaveSystem } from './SaveSystem.js?v=63';
 
-import { Character } from '../entities/Character.js?v=62';
-import { Enemy } from '../entities/Enemy.js?v=62';
-import { Item } from '../entities/Item.js?v=62';
-import { EnemySystem } from '../systems/EnemySystem.js?v=62';
-import { InteractionSystem } from '../systems/InteractionSystem.js?v=62';
-import { VehicleSystem, MAX_SQUAD_VEHICLES } from '../systems/VehicleSystem.js?v=62';
-import { AbilitySystem } from '../systems/AbilitySystem.js?v=62';
-import { BattleSystem } from '../systems/BattleSystem.js?v=62';
+import { Character } from '../entities/Character.js?v=63';
+import { Enemy } from '../entities/Enemy.js?v=63';
+import { Item } from '../entities/Item.js?v=63';
+import { EnemySystem } from '../systems/EnemySystem.js?v=63';
+import { InteractionSystem } from '../systems/InteractionSystem.js?v=63';
+import { VehicleSystem, MAX_SQUAD_VEHICLES } from '../systems/VehicleSystem.js?v=63';
+import { AbilitySystem } from '../systems/AbilitySystem.js?v=63';
+import { BattleSystem } from '../systems/BattleSystem.js?v=63';
 
-import { ShelterUI } from '../ui/ShelterUI.js?v=62';
-import { LeftBarUI } from '../ui/LeftBarUI.js?v=62';
-import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=62';
-import { ConstructionUI } from '../ui/ConstructionUI.js?v=62';
-import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=62';
-import { PartyUI } from '../ui/PartyUI.js?v=62';
-import { InventoryUI } from '../ui/InventoryUI.js?v=62';
-import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=62';
-import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=62';
-import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=62';
-import { showStartMenu } from '../ui/StartMenu.js?v=62';
-import { installOrientationLockRetry } from './OrientationLock.js?v=62';
+import { ShelterUI } from '../ui/ShelterUI.js?v=63';
+import { LeftBarUI } from '../ui/LeftBarUI.js?v=63';
+import { CharacterMenuUI } from '../ui/CharacterMenuUI.js?v=63';
+import { ConstructionUI } from '../ui/ConstructionUI.js?v=63';
+import { CharacterRosterUI } from '../ui/CharacterRosterUI.js?v=63';
+import { PartyUI } from '../ui/PartyUI.js?v=63';
+import { InventoryUI } from '../ui/InventoryUI.js?v=63';
+import { EnemyMenuUI } from '../ui/EnemyMenuUI.js?v=63';
+import { EnemyInfoUI } from '../ui/EnemyInfoUI.js?v=63';
+import { DoorMenuUI } from '../ui/DoorMenuUI.js?v=63';
+import { showStartMenu } from '../ui/StartMenu.js?v=63';
+import { installOrientationLockRetry } from './OrientationLock.js?v=63';
 
 const DEBUG_GRID = false; // flip to true to see the passability grid over the art
 const CHARACTER_HEIGHT_TILES = 6.2; // sprite height in grid cells — was 3.6, bumped up per feedback. Рост героев.
@@ -84,7 +84,7 @@ const MAX_PARTY_SIZE = 5; // hard cap on how many settlers can be checked "в о
 // latest code, rather than guessing from behaviour alone. MUST match the
 // current ?v= number exactly, or the badge is worse than useless — it'll
 // look fine while the browser is still serving stale JS.
-const GAME_VERSION = 'v62';
+const GAME_VERSION = 'v63';
 const BATTLE_LOG_MAX = 200; // ring buffer size for this.battleLog — see _logBattle
 // Only Ольга (char_2) can hack a "hack:<seconds>" door's keypad — see
 // _commandHackDoor/_startHacking. She's the party's dedicated hacker (высокий

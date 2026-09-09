@@ -201,6 +201,21 @@ export class EnemySystem {
   }
 
   _chase(enemy, target, dt, offset) {
+    // Lock which side of the target we're approaching from the first time
+    // this enemy starts chasing it, instead of recomputing "which side is
+    // the target on" fresh every repath for the STANDOFF-COLUMN below.
+    // Two converging characters can easily end up with a stale repath
+    // (see REPATH_INTERVAL_SECONDS) whose desiredCol lands on the
+    // technically-other side of where the target ends up stopping —
+    // which then made BattleSystem correctly, but jarringly, spin the
+    // defender around mid-fight the instant this enemy settled there.
+    // enemy.facingDir (just below) still updates freely every frame for
+    // its own sprite; only the DESTINATION this enemy paths toward is
+    // locked to a stable side once chosen, and only for as long as it
+    // keeps chasing this same target.
+    if (enemy.targetCharacterId !== target.id || enemy._approachSide == null) {
+      enemy._approachSide = target.position.col >= enemy.position.col ? 1 : -1;
+    }
     enemy.aiState = 'chasing';
     enemy.targetCharacterId = target.id;
 
@@ -216,8 +231,10 @@ export class EnemySystem {
     // enemy's slot in the target's stacking queue — see _queueOffset) adds
     // one extra tile per enemy already ahead of it, so several enemies on
     // the same target line up one behind another instead of overlapping.
+    // Uses the LOCKED approach side (see above), not a fresh recomputation,
+    // so the destination column doesn't flip sides mid-chase.
     const stopDistance = Math.max(1, Math.round(enemy.attackDistance) + offset);
-    const desiredCol = target.position.col - dirToTarget * stopDistance;
+    const desiredCol = target.position.col - enemy._approachSide * stopDistance;
 
     enemy._repathAccumulator += dt;
     const needsNewPath = enemy.path.length === 0 || enemy._repathAccumulator >= REPATH_INTERVAL_SECONDS;
@@ -298,6 +315,7 @@ export class EnemySystem {
       // Just lost/gave up on a target — head home once, don't keep repathing every frame.
       enemy.aiState = 'idle';
       enemy.targetCharacterId = null;
+      enemy._approachSide = null; // see _chase — next engagement re-locks a fresh side
       if (!atSpawn) {
         this.movementSystem.moveTo(enemy, { ...enemy.spawnPosition }, this.pathfinder);
       }
